@@ -8,15 +8,10 @@ import gzip
 import six
 import unidecode
 from decimal import Decimal
-from past.utils import old_div
 
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO, BytesIO
+from io import StringIO, BytesIO
 
-from six.moves import zip, reduce, zip_longest
-from itertools import chain
+from six.moves import zip, reduce
 
 from functools import partial
 from pyramid.threadlocal import get_current_registry
@@ -24,35 +19,24 @@ from pyramid.i18n import get_locale_name
 from pyramid.url import route_url
 from pyramid.httpexceptions import HTTPBadRequest, HTTPRequestTimeout
 import unicodedata
-try:
-    from urlparse import urlparse, urlunparse, urljoin
-except ImportError:
-    from urllib.parse import urlparse, urlunparse, urljoin
 
-try:
-    from urllib import quote
-except ImportError:
-    from urllib.parse import quote
+from urllib.parse import urlparse, urlunparse, urljoin
+
+from urllib.parse import quote
 
 import xml.etree.ElementTree as etree
 from pyproj import Proj, transform as proj_transform
 from requests.exceptions import ConnectionError
-from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from shapely.ops import transform as shape_transform
 from shapely.wkt import dumps as shape_dumps, loads as shape_loads
 from shapely.geometry.base import BaseGeometry
-from chsdi.lib.parser import WhereParser
-from chsdi.lib.exceptions import QueryParseException, CoordinatesTransformationException
 import logging
 
 if six.PY3:
     unicode = str
     long = int
 
-requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
-
 log = logging.getLogger(__name__)
-
 
 PROJECTIONS = {}
 
@@ -67,6 +51,7 @@ def to_utf8(data):
     except (UnicodeDecodeError, AttributeError):
         pass
     return data
+
 
 # Number of element in an iterator
 
@@ -86,7 +71,8 @@ def versioned(path):
             parts = parsedURL.path.split(entry_path, 1)
             if len(parts) > 1:
                 parsedURL = parsedURL._replace(
-                    path=parts[0] + entry_path + version + '/' + parts[1])
+                    path=parts[0] + entry_path + version + '/' + parts[1]
+                )
                 agnosticPath = urlunparse(parsedURL)
         return agnosticPath
     else:
@@ -136,9 +122,13 @@ def check_url(url, config):
         raise HTTPBadRequest('Could not determine the hostname')
     domain = ".".join(hostname.split(".")[-2:])
     allowed_hosts = config['shortener.allowed_hosts'] if 'shortener.allowed_hosts' in config else ''
-    allowed_domains = config['shortener.allowed_domains'] if 'shortener.allowed_domains' in config else ''
+    allowed_domains = config['shortener.allowed_domains'
+                            ] if 'shortener.allowed_domains' in config else ''
     if domain not in allowed_domains and hostname not in allowed_hosts:
-        raise HTTPBadRequest('Shortener can only be used for %s domains or %s hosts.' % (allowed_domains, allowed_hosts))
+        raise HTTPBadRequest(
+            'Shortener can only be used for %s domains or %s hosts.' %
+            (allowed_domains, allowed_hosts)
+        )
     return url
 
 
@@ -155,7 +145,9 @@ def locale_negotiator(request):
     try:
         lang = request.params.get('lang')
     except UnicodeDecodeError:  # pragma: no cover
-        raise HTTPBadRequest('Could not parse URL and parameters. Request send must be encoded in utf-8.')
+        raise HTTPBadRequest(
+            'Could not parse URL and parameters. Request send must be encoded in utf-8.'
+        )
     # This might happen if a POST request is aborted before all the data could be transmitted
     except IOError:  # pragma: no cover
         raise HTTPRequestTimeout('Request was aborted. Didn\'t receive full request')
@@ -179,9 +171,7 @@ def check_even(number):
 
 
 def format_search_text(input_str):
-    return remove_accents(
-        escape_sphinx_syntax(input_str)
-    )
+    return remove_accents(escape_sphinx_syntax(input_str))
 
 
 def format_locations_search_text(input_str):
@@ -203,7 +193,9 @@ def remove_accents(input_str):
     input_str = input_str.replace(u'Ä', u'ae')
     input_str = input_str.replace(u'ö', u'oe')
     input_str = input_str.replace(u'Ö', u'oe')
-    return ''.join(c for c in unicodedata.normalize('NFD', input_str) if unicodedata.category(c) != 'Mn')
+    return ''.join(
+        c for c in unicodedata.normalize('NFD', input_str) if unicodedata.category(c) != 'Mn'
+    )
 
 
 def escape_sphinx_syntax(input_str):
@@ -238,122 +230,22 @@ def format_query(model, value, lang):
     def escapeSQL(value):
         if u'ilike' in value:
             match = re.search(r'([\w]+\s)(ilike|not ilike)(\s\'%)([\s\S]*)(%\')', value)
-            where = u''.join((
-                match.group(1).replace(u'\'', u'E\''),
-                match.group(2),
-                match.group(3),
-                match.group(4).replace(u'\\', u'\\\\')
-                              .replace(u'\'', u"\''")
-                              .replace(u'_', u'\\_'),
-                match.group(5)
-            ))
+            where = u''.join(
+                (
+                    match.group(1).replace(u'\'', u'E\''),
+                    match.group(2),
+                    match.group(3),
+                    match.group(4).replace(u'\\', u'\\\\').replace(u'\'',
+                                                                   u"\''").replace(u'_', u'\\_'),
+                    match.group(5)
+                )
+            )
             return where
         return value
-
-    def get_queryable_attributes(model, lang):
-        attributes = []
-        if hasattr(model, '__queryable_attributes__'):
-            attributes = model.get_queryable_attributes_keys(lang)
-        return attributes
-
-    # Check if attributes are queryable and replace by the DB column name
-    def replacePropByColumnName(model, values, lang):
-        res = []
-        queryable_attributes = get_queryable_attributes(model, lang)
-        for val in values:
-            prop = val.split(' ')[0].strip()
-            column = model.get_column_by_property_name(prop)
-            if prop not in queryable_attributes:
-                error_msg = "Query attribute '{}' is not queryable. Queryable attributes are '{}'" \
-                    .format(prop, ",".join(queryable_attributes))
-                log.error(error_msg)
-                raise QueryParseException(error_msg)
-            if column is None:
-                error_msg = "Query attribute '{} doesn't exist in the model".format(prop)
-                log.error(error_msg)
-                raise QueryParseException(error_msg)
-
-            val = val.replace(prop, unicode(column.name))
-            res.append(val)
-        return res
-
-    def merge_statements(statements, operators):
-        ''' Given values=["toto >1', "'tutu' like 'tata%'"] and operators=["AND" ]
-            return "toto >1' AND 'tutu' like 'tata%'"
-        '''
-        if len(statements) - 1 != ilen(operators):
-            raise Exception
-
-        # iters = [iter(statements), iter(operators)]
-        # full = list(it.next() for it in cycle(iters))
-
-        full = [x for x in chain.from_iterable(zip_longest(statements, operators))
-            if x is not None]
-
-        return unicode(" ".join(full))
-
-    try:
-        w = WhereParser(value)
-        tokens = list(w.tokens)
-        if ilen(tokens) == 0:
-            return None
-        # TODO: what does really do?
-        # values = map(escapeSQL, values)
-        values = replacePropByColumnName(model, tokens, lang)
-        operators = list(w.operators)
-
-        where = merge_statements(values, operators)
-
-    except QueryParseException as qpe:
-        raise HTTPBadRequest("Failed to parse where/layersDef: {}".format(qpe))
-    except HTTPBadRequest:
-        raise Exception
-    except Exception as e:
-        log.error("Unkown error while parsing where/layerDefs: {}".format(e))
-        return None
-    return where
 
 
 def quoting(text):
     return quote(text.encode('utf-8'))
-
-
-def parseHydroXML(id, root):
-    html_attr = {'date_time': '-', 'abfluss': '-', 'wasserstand': '-', 'wassertemperatur': '-'}
-    for child in root:
-        fid = child.attrib['StrNr']
-        if fid == id:
-            if child.attrib['Typ'] == '10':
-                for attr in child:
-                    if attr.tag == 'Datum':
-                        html_attr['date_time'] = attr.text
-                    # Zeit is always parsed after Datum
-                    elif attr.tag == 'Zeit':
-                        html_attr['date_time'] = html_attr['date_time'] + ' ' + attr.text
-                    elif attr.tag == 'Wert':
-                        html_attr['abfluss'] = attr.text
-                        break
-            elif child.attrib['Typ'] == '02':
-                for attr in child:
-                    if attr.tag == 'Datum':
-                        html_attr['date_time'] = attr.text
-                    # Zeit is always parsed after Datum
-                    elif attr.tag == 'Zeit':
-                        html_attr['date_time'] = html_attr['date_time'] + ' ' + attr.text
-                    elif attr.tag == 'Wert':
-                        html_attr['wasserstand'] = attr.text
-                        break
-            elif child.attrib['Typ'] == '03':
-                for attr in child:
-                    if attr.tag == 'Datum':
-                        html_attr['date_time'] = attr.text
-                    # Zeit is always parsed after Datum
-                    elif attr.tag == 'Zeit':
-                        html_attr['date_time'] = html_attr['date_time'] + ' ' + attr.text
-                    elif attr.tag == 'Wert':
-                        html_attr['wassertemperatur'] = attr.text
-                        break
-    return html_attr
 
 
 def imagesize_from_metafile(tileUrlBasePath, bvnummer):
@@ -401,13 +293,14 @@ def _round_shape_coordinates(shape, precision=None):
     if precision is None:
         return shape
     else:
-        return shape_loads(
-            shape_dumps(shape, rounding_precision=precision)
-        )
+        return shape_loads(shape_dumps(shape, rounding_precision=precision))
 
 
 def round_geometry_coordinates(geom, precision=None):
-    if isinstance(geom, (list, tuple, )):
+    if isinstance(geom, (
+        list,
+        tuple,
+    )):
         return _round_bbox_coordinates(geom, precision=precision)
     elif isinstance(geom, BaseGeometry):
         return _round_shape_coordinates(geom, precision=precision)
@@ -427,7 +320,10 @@ def transform_round_geometry(geom, srid_from, srid_to, rounding=True):
             precision = get_precision_for_proj(srid_to)
             return round_geometry_coordinates(geom, precision=precision)
         return geom
-    if isinstance(geom, (list, tuple, )):
+    if isinstance(geom, (
+        list,
+        tuple,
+    )):
         return _transform_coordinates(geom, srid_from, srid_to, rounding=rounding)
     else:
         return _transform_shape(geom, srid_from, srid_to, rounding=rounding)
@@ -448,7 +344,9 @@ def _transform_coordinates(coordinates, srid_from, srid_to, rounding=True):
             precision = get_precision_for_proj(srid_to)
             new_coords = _round_bbox_coordinates(new_coords, precision=precision)
     except Exception:
-        raise CoordinatesTransformationException("Cannot transform coordinates {} from {} to {}".format(coordinates, srid_from, srid_to))
+        raise ValueError(
+            "Cannot transform coordinates {} from {} to {}".format(coordinates, srid_from, srid_to)
+        )
     return new_coords
 
 
@@ -463,6 +361,7 @@ def _transform_shape(geom, srid_from, srid_to, rounding=True):
         precision = get_precision_for_proj(srid_to)
         return _round_shape_coordinates(new_geom, precision=precision)
     return new_geom
+
 
 # float('NaN') does not raise an Exception. This function does.
 
@@ -495,10 +394,7 @@ def is_box2d(box2D):
 
 def center_from_box2d(box2D):
     box2D = is_box2d(box2D)
-    return [
-        box2D[0] + ((box2D[2] - box2D[0]) / 2),
-        box2D[1] + ((box2D[3] - box2D[1]) / 2)
-    ]
+    return [box2D[0] + ((box2D[2] - box2D[0]) / 2), box2D[1] + ((box2D[3] - box2D[1]) / 2)]
 
 
 def shift_to(coords, srid):
@@ -519,9 +415,7 @@ def shift_to(coords, srid):
 
 def parse_date_string(dateStr, format_input='%Y-%m-%d', format_output='%d.%m.%Y'):
     try:
-        return datetime.datetime.strptime(
-            dateStr.strip(), format_input
-        ).strftime(format_output)
+        return datetime.datetime.strptime(dateStr.strip(), format_input).strftime(format_output)
     except Exception:
         return '-'
 
@@ -543,22 +437,6 @@ def parse_date_datenstand(dateDatenstand):
         else:
             return '-'
     return result
-
-
-def format_scale(scale):
-    """Format the scale denominator inserting the thousand separator (')
-
-       Example:  50000  gives 1:50'000
-    """
-    scale_str = str(scale)
-    n = ''
-    while len(scale_str) > 3:
-        # Python2/3
-        scale_prov = old_div(int(float(scale_str)), 1000)
-        n = n + "'000"
-        scale_str = str(scale_prov)
-    scale = "1:" + scale_str + n
-    return scale
 
 
 def int_with_apostrophe(x):
@@ -630,7 +508,13 @@ def unnacent_where_text(where_string, model):
                 if str(getattr(model, where_text_split[0]).type) == 'VARCHAR':
                     # if we get to this place, it means we have a string type of data with a custom input from the
                     # customer and we will need to unaccent them to make the search.
-                    return "unaccent({}) {} {}".format(where_text_split[0], separator, sanitize_user_input_accents(separate_statements(where_text_split[1], model)))
+                    return "unaccent({}) {} {}".format(
+                        where_text_split[0],
+                        separator,
+                        sanitize_user_input_accents(
+                            separate_statements(where_text_split[1], model)
+                        )
+                    )
                 else:
                     # if we get here, it means we had a separator, but it's not a string (only possibility should be '='
                     # and a number. So we break out of the for loop for performances purpose
@@ -646,7 +530,9 @@ def separate_statements(substring, model):
         separator = splitted_substring[1]
         if separator == 'or' or separator == 'and':
             splitted_substring[2] = unnacent_where_text(splitted_substring[2], model)
-            return "{} {} {}".format(splitted_substring[0], separator, separate_statements(splitted_substring[2], model))
+            return "{} {} {}".format(
+                splitted_substring[0], separator, separate_statements(splitted_substring[2], model)
+            )
     return substring
 
 

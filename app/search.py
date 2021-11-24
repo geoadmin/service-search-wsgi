@@ -7,12 +7,12 @@ from pyramid.view import view_config
 
 from shapely.geometry import box, Point, mapping
 
-from chsdi.lib.validation.search import SearchValidation
-from chsdi.lib.helpers import format_search_text, format_locations_search_text
-from chsdi.lib.helpers import _transform_point as transform_coordinate, parse_box2d, shift_to, ilen
-from chsdi.lib.helpers import center_from_box2d, transform_round_geometry as transform_shape
-from chsdi.lib.sphinxapi import sphinxapi
-from chsdi.lib import mortonspacekey as msk
+from app.helpers.validation_search import SearchValidation
+from app.helpers.helpers_search import format_search_text, format_locations_search_text
+from app.helpers.helpers_search import _transform_point as transform_coordinate, parse_box2d, shift_to, ilen
+from app.helpers.helpers_search import center_from_box2d, transform_round_geometry as transform_shape
+from app.helpers import sphinxapi
+from app.helpers import mortonspacekey as msk
 
 
 class Search(SearchValidation):
@@ -26,45 +26,59 @@ class Search(SearchValidation):
     def __init__(self, request):
         super(Search, self).__init__(request)
 
-        self.mapName = request.matchdict.get('map')
-        self.hasMap(request.db, self.mapName)
-        self.lang = request.lang
-        self.searchLang = request.params.get('searchLang')
-        self.cbName = request.params.get('callback')
-        # Order matters define srid first
-        self.srid = request.params.get('sr', str(self.DEFAULT_SRID))
-        self.bbox = request.params.get('bbox')
-        self.sortbbox = request.params.get('sortbbox', 'true').lower() == 'true'
-        self.returnGeometry = request.params.get('returnGeometry', 'true').lower() == 'true'
-        self.quadindex = None
-        self.origins = request.params.get('origins')
-        self.featureIndexes = request.params.get('features')
-        self.timeInstant = request.params.get('timeInstant')
-        self.timeEnabled = request.params.get('timeEnabled')
-        self.timeStamps = request.params.get('timeStamps')
-        self.typeInfo = request.params.get('type')
-        self.limit = request.params.get('limit')
+        # DOTO remove ugly hack
+        request.registry = {}
 
-        self.geodataStaging = request.registry.settings['geodata_staging']
+        # DOTO remove ugly hack
+        request.matchdict = {}
+        request.matchdict['map'] = 'all'
+
+        self.mapName = request.matchdict.get('map')
+
+        # DOTO remove ugly hack
+        request.db = 'to do'
+        self.hasMap(request.db, self.mapName)
+
+        # DOTO remove ugly hack
+        request.lang = 'de'
+        self.lang = request.lang
+        self.searchLang = request.args.get('searchLang')
+        self.cbName = request.args.get('callback')
+        # Order matters define srid first
+        self.srid = request.args.get('sr', str(self.DEFAULT_SRID))
+        self.bbox = request.args.get('bbox')
+        self.sortbbox = request.args.get('sortbbox', 'true').lower() == 'true'
+        self.returnGeometry = request.args.get('returnGeometry', 'true').lower() == 'true'
+        self.quadindex = None
+        self.origins = request.args.get('origins')
+        self.featureIndexes = request.args.get('features')
+        self.timeInstant = request.args.get('timeInstant')
+        self.timeEnabled = request.args.get('timeEnabled')
+        self.timeStamps = request.args.get('timeStamps')
+        self.typeInfo = request.args.get('type')
+        self.limit = request.args.get('limit')
+
+        # DOTO remove this hack
+        #self.geodataStaging = request.registry.settings['geodata_staging']
+        self.geodataStaging = 'dev'
         self.results = {'results': []}
         self.request = request
 
         morton_box = [420000, 30000, 900000, 510000]
-        self.quadtree = msk.QuadTree(
-            msk.BBox(*morton_box), 20)
+        self.quadtree = msk.QuadTree(msk.BBox(*morton_box), 20)
         self.sphinx = sphinxapi.SphinxClient()
-        self.sphinx.SetServer(request.registry.settings['sphinxhost'], 9312)
+        # DOTO remove this hack
+        #self.sphinx.SetServer(request.registry.settings['sphinxhost'], 9312)
+        self.sphinx.SetServer('localhost', 9312)
         self.sphinx.SetMatchMode(sphinxapi.SPH_MATCH_EXTENDED)
 
-    @view_config(route_name='search', renderer='geojson',
-                 request_param='geometryFormat=geojson')
+    @view_config(route_name='search', renderer='geojson', request_param='geometryFormat=geojson')
     def view_find_geojson(self):
         (features, bbox) = self._find_geojson()
         bounds = bbox.bounds if bbox is not None else None
         return {"type": "FeatureCollection", "bbox": bounds, "features": features}
 
-    @view_config(route_name='search', renderer='esrijson',
-                 request_param='geometryFormat=esrijson')
+    @view_config(route_name='search', renderer='esrijson', request_param='geometryFormat=esrijson')
     def view_find_esrijson(self):
         raise exc.HTTPBadRequest("Param 'geometryFormat=esrijson' is not supported")
 
@@ -85,50 +99,54 @@ class Search(SearchValidation):
                         bounds = self.quadtree.bbox.bounds
                         bounds = transform_shape(bounds, self.DEFAULT_SRID, self.srid)
                     except ValueError:
-                        raise exc.HTTPInternalServerError("Search error: cannot reproject result to SRID: {}".format(self.srid))
+                        raise exc.HTTPInternalServerError(
+                            "Search error: cannot reproject result to SRID: {}".format(self.srid)
+                        )
                 bbox = box(*bounds)
                 if features_bbox is None:
                     features_bbox = bbox
                 else:
                     features_bbox.union(bbox)
                 if 'x' in attributes.keys() and 'y' in attributes.keys():
-                    feature = {'type': 'Feature',
-                               'id': item['id'],
-                               'bbox': bbox.bounds,
-                               'geometry': {'type': 'Point', 'coordinates': [attributes['x'], attributes['y']]},
-                               'properties': attributes}
+                    feature = {
+                        'type': 'Feature',
+                        'id': item['id'],
+                        'bbox': bbox.bounds,
+                        'geometry':
+                            {
+                                'type': 'Point', 'coordinates': [attributes['x'], attributes['y']]
+                            },
+                        'properties': attributes
+                    }
                 else:
-                    feature = {'type': 'Feature',
-                               'id': item['id'],
-                               'bbox': bbox.bounds,
-                               'geometry': mapping(bbox),
-                               'properties': attributes}
+                    feature = {
+                        'type': 'Feature',
+                        'id': item['id'],
+                        'bbox': bbox.bounds,
+                        'geometry': mapping(bbox),
+                        'properties': attributes
+                    }
 
                 features.append(feature)
         return (features, features_bbox)
 
     @view_config(route_name='search', renderer='jsonp')
     def search(self):
+        print("-------------------------------------------------------------------------")
         self.sphinx.SetConnectTimeout(10.0)
         # create a quadindex if the bbox is defined
         if self.bbox is not None and self.typeInfo not in ('layers', 'featuresearch'):
             self._get_quad_index()
         if self.typeInfo == 'layers':
             # search all layers
-            self.searchText = format_search_text(
-                self.request.params.get('searchText')
-            )
+            self.searchText = format_search_text(self.request.args.get('searchText'))
             self._layer_search()
         elif self.typeInfo == 'featuresearch':
             # search all features using searchText
-            self.searchText = format_search_text(
-                self.request.params.get('searchText')
-            )
+            self.searchText = format_search_text(self.request.args.get('searchText'))
             self._feature_search()
         elif self.typeInfo in ('locations'):
-            self.searchText = format_locations_search_text(
-                self.request.params.get('searchText', '')
-            )
+            self.searchText = format_locations_search_text(self.request.args.get('searchText', ''))
             # swiss search
             self._swiss_search()
             # translate some gazetteer categories from swissnames3 tagged with <i>...</i> in the label attribute of the response
@@ -139,7 +157,7 @@ class Search(SearchValidation):
         # For ranking modes, see http://sphinxsearch.com/docs/current.html#weighting
         self.sphinx.SetRankingMode(sphinxapi.SPH_RANK_SPH04)
         # Only include results with a certain weight. This might need tweaking
-        self.sphinx.SetFilterRange('@weight', 5000, 2 ** 32 - 1)
+        self.sphinx.SetFilterRange('@weight', 5000, 2**32 - 1)
         try:
             if self.typeInfo in ('locations'):
                 temp = self.sphinx.Query(searchTextFinal, index='swisssearch_fuzzy')
@@ -200,12 +218,16 @@ class Search(SearchValidation):
                 # In case RunQueries doesn't return results (reason unknown)
                 # related to issue
                 if temp is None:
-                    raise exc.HTTPServiceUnavailable('no results from sphinx service (%s)' % self.sphinx._error)
+                    raise exc.HTTPServiceUnavailable(
+                        'no results from sphinx service (%s)' % self.sphinx._error
+                    )
 
             except IOError:  # pragma: no cover
                 raise exc.HTTPGatewayTimeout()
 
-            temp_merged = temp[0].get('matches', []) + temp[1].get('matches', []) if len(temp) == 2 else temp[0].get('matches', [])
+            temp_merged = temp[0].get('matches', []) + temp[1].get('matches', []) if len(
+                temp
+            ) == 2 else temp[0].get('matches', [])
 
             # remove duplicate results, exact search results have priority over wildcard search results
             temp = []
@@ -243,11 +265,7 @@ class Search(SearchValidation):
         self.sphinx.SetRankingMode(sphinxapi.SPH_RANK_WORDCOUNT)
         self.sphinx.SetSortMode(sphinxapi.SPH_SORT_EXTENDED, '@weight DESC')
         # Weights defaults to 1
-        self.sphinx.SetFieldWeights({
-            '@title': 4,
-            '@detail': 2,
-            '@layer': 1
-        })
+        self.sphinx.SetFieldWeights({'@title': 4, '@detail': 2, '@layer': 1})
 
         index_name = 'layers_%s' % self.lang
         mapName = self.mapName if self.mapName != 'all' else ''
@@ -256,11 +274,15 @@ class Search(SearchValidation):
             topicFilter = 'api'
         else:
             topicFilter = '(%s | ech)' % mapName
-        searchText = ' '.join((
-            self._query_fields('@(title,detail,layer)'),
-            '& @topics %s' % (topicFilter),  # Filter by to topic if string not empty, ech whitelist hack
-            '& %s' % (staging_filter(self.geodataStaging))  # Only layers in correct staging are searched
-        ))
+        searchText = ' '.join(
+            (
+                self._query_fields('@(title,detail,layer)'),
+                '& @topics %s' %
+                (topicFilter),  # Filter by to topic if string not empty, ech whitelist hack
+                '& %s' %
+                (staging_filter(self.geodataStaging))  # Only layers in correct staging are searched
+            )
+        )
         try:
             temp = self.sphinx.Query(searchText, index=index_name)
         except IOError:  # pragma: no cover
@@ -279,8 +301,7 @@ class Search(SearchValidation):
             else:
                 quadSearch = ''.join(('@geom_quadindex ', self.quadindex, '* | '))
                 quadSearch += ''.join(
-                    buildQuadQuery(self.quadindex[:-x])
-                    for x in range(1, len(self.quadindex))
+                    buildQuadQuery(self.quadindex[:-x]) for x in range(1, len(self.quadindex))
                 )[:-len(' | ')]
             return quadSearch
         return ''
@@ -336,14 +357,13 @@ class Search(SearchValidation):
             if min != max:
                 t = 'range'
                 years = [start, stop]
-        return {
-            'type': t,
-            'years': years
-        }
+        return {'type': t, 'years': years}
 
     def _check_timeparameters(self):
         if self.timeInstant is not None and self.timeStamps is not None:
-            raise exc.HTTPBadRequest('You are not allowed to mix timeStamps and timeInstant parameters')
+            raise exc.HTTPBadRequest(
+                'You are not allowed to mix timeStamps and timeInstant parameters'
+            )
 
     def _get_geoanchor_from_bbox(self):
         center = center_from_box2d(self.bbox)
@@ -364,17 +384,17 @@ class Search(SearchValidation):
             preNonDigit = ' '.join([prefix_non_digit(w) for w in self.searchText])
             infNonDigit = ' '.join([infix_non_digit(w) for w in self.searchText])
             q = [
-                '%s "%s"'    % (fields, exactAll),
-                '%s "^%s"'   % (fields, exactAll),
-                '%s "%s$"'   % (fields, exactAll),
-                '%s "^%s$"'  % (fields, exactAll),
-                '%s "%s"~5'  % (fields, exactAll),
-                '%s "%s"'    % (fields, preNonDigit),
-                '%s "^%s"'   % (fields, preNonDigit),
-                '%s "%s"~5'  % (fields, preNonDigit),
-                '%s "%s"'    % (fields, infNonDigit),
-                '%s "^%s"'   % (fields, infNonDigit),
-                '%s "%s"~5'  % (fields, infNonDigit)
+                '%s "%s"' % (fields, exactAll),
+                '%s "^%s"' % (fields, exactAll),
+                '%s "%s$"' % (fields, exactAll),
+                '%s "^%s$"' % (fields, exactAll),
+                '%s "%s"~5' % (fields, exactAll),
+                '%s "%s"' % (fields, preNonDigit),
+                '%s "^%s"' % (fields, preNonDigit),
+                '%s "%s"~5' % (fields, preNonDigit),
+                '%s "%s"' % (fields, infNonDigit),
+                '%s "^%s"' % (fields, infNonDigit),
+                '%s "%s"~5' % (fields, infNonDigit)
             ]
 
         if hasDigit:
@@ -382,13 +402,15 @@ class Search(SearchValidation):
             prefix_all = lambda x: ''.join((x, '*'))
             preDigit = ' '.join([prefix_digit(w) for w in self.searchText])
             preNonDigitAndPreDigit = ' '.join([prefix_all(w) for w in self.searchText])
-            infNonDigitAndPreDigit = ' '.join([prefix_digit(infix_non_digit(w)) for w in self.searchText])
+            infNonDigitAndPreDigit = ' '.join(
+                [prefix_digit(infix_non_digit(w)) for w in self.searchText]
+            )
             q = q + [
-                '%s "%s"'   % (fields, preDigit),
-                '%s "^%s"'  % (fields, preDigit),
-                '%s "%s"'   % (fields, preNonDigitAndPreDigit),
+                '%s "%s"' % (fields, preDigit),
+                '%s "^%s"' % (fields, preDigit),
+                '%s "%s"' % (fields, preNonDigitAndPreDigit),
                 '%s "%s"~5' % (fields, preNonDigitAndPreDigit),
-                '%s "%s"'   % (fields, infNonDigitAndPreDigit)
+                '%s "%s"' % (fields, infNonDigitAndPreDigit)
             ]
         finalQuery = ' | '.join(q)
         return finalQuery
@@ -425,12 +447,7 @@ class Search(SearchValidation):
         return ranks
 
     def _search_lang_to_filter(self):
-        return {
-            'de': [1],
-            'fr': [2],
-            'it': [3],
-            'rm': [4]
-        }[self.searchLang]
+        return {'de': [1], 'fr': [2], 'it': [3], 'rm': [4]}[self.searchLang]
 
     def _detect_keywords(self):
         if ilen(self.searchText) > 0:
@@ -459,7 +476,9 @@ class Search(SearchValidation):
                 elif timeFilter['type'] == 'layers' and timeFilter['years'][i] is not None:
                     self.sphinx.SetFilter('year', [timeFilter['years'][i]])
                 elif timeFilter['type'] == 'range':
-                    self.sphinx.SetFilterRange('year', int(min(timeFilter['years'])), int(max(timeFilter['years'])))
+                    self.sphinx.SetFilterRange(
+                        'year', int(min(timeFilter['years'])), int(max(timeFilter['years']))
+                    )
             if index.startswith(translated_layer):
                 if self.searchLang:
                     self.sphinx.SetFilter('lang', self._search_lang_to_filter())
@@ -481,7 +500,9 @@ class Search(SearchValidation):
             bbox = transform_shape(shape, self.DEFAULT_SRID, self.srid).bounds
             res['geom_st_box2d'] = "BOX({} {},{} {})".format(*bbox)
         except Exception:
-            raise exc.HTTPInternalServerError('Error while converting BOX2D to EPSG:{}'.format(self.srid))
+            raise exc.HTTPInternalServerError(
+                'Error while converting BOX2D to EPSG:{}'.format(self.srid)
+            )
         return res
 
     def _parse_locations(self, res):
@@ -509,7 +530,9 @@ class Search(SearchValidation):
                     res['x'] = x
                     res['y'] = y
                 except Exception:
-                    raise exc.HTTPInternalServerError('Error while converting point(x, y) to EPSG:{}'.format(self.srid))
+                    raise exc.HTTPInternalServerError(
+                        'Error while converting point(x, y) to EPSG:{}'.format(self.srid)
+                    )
         return res
 
     def _parse_location_results(self, results, limit):
@@ -524,16 +547,19 @@ class Search(SearchValidation):
                 result['attrs'].pop('layerBodId', None)
             result['attrs'].pop('feature_id', None)
             result['attrs']['label'] = self._translate_label(result['attrs']['label'])
-            if (origin == 'address'
-                and nb_address < self.LOCATION_LIMIT
-                and (not self.bbox or self._bbox_intersection(self.bbox,
-                                                         result['attrs']['geom_st_box2d']))):
+            if (
+                origin == 'address' and nb_address < self.LOCATION_LIMIT and (
+                    not self.bbox or
+                    self._bbox_intersection(self.bbox, result['attrs']['geom_st_box2d'])
+                )
+            ):
                 result['attrs'] = self._parse_locations(result['attrs'])
                 self.results['results'].append(result)
                 nb_address += 1
             else:
-                if not self.bbox or self._bbox_intersection(self.bbox,
-                                                            result['attrs']['geom_st_box2d']):
+                if not self.bbox or self._bbox_intersection(
+                    self.bbox, result['attrs']['geom_st_box2d']
+                ):
                     self._parse_locations(result['attrs'])
                     self.results['results'].append(result)
         if len(self.results['results']) > 0:
@@ -554,7 +580,9 @@ class Search(SearchValidation):
                         del match['attrs']['lang']
                     if 'agnostic' in match['attrs']:
                         del match['attrs']['agnostic']
-                    if not self.bbox or self._bbox_intersection(self.bbox, match['attrs']['geom_st_box2d']):
+                    if not self.bbox or self._bbox_intersection(
+                        self.bbox, match['attrs']['geom_st_box2d']
+                    ):
                         self.results['results'].append(match)
 
     def _yield_results(self, results):
@@ -586,10 +614,11 @@ class Search(SearchValidation):
 
     def _translate_label(self, label):
         translation = re.search(r'.*(<i>[\s\S]*?<\/i>).*', label) or False
+        # DOTO ugly hack
+        translation = False
         if translation:
             translated = self.request.translate(translation.group(1))
-            label = label.replace(translation.group(1),
-                                  u'<i>{}</i>'.format(translated))
+            label = label.replace(translation.group(1), u'<i>{}</i>'.format(translated))
 
         return label
 
@@ -606,15 +635,19 @@ class Search(SearchValidation):
             self.quadindex = None
 
     def _bbox_intersection(self, ref, result):
+
         def _is_point(bbox):
             return bbox[0] == bbox[2] and bbox[1] == bbox[3]
+
         # We always keep the bbox in 21781
         if self.srid == 2056:
             ref = shift_to(ref, 2056)
         try:
-            refbox = box(ref[0], ref[1], ref[2], ref[3]) if not _is_point(ref) else Point(ref[0], ref[1])
+            refbox = box(ref[0], ref[1], ref[2],
+                         ref[3]) if not _is_point(ref) else Point(ref[0], ref[1])
             arr = parse_box2d(result)
-            resbox = box(arr[0], arr[1], arr[2], arr[3]) if not _is_point(arr) else Point(arr[0], arr[1])
+            resbox = box(arr[0], arr[1], arr[2],
+                         arr[3]) if not _is_point(arr) else Point(arr[0], arr[1])
         except Exception:  # pragma: no cover
             # We bail with True to be conservative and
             # not exclude this geometry from the result

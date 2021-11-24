@@ -2,18 +2,48 @@
 
 from pyramid.httpexceptions import HTTPBadRequest
 
-from chsdi.lib.helpers import float_raise_nan, shift_to, ilen
-from chsdi.lib.validation import MapNameValidation, SUPPORTED_OUTPUT_SRS
+from app.helpers.helpers_search import float_raise_nan, shift_to, ilen
+
+SUPPORTED_OUTPUT_SRS = (21781, 2056, 3857, 4326)
 
 MAX_SPHINX_INDEX_LENGTH = 63
 MAX_SEARCH_TERMS = 10
+
+
+class MapNameValidation(object):
+
+    def hasMap(self, db, mapName):
+        # DOTO - db connection and Topics Model here
+        # availableMaps = [q[0] for q in db.query(Topics.id)]
+        # availableMaps.append(u'all')
+
+        # if mapName not in availableMaps:
+        #    raise HTTPBadRequest('The map you provided does not exist')
+        if db or mapName:
+            pass
+
+
+class BaseValidation(MapNameValidation):
+
+    def __init__(self, request):
+        super(BaseValidation, self).__init__()
+
+        self.mapName = request.matchdict.get('map')
+        self.hasMap(request.db, self.mapName)
+        self.geodataStaging = request.registry.settings['geodata_staging']
+        self.cbName = request.params.get('callback')
+        self.request = request
+        self.lang = request.lang
+        self.translate = request.translate
 
 
 class SearchValidation(MapNameValidation):
 
     def __init__(self, request):
         super(SearchValidation, self).__init__()
-        self.availableLangs = request.registry.settings['available_languages'].split(' ')
+        # DOTO remove this hack
+        #self.availableLangs = request.registry.settings['available_languages'].split(' ')
+        self.availableLangs = ['de', 'fr', 'it', 'rm', 'en']
         self.locationTypes = [u'locations']
         self.layerTypes = [u'layers']
         self.featureTypes = [u'featuresearch']
@@ -97,8 +127,9 @@ class SearchValidation(MapNameValidation):
 
     @searchText.setter
     def searchText(self, value):
-        isSearchTextRequired = not bool(self.bbox is not None and
-            bool(set(self.locationTypes) & set([self.typeInfo])))
+        isSearchTextRequired = not bool(
+            self.bbox is not None and bool(set(self.locationTypes) & set([self.typeInfo]))
+        )
         if (value is None or value.strip() == '') and isSearchTextRequired:
             raise HTTPBadRequest("Please provide a search text")
         searchTextList = value.split(' ')
@@ -150,7 +181,9 @@ class SearchValidation(MapNameValidation):
             result = []
             for val in values:
                 if len(val) != 4 and len(val) != 0:
-                    raise HTTPBadRequest('Only years (4 digits) or empty strings are supported in timeStamps parameter')
+                    raise HTTPBadRequest(
+                        'Only years (4 digits) or empty strings are supported in timeStamps parameter'
+                    )
                 if len(val) == 0:
                     result.append(None)
                 else:
@@ -183,10 +216,14 @@ class SearchValidation(MapNameValidation):
     def typeInfo(self, value):
         if value is None:
             raise HTTPBadRequest(
-                'Please provide a type parameter. Possible values are %s' % (', '.join(self.supportedTypes)))
+                'Please provide a type parameter. Possible values are %s' %
+                (', '.join(self.supportedTypes))
+            )
         elif value not in self.supportedTypes:
             raise HTTPBadRequest(
-                'The type parameter you provided is not valid. Possible values are %s' % (', '.join(self.supportedTypes)))
+                'The type parameter you provided is not valid. Possible values are %s' %
+                (', '.join(self.supportedTypes))
+            )
         self._typeInfo = value
 
     @limit.setter

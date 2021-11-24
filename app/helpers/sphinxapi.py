@@ -21,114 +21,108 @@ import re
 from struct import pack, unpack
 import six
 
-if six.PY3:
-    long = int
-    text_type = str
-else:
-    text_type = unicode
+long = int
+text_type = str
 
 
-if six.PY3:
-    def str_bytes(x):
-        return bytearray(x, 'utf-8')
-else:
-    def str_bytes(x):
-        if isinstance(x,unicode):
-            return bytearray(x, 'utf-8')
-        else:
-            return bytearray(x)
+def str_bytes(x):
+    return bytearray(x, 'utf-8')
+
 
 def bytes_str(x):
     assert (isinstance(x, bytearray))
     return x.decode('utf-8')
 
+
 # known searchd commands
-SEARCHD_COMMAND_SEARCH      = 0
-SEARCHD_COMMAND_EXCERPT     = 1
-SEARCHD_COMMAND_UPDATE      = 2
-SEARCHD_COMMAND_KEYWORDS    = 3
-SEARCHD_COMMAND_PERSIST     = 4
-SEARCHD_COMMAND_STATUS      = 5
-SEARCHD_COMMAND_FLUSHATTRS  = 7
+SEARCHD_COMMAND_SEARCH = 0
+SEARCHD_COMMAND_EXCERPT = 1
+SEARCHD_COMMAND_UPDATE = 2
+SEARCHD_COMMAND_KEYWORDS = 3
+SEARCHD_COMMAND_PERSIST = 4
+SEARCHD_COMMAND_STATUS = 5
+SEARCHD_COMMAND_FLUSHATTRS = 7
 
 # current client-side command implementation versions
-VER_COMMAND_SEARCH      = 0x119
-VER_COMMAND_EXCERPT     = 0x104
-VER_COMMAND_UPDATE      = 0x102
-VER_COMMAND_KEYWORDS    = 0x100
-VER_COMMAND_STATUS      = 0x100
-VER_COMMAND_FLUSHATTRS  = 0x100
+VER_COMMAND_SEARCH = 0x119
+VER_COMMAND_EXCERPT = 0x104
+VER_COMMAND_UPDATE = 0x102
+VER_COMMAND_KEYWORDS = 0x100
+VER_COMMAND_STATUS = 0x100
+VER_COMMAND_FLUSHATTRS = 0x100
 
 # known searchd status codes
-SEARCHD_OK              = 0
-SEARCHD_ERROR           = 1
-SEARCHD_RETRY           = 2
-SEARCHD_WARNING         = 3
+SEARCHD_OK = 0
+SEARCHD_ERROR = 1
+SEARCHD_RETRY = 2
+SEARCHD_WARNING = 3
 
 # known match modes
-SPH_MATCH_ALL           = 0
-SPH_MATCH_ANY           = 1
-SPH_MATCH_PHRASE        = 2
-SPH_MATCH_BOOLEAN       = 3
-SPH_MATCH_EXTENDED      = 4
-SPH_MATCH_FULLSCAN      = 5
-SPH_MATCH_EXTENDED2     = 6
+SPH_MATCH_ALL = 0
+SPH_MATCH_ANY = 1
+SPH_MATCH_PHRASE = 2
+SPH_MATCH_BOOLEAN = 3
+SPH_MATCH_EXTENDED = 4
+SPH_MATCH_FULLSCAN = 5
+SPH_MATCH_EXTENDED2 = 6
 
 # known ranking modes (extended2 mode only)
 SPH_RANK_PROXIMITY_BM25 = 0  # default mode, phrase proximity major factor and BM25 minor one
-SPH_RANK_BM25           = 1  # statistical mode, BM25 ranking only (faster but worse quality)
-SPH_RANK_NONE           = 2  # no ranking, all matches get a weight of 1
-SPH_RANK_WORDCOUNT      = 3  # simple word-count weighting, rank is a weighted sum of per-field keyword occurence counts
-SPH_RANK_PROXIMITY      = 4
-SPH_RANK_MATCHANY       = 5
-SPH_RANK_FIELDMASK      = 6
-SPH_RANK_SPH04          = 7
-SPH_RANK_EXPR           = 8
-SPH_RANK_TOTAL          = 9
+SPH_RANK_BM25 = 1  # statistical mode, BM25 ranking only (faster but worse quality)
+SPH_RANK_NONE = 2  # no ranking, all matches get a weight of 1
+SPH_RANK_WORDCOUNT = 3  # simple word-count weighting, rank is a weighted sum of per-field keyword occurence counts
+SPH_RANK_PROXIMITY = 4
+SPH_RANK_MATCHANY = 5
+SPH_RANK_FIELDMASK = 6
+SPH_RANK_SPH04 = 7
+SPH_RANK_EXPR = 8
+SPH_RANK_TOTAL = 9
 
 # known sort modes
-SPH_SORT_RELEVANCE      = 0
-SPH_SORT_ATTR_DESC      = 1
-SPH_SORT_ATTR_ASC       = 2
-SPH_SORT_TIME_SEGMENTS  = 3
-SPH_SORT_EXTENDED       = 4
-SPH_SORT_EXPR           = 5
+SPH_SORT_RELEVANCE = 0
+SPH_SORT_ATTR_DESC = 1
+SPH_SORT_ATTR_ASC = 2
+SPH_SORT_TIME_SEGMENTS = 3
+SPH_SORT_EXTENDED = 4
+SPH_SORT_EXPR = 5
 
 # known filter types
-SPH_FILTER_VALUES       = 0
-SPH_FILTER_RANGE        = 1
-SPH_FILTER_FLOATRANGE   = 2
+SPH_FILTER_VALUES = 0
+SPH_FILTER_RANGE = 1
+SPH_FILTER_FLOATRANGE = 2
 
 # known attribute types
-SPH_ATTR_NONE           = 0
-SPH_ATTR_INTEGER        = 1
-SPH_ATTR_TIMESTAMP      = 2
-SPH_ATTR_ORDINAL        = 3
-SPH_ATTR_BOOL           = 4
-SPH_ATTR_FLOAT          = 5
-SPH_ATTR_BIGINT         = 6
-SPH_ATTR_STRING         = 7
-SPH_ATTR_MULTI          = long(0X40000001)
-SPH_ATTR_MULTI64        = long(0X40000002)
+SPH_ATTR_NONE = 0
+SPH_ATTR_INTEGER = 1
+SPH_ATTR_TIMESTAMP = 2
+SPH_ATTR_ORDINAL = 3
+SPH_ATTR_BOOL = 4
+SPH_ATTR_FLOAT = 5
+SPH_ATTR_BIGINT = 6
+SPH_ATTR_STRING = 7
+SPH_ATTR_MULTI = long(0X40000001)
+SPH_ATTR_MULTI64 = long(0X40000002)
 
-SPH_ATTR_TYPES = (SPH_ATTR_NONE,
-                  SPH_ATTR_INTEGER,
-                  SPH_ATTR_TIMESTAMP,
-                  SPH_ATTR_ORDINAL,
-                  SPH_ATTR_BOOL,
-                  SPH_ATTR_FLOAT,
-                  SPH_ATTR_BIGINT,
-                  SPH_ATTR_STRING,
-                  SPH_ATTR_MULTI,
-                  SPH_ATTR_MULTI64)
+SPH_ATTR_TYPES = (
+    SPH_ATTR_NONE,
+    SPH_ATTR_INTEGER,
+    SPH_ATTR_TIMESTAMP,
+    SPH_ATTR_ORDINAL,
+    SPH_ATTR_BOOL,
+    SPH_ATTR_FLOAT,
+    SPH_ATTR_BIGINT,
+    SPH_ATTR_STRING,
+    SPH_ATTR_MULTI,
+    SPH_ATTR_MULTI64
+)
 
 # known grouping functions
-SPH_GROUPBY_DAY         = 0
-SPH_GROUPBY_WEEK        = 1
-SPH_GROUPBY_MONTH       = 2
-SPH_GROUPBY_YEAR        = 3
-SPH_GROUPBY_ATTR        = 4
-SPH_GROUPBY_ATTRPAIR    = 5
+SPH_GROUPBY_DAY = 0
+SPH_GROUPBY_WEEK = 1
+SPH_GROUPBY_MONTH = 2
+SPH_GROUPBY_YEAR = 3
+SPH_GROUPBY_ATTR = 4
+SPH_GROUPBY_ATTRPAIR = 5
 
 
 class SphinxClient:
@@ -137,41 +131,45 @@ class SphinxClient:
         """
         Create a new client object, and fill defaults.
         """
-        self._host          = 'localhost'                   # searchd host (default is "localhost")
-        self._port          = 9312                          # searchd port (default is 9312)
-        self._path          = None                          # searchd unix-domain socket path
-        self._socket        = None
-        self._offset        = 0                             # how much records to seek from result-set start (default is 0)
-        self._limit         = 20                            # how much records to return from result-set starting at offset (default is 20)
-        self._mode          = SPH_MATCH_ALL                 # query matching mode (default is SPH_MATCH_ALL)
-        self._weights       = []                            # per-field weights (default is 1 for all fields)
-        self._sort          = SPH_SORT_RELEVANCE            # match sorting mode (default is SPH_SORT_RELEVANCE)
-        self._sortby        = bytearray()                   # attribute to sort by (defualt is "")
-        self._min_id        = 0                             # min ID to match (default is 0)
-        self._max_id        = 0                             # max ID to match (default is UINT_MAX)
-        self._filters       = []                            # search filters
-        self._groupby       = bytearray()                   # group-by attribute name
-        self._groupfunc     = SPH_GROUPBY_DAY               # group-by function (to pre-process group-by attribute value with)
-        self._groupsort     = str_bytes('@group desc')      # group-by sorting clause (to sort groups in result set with)
-        self._groupdistinct = bytearray()                   # group-by count-distinct attribute
-        self._maxmatches    = 1000                          # max matches to retrieve
-        self._cutoff        = 0                             # cutoff to stop searching at
-        self._retrycount    = 0                             # distributed retry count
-        self._retrydelay    = 0                             # distributed retry delay
-        self._anchor        = {}                            # geographical anchor point
-        self._indexweights  = {}                            # per-index weights
-        self._ranker        = SPH_RANK_PROXIMITY_BM25       # ranking mode
-        self._rankexpr      = bytearray()                   # ranking expression for SPH_RANK_EXPR
-        self._maxquerytime  = 0                             # max query time, milliseconds (default is 0, do not limit)
-        self._timeout = 1.0                                     # connection timeout
-        self._fieldweights  = {}                            # per-field-name weights
-        self._overrides     = {}                            # per-query attribute values overrides
-        self._select        = str_bytes('*')                # select-list (attributes or expressions, with optional aliases)
-        self._query_flags   = SetBit ( 0, 6, True  )            # default idf=tfidf_normalized
+        self._host = 'localhost'  # searchd host (default is "localhost")
+        self._port = 9312  # searchd port (default is 9312)
+        self._path = None  # searchd unix-domain socket path
+        self._socket = None
+        self._offset = 0  # how much records to seek from result-set start (default is 0)
+        self._limit = 20  # how much records to return from result-set starting at offset (default is 20)
+        self._mode = SPH_MATCH_ALL  # query matching mode (default is SPH_MATCH_ALL)
+        self._weights = []  # per-field weights (default is 1 for all fields)
+        self._sort = SPH_SORT_RELEVANCE  # match sorting mode (default is SPH_SORT_RELEVANCE)
+        self._sortby = bytearray()  # attribute to sort by (defualt is "")
+        self._min_id = 0  # min ID to match (default is 0)
+        self._max_id = 0  # max ID to match (default is UINT_MAX)
+        self._filters = []  # search filters
+        self._groupby = bytearray()  # group-by attribute name
+        self._groupfunc = SPH_GROUPBY_DAY  # group-by function (to pre-process group-by attribute value with)
+        self._groupsort = str_bytes(
+            '@group desc'
+        )  # group-by sorting clause (to sort groups in result set with)
+        self._groupdistinct = bytearray()  # group-by count-distinct attribute
+        self._maxmatches = 1000  # max matches to retrieve
+        self._cutoff = 0  # cutoff to stop searching at
+        self._retrycount = 0  # distributed retry count
+        self._retrydelay = 0  # distributed retry delay
+        self._anchor = {}  # geographical anchor point
+        self._indexweights = {}  # per-index weights
+        self._ranker = SPH_RANK_PROXIMITY_BM25  # ranking mode
+        self._rankexpr = bytearray()  # ranking expression for SPH_RANK_EXPR
+        self._maxquerytime = 0  # max query time, milliseconds (default is 0, do not limit)
+        self._timeout = 1.0  # connection timeout
+        self._fieldweights = {}  # per-field-name weights
+        self._overrides = {}  # per-query attribute values overrides
+        self._select = str_bytes(
+            '*'
+        )  # select-list (attributes or expressions, with optional aliases)
+        self._query_flags = SetBit(0, 6, True)  # default idf=tfidf_normalized
 
-        self._error         = bytearray()                   # last error message
-        self._warning       = bytearray()                   # last warning message
-        self._reqs          = []                            # requests array for multi-query
+        self._error = bytearray()  # last error message
+        self._warning = bytearray()  # last warning message
+        self._reqs = []  # requests array for multi-query
 
     def __del__(self):
         if self._socket:
@@ -189,11 +187,11 @@ class SphinxClient:
         """
         return self._warning
 
-    def SetServer(self, host, port = None):
+    def SetServer(self, host, port=None):
         """
         Set searchd server host and port.
         """
-        assert(isinstance(host, str))
+        assert (isinstance(host, str))
         if host.startswith('/'):
             self._path = host
             return
@@ -202,7 +200,7 @@ class SphinxClient:
             return
         self._host = host
         if isinstance(port, int):
-            assert(port > 0 and port < 65536)
+            assert (port > 0 and port < 65536)
             self._port = port
         self._path = None
 
@@ -297,7 +295,7 @@ class SphinxClient:
             return None
 
         if status == SEARCHD_RETRY:
-            self._error = 'temporary searchd error: '  + bytes_str(response[4:])
+            self._error = 'temporary searchd error: ' + bytes_str(response[4:])
             return None
 
         if status != SEARCHD_OK:
@@ -331,7 +329,7 @@ class SphinxClient:
         """
         assert (type(offset) in [int, long] and 0 <= offset < 16777216)
         assert (type(limit) in [int, long] and 0 < limit < 16777216)
-        assert(maxmatches >= 0)
+        assert (maxmatches >= 0)
         self._offset = offset
         self._limit = limit
         if maxmatches > 0:
@@ -343,21 +341,31 @@ class SphinxClient:
         """
         Set maximum query time, in milliseconds, per-index. 0 means 'do not limit'.
         """
-        assert(isinstance(maxquerytime, int) and maxquerytime > 0)
+        assert (isinstance(maxquerytime, int) and maxquerytime > 0)
         self._maxquerytime = maxquerytime
 
     def SetMatchMode(self, mode):
         """
         Set matching mode.
         """
-        assert(mode in [SPH_MATCH_ALL, SPH_MATCH_ANY, SPH_MATCH_PHRASE, SPH_MATCH_BOOLEAN, SPH_MATCH_EXTENDED, SPH_MATCH_FULLSCAN, SPH_MATCH_EXTENDED2])
+        assert (
+            mode in [
+                SPH_MATCH_ALL,
+                SPH_MATCH_ANY,
+                SPH_MATCH_PHRASE,
+                SPH_MATCH_BOOLEAN,
+                SPH_MATCH_EXTENDED,
+                SPH_MATCH_FULLSCAN,
+                SPH_MATCH_EXTENDED2
+            ]
+        )
         self._mode = mode
 
     def SetRankingMode(self, ranker, rankexpr=''):
         """
         Set ranking mode.
         """
-        assert(ranker >= 0 and ranker < SPH_RANK_TOTAL)
+        assert (ranker >= 0 and ranker < SPH_RANK_TOTAL)
         self._ranker = ranker
         self._rankexpr = str_bytes(rankexpr)
 
@@ -365,8 +373,17 @@ class SphinxClient:
         """
         Set sorting mode.
         """
-        assert (mode in [SPH_SORT_RELEVANCE, SPH_SORT_ATTR_DESC, SPH_SORT_ATTR_ASC, SPH_SORT_TIME_SEGMENTS, SPH_SORT_EXTENDED, SPH_SORT_EXPR])
-        assert ( isinstance ( clause, (str,text_type)  )  )
+        assert (
+            mode in [
+                SPH_SORT_RELEVANCE,
+                SPH_SORT_ATTR_DESC,
+                SPH_SORT_ATTR_ASC,
+                SPH_SORT_TIME_SEGMENTS,
+                SPH_SORT_EXTENDED,
+                SPH_SORT_EXPR
+            ]
+        )
+        assert (isinstance(clause, (str, text_type)))
         self._sort = mode
         self._sortby = str_bytes(clause)
 
@@ -375,7 +392,7 @@ class SphinxClient:
         Set per-field weights.
         WARNING, DEPRECATED; do not use it! use SetFieldWeights() instead
         """
-        assert(isinstance(weights, list))
+        assert (isinstance(weights, list))
         for w in weights:
             AssertUInt32(w)
         self._weights = weights
@@ -384,9 +401,9 @@ class SphinxClient:
         """
         Bind per-field weights by name; expects (name,field_weight) dictionary as argument.
         """
-        assert(isinstance(weights, dict))
-        for key,val in list(weights.items()):
-            assert(isinstance(key, str))
+        assert (isinstance(weights, dict))
+        for key, val in list(weights.items()):
+            assert (isinstance(key, str))
             AssertUInt32(val)
         self._fieldweights = weights
 
@@ -394,9 +411,9 @@ class SphinxClient:
         """
         Bind per-index weights by name; expects (name,index_weight) dictionary as argument.
         """
-        assert(isinstance(weights, dict))
-        for key,val in list(weights.items()):
-            assert(isinstance(key, str))
+        assert (isinstance(weights, dict))
+        for key, val in list(weights.items()):
+            assert (isinstance(key, str))
             AssertUInt32(val)
         self._indexweights = weights
 
@@ -405,9 +422,9 @@ class SphinxClient:
         Set IDs range to match.
         Only match records if document ID is beetwen $min and $max (inclusive).
         """
-        assert(isinstance(minid, (int, long)))
-        assert(isinstance(maxid, (int, long)))
-        assert(minid <= maxid)
+        assert (isinstance(minid, (int, long)))
+        assert (isinstance(maxid, (int, long)))
+        assert (minid <= maxid)
         self._min_id = minid
         self._max_id = maxid
 
@@ -416,38 +433,58 @@ class SphinxClient:
         Set values set filter.
         Only match records where 'attribute' value is in given 'values' set.
         """
-        assert(isinstance(attribute, str))
+        assert (isinstance(attribute, str))
         assert iter(values)
 
         for value in values:
             AssertInt32(value)
 
-        self._filters.append({'type': SPH_FILTER_VALUES, 'attr': attribute, 'exclude': exclude, 'values': values})
+        self._filters.append(
+            {
+                'type': SPH_FILTER_VALUES, 'attr': attribute, 'exclude': exclude, 'values': values
+            }
+        )
 
     def SetFilterRange(self, attribute, min_, max_, exclude=0):
         """
         Set range filter.
         Only match records if 'attribute' value is beetwen 'min_' and 'max_' (inclusive).
         """
-        assert(isinstance(attribute, str))
+        assert (isinstance(attribute, str))
         AssertInt32(min_)
         AssertInt32(max_)
-        assert(min_ <= max_)
+        assert (min_ <= max_)
 
-        self._filters.append({'type': SPH_FILTER_RANGE, 'attr': attribute, 'exclude': exclude, 'min': min_, 'max': max_})
+        self._filters.append(
+            {
+                'type': SPH_FILTER_RANGE,
+                'attr': attribute,
+                'exclude': exclude,
+                'min': min_,
+                'max': max_
+            }
+        )
 
     def SetFilterFloatRange(self, attribute, min_, max_, exclude=0):
-        assert(isinstance(attribute, str))
-        assert(isinstance(min_, float))
-        assert(isinstance(max_, float))
-        assert(min_ <= max_)
-        self._filters.append({'type': SPH_FILTER_FLOATRANGE, 'attr': attribute, 'exclude': exclude, 'min': min_, 'max': max_})
+        assert (isinstance(attribute, str))
+        assert (isinstance(min_, float))
+        assert (isinstance(max_, float))
+        assert (min_ <= max_)
+        self._filters.append(
+            {
+                'type': SPH_FILTER_FLOATRANGE,
+                'attr': attribute,
+                'exclude': exclude,
+                'min': min_,
+                'max': max_
+            }
+        )
 
     def SetGeoAnchor(self, attrlat, attrlong, latitude, longitude):
-        assert(isinstance(attrlat, str))
-        assert(isinstance(attrlong, str))
-        assert(isinstance(latitude, float))
-        assert(isinstance(longitude, float))
+        assert (isinstance(attrlat, str))
+        assert (isinstance(attrlong, str))
+        assert (isinstance(latitude, float))
+        assert (isinstance(longitude, float))
         self._anchor['attrlat'] = attrlat
         self._anchor['attrlong'] = attrlong
         self._anchor['lat'] = latitude
@@ -457,9 +494,18 @@ class SphinxClient:
         """
         Set grouping attribute and function.
         """
-        assert(isinstance(attribute, str))
-        assert(func in [SPH_GROUPBY_DAY, SPH_GROUPBY_WEEK, SPH_GROUPBY_MONTH, SPH_GROUPBY_YEAR, SPH_GROUPBY_ATTR, SPH_GROUPBY_ATTRPAIR])
-        assert(isinstance(groupsort, str))
+        assert (isinstance(attribute, str))
+        assert (
+            func in [
+                SPH_GROUPBY_DAY,
+                SPH_GROUPBY_WEEK,
+                SPH_GROUPBY_MONTH,
+                SPH_GROUPBY_YEAR,
+                SPH_GROUPBY_ATTR,
+                SPH_GROUPBY_ATTRPAIR
+            ]
+        )
+        assert (isinstance(groupsort, str))
 
         self._groupby = attribute
         self._groupfunc = func
@@ -467,24 +513,24 @@ class SphinxClient:
         self._groupsort = str_bytes(groupsort)
 
     def SetGroupDistinct(self, attribute):
-        assert(isinstance(attribute,(str,text_type)))
+        assert (isinstance(attribute, (str, text_type)))
         self._groupdistinct = str_bytes(attribute)
 
     def SetRetries(self, count, delay=0):
-        assert(isinstance(count, int) and count >= 0)
-        assert(isinstance(delay, int) and delay >= 0)
+        assert (isinstance(count, int) and count >= 0)
+        assert (isinstance(delay, int) and delay >= 0)
         self._retrycount = count
         self._retrydelay = delay
 
     def SetOverride(self, name, type, values):
-        assert(isinstance(name, str))
-        assert(type in SPH_ATTR_TYPES)
-        assert(isinstance(values, dict))
+        assert (isinstance(name, str))
+        assert (type in SPH_ATTR_TYPES)
+        assert (isinstance(values, dict))
 
         self._overrides[name] = {'name': name, 'type': type, 'values': values}
 
     def SetSelect(self, select):
-        assert(isinstance(select, str))
+        assert (isinstance(select, str))
         self._select = select
 
     def ResetOverrides(self):
@@ -519,7 +565,7 @@ class SphinxClient:
         Connect to searchd server and run given search query.
         Returns None on failure; result set hash on success (see documentation for details).
         """
-        assert(len(self._reqs) == 0)
+        assert (len(self._reqs) == 0)
         self.AddQuery(query, index, comment)
         results = self.RunQueries()
         self._reqs = []  # we won't re-run erroneous batch
@@ -532,14 +578,14 @@ class SphinxClient:
             return None
         return results[0]
 
-    def AddQuery (self, query, index='*', comment=''):
+    def AddQuery(self, query, index='*', comment=''):
         """
         Add query to batch.
         """
         # build request
         req = bytearray()
         req.extend(pack('>4L', self._offset, self._limit, self._mode, self._ranker))
-        if self._ranker==SPH_RANK_EXPR:
+        if self._ranker == SPH_RANK_EXPR:
             req.extend(pack('>L', len(self._rankexpr)))
             req.extend(self._rankexpr)
         req.extend(pack('>L', self._sort))
@@ -547,7 +593,7 @@ class SphinxClient:
         req.extend(self._sortby)
 
         query = str_bytes(query)
-        assert(isinstance(query,bytearray))
+        assert (isinstance(query, bytearray))
 
         req.extend(pack('>L', len(query)))
         req.extend(query)
@@ -556,99 +602,99 @@ class SphinxClient:
         for w in self._weights:
             req.extend(pack('>L', w))
         index = str_bytes(index)
-        assert(isinstance(index,bytearray))
+        assert (isinstance(index, bytearray))
         req.extend(pack('>L', len(index)))
         req.extend(index)
-        req.extend(pack('>L',1)) # id64 range marker
+        req.extend(pack('>L', 1))  # id64 range marker
         req.extend(pack('>Q', self._min_id))
         req.extend(pack('>Q', self._max_id))
-        
+
         # filters
-        req.extend ( pack ( '>L', len(self._filters) ) )
+        req.extend(pack('>L', len(self._filters)))
         for f in self._filters:
             attr = str_bytes(f['attr'])
-            req.extend ( pack ( '>L', len(f['attr'])) + attr)
+            req.extend(pack('>L', len(f['attr'])) + attr)
             filtertype = f['type']
-            req.extend ( pack ( '>L', filtertype))
+            req.extend(pack('>L', filtertype))
             if filtertype == SPH_FILTER_VALUES:
-                req.extend ( pack ('>L', len(f['values'])))
+                req.extend(pack('>L', len(f['values'])))
                 for val in f['values']:
-                    req.extend ( pack ('>q', val))
+                    req.extend(pack('>q', val))
             elif filtertype == SPH_FILTER_RANGE:
-                req.extend ( pack ('>2q', f['min'], f['max']))
+                req.extend(pack('>2q', f['min'], f['max']))
             elif filtertype == SPH_FILTER_FLOATRANGE:
-                req.extend ( pack ('>2f', f['min'], f['max']))
+                req.extend(pack('>2f', f['min'], f['max']))
             elif filtertype == SPH_FILTER_STRING:
                 val = str_bytes(f['value'])
-                req.extend ( pack ( '>L', len(val) ) )
-                req.extend ( val )
+                req.extend(pack('>L', len(val)))
+                req.extend(val)
             elif filtertype == SPH_FILTER_STRING_LIST:
-                req.extend ( pack ('>L', len(f['values'])))
+                req.extend(pack('>L', len(f['values'])))
                 for sval in f['values']:
-                    val = str_bytes( sval )
-                    req.extend ( pack ( '>L', len(val) ) )
+                    val = str_bytes(sval)
+                    req.extend(pack('>L', len(val)))
                     req.extend(val)
-            req.extend ( pack ( '>L', f['exclude'] ) )
+            req.extend(pack('>L', f['exclude']))
 
         # group-by, max-matches, group-sort
-        req.extend ( pack ( '>2L', self._groupfunc, len(self._groupby) ) )
-        req.extend ( self._groupby )
-        req.extend ( pack ( '>2L', self._maxmatches, len(self._groupsort) ) )
+        req.extend(pack('>2L', self._groupfunc, len(self._groupby)))
+        req.extend(self._groupby)
+        req.extend(pack('>2L', self._maxmatches, len(self._groupsort)))
         # TODO Python2/3
         # _groupsort is a str
-        req.extend ( self._groupsort )
-        req.extend ( pack ( '>LLL', self._cutoff, self._retrycount, self._retrydelay))
-        req.extend ( pack ( '>L', len(self._groupdistinct)))
-        req.extend ( self._groupdistinct)
+        req.extend(self._groupsort)
+        req.extend(pack('>LLL', self._cutoff, self._retrycount, self._retrydelay))
+        req.extend(pack('>L', len(self._groupdistinct)))
+        req.extend(self._groupdistinct)
 
         # anchor point
         if len(self._anchor) == 0:
-            req.extend ( pack ('>L', 0))
+            req.extend(pack('>L', 0))
         else:
             attrlat, attrlong = str_bytes(self._anchor['attrlat']), str_bytes(self._anchor['attrlong'])
             latitude, longitude = self._anchor['lat'], self._anchor['long']
-            req.extend ( pack ('>L', 1))
-            req.extend ( pack ('>L', len(attrlat)) + attrlat)
-            req.extend ( pack ('>L', len(attrlong)) + attrlong)
-            req.extend ( pack ('>f', latitude) + pack ('>f', longitude))
+            req.extend(pack('>L', 1))
+            req.extend(pack('>L', len(attrlat)) + attrlat)
+            req.extend(pack('>L', len(attrlong)) + attrlong)
+            req.extend(pack('>f', latitude) + pack('>f', longitude))
 
         # per-index weights
-        req.extend ( pack ('>L',len(self._indexweights)))
-        for indx,weight in list(self._indexweights.items()):
+        req.extend(pack('>L', len(self._indexweights)))
+        for indx, weight in list(self._indexweights.items()):
             indx = str_bytes(indx)
-            req.extend ( pack ('>L',len(indx)) + indx + pack ('>L',weight))
+            req.extend(pack('>L', len(indx)) + indx + pack('>L', weight))
 
         # max query time
-        req.extend ( pack ('>L', self._maxquerytime) )
+        req.extend(pack('>L', self._maxquerytime))
 
         # per-field weights
-        req.extend ( pack ('>L',len(self._fieldweights) ) )
-        for field,weight in list(self._fieldweights.items()):
+        req.extend(pack('>L', len(self._fieldweights)))
+        for field, weight in list(self._fieldweights.items()):
             field = str_bytes(field)
-            req.extend ( pack ('>L',len(field)) + field + pack ('>L',weight) )
+            req.extend(pack('>L', len(field)) + field + pack('>L', weight))
 
         # comment
         comment = str_bytes(comment)
-        req.extend ( pack('>L',len(comment)) + comment )
+        req.extend(pack('>L', len(comment)) + comment)
 
         # attribute overrides
-        req.extend ( pack('>L', len(self._overrides)) )
+        req.extend(pack('>L', len(self._overrides)))
         for v in list(self._overrides.values()):
             name = str_bytes(v['name'])
-            req.extend ( ( pack('>L', len(name)), name ) )
-            req.extend ( pack('>LL', v['type'], len(v['values'])) )
+            req.extend((pack('>L', len(name)), name))
+            req.extend(pack('>LL', v['type'], len(v['values'])))
             for id, value in v['values'].items():
-                req.extend ( pack('>Q', id) )
+                req.extend(pack('>Q', id))
                 if v['type'] == SPH_ATTR_FLOAT:
-                    req.extend ( pack('>f', value) )
+                    req.extend(pack('>f', value))
                 elif v['type'] == SPH_ATTR_BIGINT:
-                    req.extend ( pack('>q', value) )
+                    req.extend(pack('>q', value))
                 else:
-                    req.extend ( pack('>l', value) )
+                    req.extend(pack('>l', value))
 
         # select-list
-        req.extend ( pack('>L', len(self._select)) )
-        req.extend ( self._select )
+        req.extend(pack('>L', len(self._select)))
+        req.extend(self._select)
         #if self._predictedtime>0:
         #    req.extend ( pack('>L', self._predictedtime ) )
 
@@ -664,7 +710,7 @@ class SphinxClient:
         # req.extend ( pack('>L',len(self._tokenfilterlibrary)) + self._tokenfilterlibrary )
         # req.extend ( pack('>L',len(self._tokenfiltername)) + self._tokenfiltername )
         # req.extend ( pack('>L',len(self._tokenfilteropts)) + self._tokenfilteropts )
-            
+
         # send query, get response
 
         self._reqs.append(req)
@@ -688,9 +734,11 @@ class SphinxClient:
             req.extend(r)
         length = len(req) + 8
         req_all = bytearray()
-        req_all.extend(pack('>HHLLL', SEARCHD_COMMAND_SEARCH, VER_COMMAND_SEARCH, length, 0, len(self._reqs)))
+        req_all.extend(
+            pack('>HHLLL', SEARCHD_COMMAND_SEARCH, VER_COMMAND_SEARCH, length, 0, len(self._reqs))
+        )
         req_all.extend(req)
-        self._Send ( sock, req_all )
+        self._Send(sock, req_all)
 
         response = self._GetResponse(sock, VER_COMMAND_SEARCH)
         if not response:
@@ -715,12 +763,12 @@ class SphinxClient:
             if status != SEARCHD_OK:
                 length = unpack('>L', response[p:p + 4])[0]
                 p += 4
-                message = bytes_str(response[p:p+length])
+                message = bytes_str(response[p:p + length])
                 p += length
 
                 if status == SEARCHD_WARNING:
                     result['warning'] = message
-                    
+
                 else:
                     result['error'] = message
                     continue
@@ -735,7 +783,7 @@ class SphinxClient:
                 nfields -= 1
                 length = unpack('>L', response[p:p + 4])[0]
                 p += 4
-                fields.append(bytes_str(response[p:p+length]))
+                fields.append(bytes_str(response[p:p + length]))
                 p += length
 
             result['fields'] = fields
@@ -746,7 +794,7 @@ class SphinxClient:
                 nattrs -= 1
                 length = unpack('>L', response[p:p + 4])[0]
                 p += 4
-                attr = bytes_str(response[p:p+length])
+                attr = bytes_str(response[p:p + length])
                 p += length
                 type_ = unpack('>L', response[p:p + 4])[0]
                 p += 4
@@ -783,7 +831,7 @@ class SphinxClient:
                         p += 4
                         match['attrs'][attrs[i][0]] = ''
                         if slen > 0:
-                            match['attrs'][attrs[i][0]] = bytes_str(response[p:p+slen])
+                            match['attrs'][attrs[i][0]] = bytes_str(response[p:p + slen])
                         p += slen - 4
                     elif attrs[i][1] == SPH_ATTR_MULTI:
                         match['attrs'][attrs[i][0]] = []
@@ -818,7 +866,7 @@ class SphinxClient:
                 words -= 1
                 length = unpack('>L', response[p:p + 4])[0]
                 p += 4
-                word = bytes_str(response[p:p+length])
+                word = bytes_str(response[p:p + length])
                 p += length
                 docs, hits = unpack('>2L', response[p:p + 8])
                 p += 8
@@ -828,17 +876,17 @@ class SphinxClient:
         self._reqs = []
         return results
 
-    def BuildExcerpts (self, docs, index, words, opts=None):
+    def BuildExcerpts(self, docs, index, words, opts=None):
         """
         Connect to searchd server and generate exceprts from given documents.
         """
         if not opts:
             opts = {}
 
-        assert(isinstance(docs, list))
-        assert(isinstance(index, (str,text_type)))
-        assert(isinstance(words, (str,text_type)))
-        assert(isinstance(opts, dict))
+        assert (isinstance(docs, list))
+        assert (isinstance(index, (str, text_type)))
+        assert (isinstance(words, (str, text_type)))
+        assert (isinstance(opts, dict))
 
         sock = self._Connect()
 
@@ -860,18 +908,28 @@ class SphinxClient:
         # build request
         # v.1.0 req
 
-        flags = 1 # (remove spaces)
-        if opts.get('exact_phrase'):    flags |= 2
-        if opts.get('single_passage'):  flags |= 4
-        if opts.get('use_boundaries'):  flags |= 8
-        if opts.get('weight_order'):    flags |= 16
-        if opts.get('query_mode'):              flags |= 32
-        if opts.get('force_all_words'): flags |= 64
-        if opts.get('load_files'):              flags |= 128
-        if opts.get('allow_empty'):             flags |= 256
-        if opts.get('emit_zones'):              flags |= 512
-        if opts.get('load_files_scattered'):    flags |= 1024
-        
+        flags = 1  # (remove spaces)
+        if opts.get('exact_phrase'):
+            flags |= 2
+        if opts.get('single_passage'):
+            flags |= 4
+        if opts.get('use_boundaries'):
+            flags |= 8
+        if opts.get('weight_order'):
+            flags |= 16
+        if opts.get('query_mode'):
+            flags |= 32
+        if opts.get('force_all_words'):
+            flags |= 64
+        if opts.get('load_files'):
+            flags |= 128
+        if opts.get('allow_empty'):
+            flags |= 256
+        if opts.get('emit_zones'):
+            flags |= 512
+        if opts.get('load_files_scattered'):
+            flags |= 1024
+
         # mode=0, flags
         req = bytearray()
         req.extend(pack('>2L', 0, flags))
@@ -901,7 +959,7 @@ class SphinxClient:
 
         req.extend(pack('>L', int(opts['limit'])))
         req.extend(pack('>L', int(opts['around'])))
-        
+
         req.extend(pack('>L', int(opts['limit_passages'])))
         req.extend(pack('>L', int(opts['limit_words'])))
         req.extend(pack('>L', int(opts['start_passage_id'])))
@@ -926,9 +984,9 @@ class SphinxClient:
         req_head = bytearray()
         req_head.extend(pack('>2HL', SEARCHD_COMMAND_EXCERPT, VER_COMMAND_EXCERPT, length))
         req_all = req_head + req
-        self._Send ( sock, req_all )
+        self._Send(sock, req_all)
 
-        response = self._GetResponse(sock, VER_COMMAND_EXCERPT )
+        response = self._GetResponse(sock, VER_COMMAND_EXCERPT)
         if not response:
             return []
 
@@ -938,14 +996,14 @@ class SphinxClient:
         rlen = len(response)
 
         for i in range(len(docs)):
-            length = unpack('>L', response[pos:pos+4])[0]
+            length = unpack('>L', response[pos:pos + 4])[0]
             pos += 4
 
-            if pos+length > rlen:
+            if pos + length > rlen:
                 self._error = 'incomplete reply'
                 return []
 
-            res.append(bytes_str(response[pos:pos+length]))
+            res.append(bytes_str(response[pos:pos + length]))
             pos += length
 
         return res
@@ -1035,15 +1093,13 @@ class SphinxClient:
         assert (isinstance(hits, int))
 
         # build request
- 
+
         req = bytearray()
         query = str_bytes(query)
-        req.extend(pack ( '>L', len(query) ) + query)
+        req.extend(pack('>L', len(query)) + query)
         index = str_bytes(index)
-        req.extend ( pack ( '>L', len(index) ) + index )
-        req.extend ( pack ( '>L', hits ) )
-
-
+        req.extend(pack('>L', len(index)) + index)
+        req.extend(pack('>L', hits))
 
         # connect, send query, get response
         sock = self._Connect()
@@ -1051,9 +1107,9 @@ class SphinxClient:
             return None
 
         req_all = bytearray()
-        req_all.extend(pack ( '>2HL', SEARCHD_COMMAND_KEYWORDS, VER_COMMAND_KEYWORDS, length ))
+        req_all.extend(pack('>2HL', SEARCHD_COMMAND_KEYWORDS, VER_COMMAND_KEYWORDS, length))
         req_all.extend(req)
-        self._Send ( sock, req_all )
+        self._Send(sock, req_all)
 
         response = self._GetResponse(sock, VER_COMMAND_KEYWORDS)
         if not response:
@@ -1079,7 +1135,7 @@ class SphinxClient:
             normalized = response[p:p + length]
             p += length
 
-            entry = { 'tokenized':bytes_str(tokenized), 'normalized':bytes_str(normalized) }
+            entry = {'tokenized': bytes_str(tokenized), 'normalized': bytes_str(normalized)}
             if hits:
                 entry['docs'], entry['hits'] = unpack('>2L', response[p:p + 8])
                 p += 8
@@ -1159,7 +1215,9 @@ class SphinxClient:
         if not sock:
             return -1
 
-        request = pack('>hhI', SEARCHD_COMMAND_FLUSHATTRS, VER_COMMAND_FLUSHATTRS, 0)  # cmd, ver, bodylen
+        request = pack(
+            '>hhI', SEARCHD_COMMAND_FLUSHATTRS, VER_COMMAND_FLUSHATTRS, 0
+        )  # cmd, ver, bodylen
         self._Send(sock, request)
 
         response = self._GetResponse(sock, VER_COMMAND_FLUSHATTRS)
@@ -1170,23 +1228,26 @@ class SphinxClient:
         tag = unpack('>L', response[0:4])[0]
         return tag
 
-def SetBit ( flag, bit, on ):
+
+def SetBit(flag, bit, on):
     if on:
-        flag += ( 1<<bit )
+        flag += (1 << bit)
     else:
-        reset = 255 ^ ( 1<<bit )
+        reset = 255 ^ (1 << bit)
         flag = flag & reset
 
     return flag
 
+
 def AssertInt32(value):
-    assert(isinstance(value, (int, long)))
-    assert(value >= -2 ** 32 - 1 and value <= 2 ** 32 - 1)
+    assert (isinstance(value, (int, long)))
+    assert (value >= -2**32 - 1 and value <= 2**32 - 1)
 
 
 def AssertUInt32(value):
-    assert(isinstance(value, (int, long)))
-    assert(value >= 0 and value <= 2 ** 32 - 1)
+    assert (isinstance(value, (int, long)))
+    assert (value >= 0 and value <= 2**32 - 1)
+
 
 #
 # $Id: sphinxapi.py 3436 2012-10-08 09:17:18Z kevg $

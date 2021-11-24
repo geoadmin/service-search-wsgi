@@ -16,14 +16,10 @@ LOGS_DIR = os.getenv('LOGS_DIR', str(BASE_DIR / 'logs'))
 os.environ['LOGS_DIR'] = LOGS_DIR  # Set default if not set
 LOGGING_CFG = os.getenv('LOGGING_CFG', 'logging-cfg-local.yml')
 TRAP_HTTP_EXCEPTIONS = True
+DEBUG = os.getenv('DEBUG', 'FALSE') == 'TRUE'
 
-# Definition of the allowed domains for CORS implementation
-ALLOWED_DOMAINS_STRING = os.getenv('ALLOWED_DOMAINS')
-if ALLOWED_DOMAINS_STRING is None or ALLOWED_DOMAINS_STRING == "":
-    logger.error("No allowed domains pattern from env was found")
-    raise RuntimeError("Environment variable $ALLOWED_DOMAINS was not set")
-
-ALLOWED_DOMAINS = ALLOWED_DOMAINS_STRING.split(',')
+ALLOWED_DOMAINS = os.getenv('ALLOWED_DOMAINS', r'.*').split(',')
+ALLOWED_DOMAINS_PATTERN = f"({format('|'.join(ALLOWED_DOMAINS))})"
 
 # Proxy settings
 FORWARED_ALLOW_IPS = os.getenv('FORWARED_ALLOW_IPS', '*')
