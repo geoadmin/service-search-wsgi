@@ -38,6 +38,9 @@ logs/
 # virtualenv
 .venv
 
+# local env
+.env.local
+
 # mypy
 .mypy_cache/
 
