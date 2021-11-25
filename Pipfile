@@ -15,7 +15,7 @@ six = "*"
 pyramid = "*"
 shapely = "*"
 requests = "*"
-pyproj = "*"
+pyproj = "~=3.2.1"
 unidecode = "*"
 
 [dev-packages]
