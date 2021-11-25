@@ -24,6 +24,7 @@ yapf = "*"
 nose2 = "*"
 pylint = "*"
 pylint-flask = "*"
+numpy = "*"
 
 [requires]
 python_version = "3.7"

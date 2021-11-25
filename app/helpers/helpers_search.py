@@ -34,9 +34,8 @@ from shapely.wkt import loads as shape_loads
 from six.moves import reduce
 from six.moves import zip
 
-if six.PY3:
-    unicode = str
-    long = int
+unicode = str
+long = int
 
 log = logging.getLogger(__name__)
 
@@ -58,6 +57,7 @@ def to_utf8(data):
 # Number of element in an iterator
 
 
+# used by validation_search.py and search.py
 def ilen(iterable):
     return reduce(lambda sum, element: sum + 1, iterable, 0)
 
@@ -166,16 +166,12 @@ def locale_negotiator(request):
     return lang
 
 
-def check_even(number):
-    if number % 2 == 0:
-        return True
-    return False
-
-
+# used by search.py
 def format_search_text(input_str):
     return remove_accents(escape_sphinx_syntax(input_str))
 
 
+# used by search.py
 def format_locations_search_text(input_str):
     if input_str is None:
         return input_str
@@ -186,6 +182,7 @@ def format_locations_search_text(input_str):
     return format_search_text(input_str)
 
 
+# used by format_search_text used by search.py
 def remove_accents(input_str):
     if input_str is None:
         return input_str
@@ -200,6 +197,7 @@ def remove_accents(input_str):
     )
 
 
+# indirectly used by search
 def escape_sphinx_syntax(input_str):
     if input_str is None:
         return input_str
@@ -222,50 +220,7 @@ def escape_sphinx_syntax(input_str):
     return input_str
 
 
-def format_query(model, value, lang):
-    '''
-        Supported operators on numerical or date values are "=, !=, >=, <=, > and <"
-        Supported operators for text are "ilike and not ilike"
-    '''
-    where = None
-
-    def escapeSQL(value):
-        if u'ilike' in value:
-            match = re.search(r'([\w]+\s)(ilike|not ilike)(\s\'%)([\s\S]*)(%\')', value)
-            where = u''.join(
-                (
-                    match.group(1).replace(u'\'', u'E\''),
-                    match.group(2),
-                    match.group(3),
-                    match.group(4).replace(u'\\', u'\\\\').replace(u'\'',
-                                                                   u"\''").replace(u'_', u'\\_'),
-                    match.group(5)
-                )
-            )
-            return where
-        return value
-
-
-def quoting(text):
-    return quote(text.encode('utf-8'))
-
-
-def imagesize_from_metafile(tileUrlBasePath, bvnummer):
-    width = None
-    height = None
-    headers = {'Referer': 'http://admin.ch', 'User-Agent': 'mf-geoadmin/python'}
-    metaurl = tileUrlBasePath + '/' + bvnummer + '/tilemapresource.xml'
-    s = requests.Session()
-    response = s.get(metaurl, headers=headers)
-    if response.status_code == requests.codes.ok:
-        xml = etree.fromstring(response.content)
-        bb = xml.find('BoundingBox')
-        if bb is not None:
-            width = abs(int(float(bb.get('maxy'))) - int(float(bb.get('miny'))))
-            height = abs(int(float(bb.get('maxx'))) - int(float(bb.get('minx'))))
-    return (width, height)
-
-
+# used by _transform_point used by search.py
 def get_proj_from_srid(srid):
     if srid in PROJECTIONS:
         return PROJECTIONS[srid]
@@ -275,6 +230,7 @@ def get_proj_from_srid(srid):
         return proj
 
 
+# indirectly used by search.py
 def get_precision_for_proj(srid):
     precision = COORDINATES_DECIMALS_FOR_METRIC_PROJ
     proj = get_proj_from_srid(srid)
@@ -283,6 +239,7 @@ def get_precision_for_proj(srid):
     return precision
 
 
+# indirectly used by search.py
 def _round_bbox_coordinates(bbox, precision=None):
     tpl = '%.{}f'.format(precision)
     if precision is not None:
@@ -291,6 +248,7 @@ def _round_bbox_coordinates(bbox, precision=None):
         return bbox
 
 
+# indirectly used by search.py
 def _round_shape_coordinates(shape, precision=None):
     if precision is None:
         return shape
@@ -298,6 +256,7 @@ def _round_shape_coordinates(shape, precision=None):
         return shape_loads(shape_dumps(shape, rounding_precision=precision))
 
 
+# used by transform_round_geometry used by search.py
 def round_geometry_coordinates(geom, precision=None):
     if isinstance(geom, (
         list,
@@ -310,12 +269,14 @@ def round_geometry_coordinates(geom, precision=None):
         return geom
 
 
+# used by search.py
 def _transform_point(coords, srid_from, srid_to):
     proj_in = get_proj_from_srid(srid_from)
     proj_out = get_proj_from_srid(srid_to)
     return proj_transform(proj_in, proj_out, coords[0], coords[1])
 
 
+# used by search.py
 def transform_round_geometry(geom, srid_from, srid_to, rounding=True):
     if (srid_from == srid_to):
         if rounding:
@@ -331,6 +292,7 @@ def transform_round_geometry(geom, srid_from, srid_to, rounding=True):
         return _transform_shape(geom, srid_from, srid_to, rounding=rounding)
 
 
+# used by transform_round_geometry used by search.py
 # Reprojecting pairs of coordinates and rounding them if necessary
 # Only a point or a line are considered
 def _transform_coordinates(coordinates, srid_from, srid_to, rounding=True):
@@ -352,6 +314,7 @@ def _transform_coordinates(coordinates, srid_from, srid_to, rounding=True):
     return new_coords
 
 
+# indirectly used by search.py
 def _transform_shape(geom, srid_from, srid_to, rounding=True):
     proj_in = get_proj_from_srid(srid_from)
     proj_out = get_proj_from_srid(srid_to)
@@ -368,6 +331,7 @@ def _transform_shape(geom, srid_from, srid_to, rounding=True):
 # float('NaN') does not raise an Exception. This function does.
 
 
+# used by validation_search.py
 def float_raise_nan(val):
     ret = float(val)
     if math.isnan(ret):
@@ -375,6 +339,7 @@ def float_raise_nan(val):
     return ret
 
 
+# used by search.py
 def parse_box2d(stringBox2D):
     extent = stringBox2D.replace('BOX(', '').replace(')', '').replace(',', ' ')
     # Python2/3
@@ -384,6 +349,7 @@ def parse_box2d(stringBox2D):
     return box
 
 
+# used by center_from_box_2d used by search.py
 def is_box2d(box2D):
     # Python2/3
     if not isinstance(box2D, list):
@@ -394,11 +360,13 @@ def is_box2d(box2D):
     return box2D
 
 
+# used by search.py
 def center_from_box2d(box2D):
     box2D = is_box2d(box2D)
     return [box2D[0] + ((box2D[2] - box2D[0]) / 2), box2D[1] + ((box2D[3] - box2D[1]) / 2)]
 
 
+# used by validation_search.py and search.py
 def shift_to(coords, srid):
     cds = []
     x_offset = 2e6
@@ -413,131 +381,3 @@ def shift_to(coords, srid):
         elif srid == 21781:
             cds.append(c - x_offset if len(coords_copy) % 2 else c - y_offset)
     return cds
-
-
-def parse_date_string(dateStr, format_input='%Y-%m-%d', format_output='%d.%m.%Y'):
-    try:
-        return datetime.datetime.strptime(dateStr.strip(), format_input).strftime(format_output)
-    except Exception:
-        return '-'
-
-
-def parse_date_datenstand(dateDatenstand):
-    result = ''
-    for part in re.split('([-| ])', str(dateDatenstand).strip()):
-        if part.isdigit():
-            if len(part) == 4:
-                result += parse_date_string(part, '%Y', '%Y')
-            elif len(part) == 6:
-                result += parse_date_string(part, '%Y%m', '%m.%Y')
-            elif len(part) == 8:
-                result += parse_date_string(part, '%Y%m%d', '%d.%m.%Y')
-        elif part == '-' or part == ' ':
-            result += part
-        elif len(part) == 5 and ':' in part:
-            result += part
-        else:
-            return '-'
-    return result
-
-
-def int_with_apostrophe(x):
-    if type(x) not in [type(0), type(long(0))]:
-        return '-'
-    if x < 0:
-        return '-' + int_with_apostrophe(-x)
-    result = ''
-    while x >= 1000:
-        x, r = divmod(x, 1000)
-        result = "'%03d%s" % (r, result)
-    return "%d%s" % (x, result)
-
-
-def get_loaderjs_url(request, version='3.6.0'):
-    return make_agnostic(route_url('ga_api', request)) + '?version=' + version
-
-
-def gzip_string(string):
-    # Python2/3
-    if six.PY2:
-        infile = StringIO()
-        data = string
-    else:
-        infile = BytesIO()
-        try:
-            data = string.encode('utf8')
-        except (UnicodeDecodeError, AttributeError):
-            data = string
-    try:
-        gzip_file = gzip.GzipFile(fileobj=infile, mode='w', compresslevel=5)
-        gzip_file.write(data)
-        gzip_file.close()
-        infile.seek(0)
-        out = infile.getvalue()
-    except Exception as e:
-        log.error("Cannot gzip string: {}".format(e))
-        out = None
-    finally:
-        infile.close()
-    return out
-
-
-def decompress_gzipped_string(streaming_body):
-    if six.PY2:
-        string_file = StringIO(streaming_body.read())
-        gzip_file = gzip.GzipFile(fileobj=string_file, mode='r', compresslevel=5)
-        return gzip_file.read().decode('utf-8')
-    else:
-        return gzip.decompress(streaming_body.read()).decode()
-
-
-def unnacent_where_text(where_string, model):
-
-    # where_string is the arbitrary where text given by the query
-    # model is the model corresponding to the layer for the query
-    separator = None
-    for possible_separator in ('+=', '=', 'ilike', 'like'):
-        # Those are the only string separators that ask for custom inputs from the customer.
-        if separator is None:
-            # We are not looking for a valid separator if we already found one
-            separator = possible_separator if where_string.find(possible_separator) > -1 else None
-            if separator is not None:
-                # splitting the string and trimming the substrings
-                where_text_split = where_string.split(separator, 1)
-                where_text_split[0] = where_text_split[0].strip()
-                # TODO: we might have multiple statements here, with 'or' or 'and'
-                where_text_split[1] = where_text_split[1].strip()
-                if str(getattr(model, where_text_split[0]).type) == 'VARCHAR':
-                    # if we get to this place, it means we have a string type of data with a custom input from the
-                    # customer and we will need to unaccent them to make the search.
-                    return "unaccent({}) {} {}".format(
-                        where_text_split[0],
-                        separator,
-                        sanitize_user_input_accents(
-                            separate_statements(where_text_split[1], model)
-                        )
-                    )
-                else:
-                    # if we get here, it means we had a separator, but it's not a string (only possibility should be '='
-                    # and a number. So we break out of the for loop for performances purpose
-                    break
-
-    return where_string
-
-
-def separate_statements(substring, model):
-    # in layerdefs, sometimes statements are separated by 'or' or 'and' clauses. this separates them. Only downside is that I'm calling sanitize input accents multiple times.
-    splitted_substring = substring.split(" ", 2)
-    if len(splitted_substring) == 3:
-        separator = splitted_substring[1]
-        if separator == 'or' or separator == 'and':
-            splitted_substring[2] = unnacent_where_text(splitted_substring[2], model)
-            return "{} {} {}".format(
-                splitted_substring[0], separator, separate_statements(splitted_substring[2], model)
-            )
-    return substring
-
-
-def sanitize_user_input_accents(string):
-    # this transforms the umlauts in latin compliant version, then remove the accents entirely
-    return unidecode.unidecode(remove_accents(string))

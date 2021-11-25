@@ -2,36 +2,36 @@
 
 import unittest
 
-from chsdi.lib.helpers import _round_bbox_coordinates
-from chsdi.lib.helpers import _round_shape_coordinates
-from chsdi.lib.helpers import _transform_coordinates
-from chsdi.lib.helpers import _transform_point
-from chsdi.lib.helpers import _transform_shape
-from chsdi.lib.helpers import center_from_box2d
-from chsdi.lib.helpers import check_even
-from chsdi.lib.helpers import check_url
-from chsdi.lib.helpers import escape_sphinx_syntax
-from chsdi.lib.helpers import float_raise_nan
-from chsdi.lib.helpers import format_scale
-from chsdi.lib.helpers import format_search_text
-from chsdi.lib.helpers import get_loaderjs_url
-from chsdi.lib.helpers import get_precision_for_proj
-from chsdi.lib.helpers import get_proj_from_srid
-from chsdi.lib.helpers import int_with_apostrophe
-from chsdi.lib.helpers import locale_negotiator
-from chsdi.lib.helpers import make_agnostic
-from chsdi.lib.helpers import make_api_url
-from chsdi.lib.helpers import parse_box2d
-from chsdi.lib.helpers import parse_date_datenstand
-from chsdi.lib.helpers import parse_date_string
-from chsdi.lib.helpers import parseHydroXML
-from chsdi.lib.helpers import quoting
-from chsdi.lib.helpers import remove_accents
-from chsdi.lib.helpers import resource_exists
-from chsdi.lib.helpers import round_geometry_coordinates
-from chsdi.lib.helpers import sanitize_url
-from chsdi.lib.helpers import transform_round_geometry
-from chsdi.lib.helpers import versioned
+from app.helpers.helpers_search import _round_bbox_coordinates
+from app.helpers.helpers_search import _round_shape_coordinates
+from app.helpers.helpers_search import _transform_coordinates
+from app.helpers.helpers_search import _transform_point
+from app.helpers.helpers_search import _transform_shape
+from app.helpers.helpers_search import center_from_box2d
+from app.helpers.helpers_search import check_even
+from app.helpers.helpers_search import check_url
+from app.helpers.helpers_search import escape_sphinx_syntax
+from app.helpers.helpers_search import float_raise_nan
+from app.helpers.helpers_search import format_scale
+from app.helpers.helpers_search import format_search_text
+from app.helpers.helpers_search import get_loaderjs_url
+from app.helpers.helpers_search import get_precision_for_proj
+from app.helpers.helpers_search import get_proj_from_srid
+from app.helpers.helpers_search import int_with_apostrophe
+from app.helpers.helpers_search import locale_negotiator
+from app.helpers.helpers_search import make_agnostic
+from app.helpers.helpers_search import make_api_url
+from app.helpers.helpers_search import parse_box2d
+from app.helpers.helpers_search import parse_date_datenstand
+from app.helpers.helpers_search import parse_date_string
+from app.helpers.helpers_search import parseHydroXML
+from app.helpers.helpers_search import quoting
+from app.helpers.helpers_search import remove_accents
+from app.helpers.helpers_search import resource_exists
+from app.helpers.helpers_search import round_geometry_coordinates
+from app.helpers.helpers_search import sanitize_url
+from app.helpers.helpers_search import transform_round_geometry
+from app.helpers.helpers_search import versioned
 from numpy.testing import assert_almost_equal
 from pyramid import testing
 from pyramid.threadlocal import get_current_registry
@@ -39,10 +39,7 @@ from shapely.geometry import Point
 from shapely.geometry import Polygon
 from shapely.geometry import mapping
 
-try:
-    from urlparse import urljoin
-except ImportError:
-    from urllib.parse import urljoin
+from urllib.parse import urljoin
 
 
 class Test_Helpers(unittest.TestCase):

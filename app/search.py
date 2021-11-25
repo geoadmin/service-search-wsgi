@@ -1,7 +1,6 @@
 import logging
 import re
 
-import six
 from shapely.geometry import Point
 from shapely.geometry import box
 from shapely.geometry import mapping
@@ -26,8 +25,10 @@ from app.helpers.validation_search import SearchValidation
 
 logger = logging.getLogger(__name__)
 
+# pylint: disable=invalid-name
 
-class Search(SearchValidation):
+
+class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
 
     LOCATION_LIMIT = 50
     LAYER_LIMIT = 30
@@ -36,7 +37,7 @@ class Search(SearchValidation):
     BBOX_SEARCH_LIMIT = 150
 
     def __init__(self, request):
-        super(Search, self).__init__(request)
+        super().__init__(request)
 
         # DOTO remove ugly hack
         request.registry = {}
@@ -91,7 +92,8 @@ class Search(SearchValidation):
         return {"type": "FeatureCollection", "bbox": bounds, "features": features}
 
     # is being called from routes.py directly
-    def view_find_esrijson(self):
+    @staticmethod
+    def view_find_esrijson():
         raise BadRequest("Param 'geometryFormat=esrijson' is not supported")
 
     def _find_geojson(self):
@@ -107,12 +109,13 @@ class Search(SearchValidation):
                     bounds = parse_box2d(attributes['geom_st_box2d'])
                 else:
                     try:
-                        # TODO: This is the requested QuadTree, because sphinx layer indices do not have extent
+                        # DOTO: This is the requested QuadTree,
+                        # because sphinx layer indices do not have extent
                         bounds = self.quadtree.bbox.bounds
                         bounds = transform_shape(bounds, self.DEFAULT_SRID, self.srid)
-                    except ValueError:
-                        raise InternalServerError(
-                            "Search error: cannot reproject result to SRID: {}".format(self.srid)
+                    except ValueError as e:
+                        raise e from InternalServerError(
+                            f"Search error: cannot reproject result to SRID: {self.srid}"
                         )
                 bbox = box(*bounds)
                 if features_bbox is None:
@@ -160,7 +163,8 @@ class Search(SearchValidation):
             self.searchText = format_locations_search_text(self.request.args.get('searchText', ''))
             # swiss search
             self._swiss_search()
-            # translate some gazetteer categories from swissnames3 tagged with <i>...</i> in the label attribute of the response
+            # translate some gazetteer categories from swissnames3
+            # tagged with <i>...</i> in the label attribute of the response
         return self.results
 
     def _fuzzy_search(self, searchTextFinal):
@@ -172,18 +176,19 @@ class Search(SearchValidation):
         try:
             if self.typeInfo in ('locations'):
                 temp = self.sphinx.Query(searchTextFinal, index='swisssearch_fuzzy')
-        except IOError:  # pragma: no cover
-            raise GatewayTimeout()
+        except IOError as e:  # pragma: no cover
+            raise e from GatewayTimeout()
         temp = temp['matches'] if temp is not None else temp
         self.results['fuzzy'] = 'true'
         return temp
 
-    def _swiss_search(self):
-        limit = self.limit if self.limit and self.limit <= self.LOCATION_LIMIT else self.LOCATION_LIMIT
+    def _swiss_search(self):  # pylint: disable=too-many-branches, too-many-statements
+        limit = self.limit if self.limit and \
+            self.limit <= self.LOCATION_LIMIT else self.LOCATION_LIMIT
         # Define ranking mode
         if self.bbox is not None and self.sortbbox:
             coords = self._get_geoanchor_from_bbox()
-            self.sphinx.SetGeoAnchor('lat', 'lon', coords[1], coords[0])
+            self.sphinx.SetGeoAnchor('lat', 'lon', coords[1], coords[0])  # pylint: disable=unsubscriptable-object, line-too-long
             self.sphinx.SetSortMode(sphinxapi.SPH_SORT_EXTENDED, '@geodist ASC')
             limit = self.BBOX_SEARCH_LIMIT
         else:
@@ -220,7 +225,7 @@ class Search(SearchValidation):
                     self.sphinx.AddQuery(searchTextFinal, index='swisssearch')
 
                 # exact search, first 10 results
-                searchText = '@detail ^%s' % ' '.join(self.searchText)
+                searchText = f"@detail ^{' '.join(self.searchText)}"
                 self.sphinx.AddQuery(searchText, index='swisssearch')
 
                 # reset settings
@@ -230,17 +235,18 @@ class Search(SearchValidation):
                 # related to issue
                 if temp is None:
                     raise ServiceUnavailable(
-                        'no results from sphinx service (%s)' % self.sphinx._error
+                        f'no results from sphinx service ({self.sphinx._error})'  # pylint: disable=line-too-long, protected-access
                     )
 
-            except IOError:  # pragma: no cover
-                raise HTTPGatewayTimeout()
+            except IOError as e:  # pragma: no cover
+                raise e from GatewayTimeout()
 
             temp_merged = temp[0].get('matches', []) + temp[1].get('matches', []) if len(
                 temp
             ) == 2 else temp[0].get('matches', [])
 
-            # remove duplicate results, exact search results have priority over wildcard search results
+            # remove duplicate results,
+            # exact search results have priority over wildcard search results
             temp = []
             seen = []
             for d in temp_merged:
@@ -264,40 +270,40 @@ class Search(SearchValidation):
 
         def staging_filter(staging):
             ret = '@staging prod'
-            if staging == 'integration' or staging == 'test':
+            if staging in ('integration', 'test'):
                 ret += ' | @staging integration'
                 if staging == 'test':
                     ret += ' | @staging test'
             return ret
 
         # 10 features per layer are returned at max
-        layerLimit = self.limit if self.limit and self.limit <= self.LAYER_LIMIT else self.LAYER_LIMIT
+        layerLimit = \
+            self.limit if self.limit and \
+            self.limit <= self.LAYER_LIMIT else self.LAYER_LIMIT
         self.sphinx.SetLimits(0, layerLimit)
         self.sphinx.SetRankingMode(sphinxapi.SPH_RANK_WORDCOUNT)
         self.sphinx.SetSortMode(sphinxapi.SPH_SORT_EXTENDED, '@weight DESC')
         # Weights defaults to 1
         self.sphinx.SetFieldWeights({'@title': 4, '@detail': 2, '@layer': 1})
 
-        index_name = 'layers_%s' % self.lang
+        index_name = f'layers_{self.lang}'
         mapName = self.mapName if self.mapName != 'all' else ''
         # Whitelist hack
         if mapName in ('api'):
             topicFilter = 'api'
         else:
-            topicFilter = '(%s | ech)' % mapName
+            topicFilter = f'({mapName} | ech)'
         searchText = ' '.join(
             (
                 self._query_fields('@(title,detail,layer)'),
-                '& @topics %s' %
-                (topicFilter),  # Filter by to topic if string not empty, ech whitelist hack
-                '& %s' %
-                (staging_filter(self.geodataStaging))  # Only layers in correct staging are searched
+                f'& @topics {topicFilter}'  # Filter by to topic if string not empty, ech whitelist hack pylint: disable=line-too-long
+                f'& {staging_filter(self.geodataStaging)}'  # Only layers in correct staging are searched pylint: disable=line-too-long
             )
         )
         try:
             temp = self.sphinx.Query(searchText, index=index_name)
-        except IOError:  # pragma: no cover
-            raise HTTPGatewayTimeout()
+        except IOError as e:  # pragma: no cover
+            raise e from GatewayTimeout()
         temp = temp['matches'] if temp is not None else temp
         if temp is not None and len(temp) != 0:
             self.results['results'] += temp
@@ -323,12 +329,14 @@ class Search(SearchValidation):
         if self.featureIndexes is None:
             # we need bounding box and layernames. FIXME: this should be error
             raise BadRequest('Bad request: no layername given')
-        featureLimit = self.limit if self.limit and self.limit <= self.FEATURE_LIMIT else self.FEATURE_LIMIT
+        featureLimit = \
+            self.limit if self.limit \
+            and self.limit <= self.FEATURE_LIMIT else self.FEATURE_LIMIT
         self.sphinx.SetLimits(0, featureLimit)
         self.sphinx.SetRankingMode(sphinxapi.SPH_RANK_WORDCOUNT)
         if self.bbox and self.sortbbox:
             coords = self._get_geoanchor_from_bbox()
-            self.sphinx.SetGeoAnchor('lat', 'lon', coords[1], coords[0])
+            self.sphinx.SetGeoAnchor('lat', 'lon', coords[1], coords[0])  # pylint: disable=unsubscriptable-object, line-too-long
             self.sphinx.SetSortMode(sphinxapi.SPH_SORT_EXTENDED, '@weight DESC, @geodist ASC')
         else:
             self.sphinx.SetSortMode(sphinxapi.SPH_SORT_EXTENDED, '@weight DESC')
@@ -341,8 +349,8 @@ class Search(SearchValidation):
         self._add_feature_queries(searchdText, timeFilter)
         try:
             temp = self.sphinx.RunQueries()
-        except IOError:  # pragma: no cover
-            raise GatewayTimeout()
+        except IOError as e:  # pragma: no cover
+            raise e from GatewayTimeout()
         self.sphinx.ResetFilters()
         self._parse_feature_results(temp)
 
@@ -378,7 +386,7 @@ class Search(SearchValidation):
         center = center_from_box2d(self.bbox)
         return transform_coordinate(center, self.DEFAULT_SRID, 4326)
 
-    def _query_fields(self, fields):
+    def _query_fields(self, fields):  # pylint: disable=too-many-locals
         # 10a, 10b needs to be interpreted as digit
         q = []
         isdigit = lambda x: bool(re.match('^[0-9]', x))
@@ -393,17 +401,17 @@ class Search(SearchValidation):
             preNonDigit = ' '.join([prefix_non_digit(w) for w in self.searchText])
             infNonDigit = ' '.join([infix_non_digit(w) for w in self.searchText])
             q = [
-                '%s "%s"' % (fields, exactAll),
-                '%s "^%s"' % (fields, exactAll),
-                '%s "%s$"' % (fields, exactAll),
-                '%s "^%s$"' % (fields, exactAll),
-                '%s "%s"~5' % (fields, exactAll),
-                '%s "%s"' % (fields, preNonDigit),
-                '%s "^%s"' % (fields, preNonDigit),
-                '%s "%s"~5' % (fields, preNonDigit),
-                '%s "%s"' % (fields, infNonDigit),
-                '%s "^%s"' % (fields, infNonDigit),
-                '%s "%s"~5' % (fields, infNonDigit)
+                f'{fields} "{exactAll}"',
+                f'{fields} "^{exactAll}"',
+                f'{fields} "%{exactAll}$"',
+                f'{fields} "^{exactAll}$"',
+                f'{fields} "{exactAll}"~5',
+                f'{fields} "{preNonDigit}"',
+                f'{fields} "^{preNonDigit}"',
+                f'{fields} "{preNonDigit}"~5',
+                f'{fields} "{infNonDigit}"',
+                f'{fields} "^{infNonDigit}"',
+                f'{fields} "{infNonDigit}"~5'
             ]
 
         if hasDigit:
@@ -415,16 +423,17 @@ class Search(SearchValidation):
                 [prefix_digit(infix_non_digit(w)) for w in self.searchText]
             )
             q = q + [
-                '%s "%s"' % (fields, preDigit),
-                '%s "^%s"' % (fields, preDigit),
-                '%s "%s"' % (fields, preNonDigitAndPreDigit),
-                '%s "%s"~5' % (fields, preNonDigitAndPreDigit),
-                '%s "%s"' % (fields, infNonDigitAndPreDigit)
+                f'{fields} "{preDigit}"',
+                f'{fields} "^{preDigit}"',
+                f'{fields} "{preNonDigitAndPreDigit}"',
+                f'{fields} "{preNonDigitAndPreDigit}"~5',
+                f'{fields} "{infNonDigitAndPreDigit}"'
             ]
         finalQuery = ' | '.join(q)
         return finalQuery
 
-    def _origin_to_layerbodid(self, origin):
+    @staticmethod
+    def _origin_to_layerbodid(origin):
         origins2LayerBodId = {
             'zipcode': 'ch.swisstopo-vd.ortschaftenverzeichnis_plz',
             'gg25': 'ch.swisstopo.swissboundaries3d-gemeinde-flaeche.fill',
@@ -436,7 +445,8 @@ class Search(SearchValidation):
             return origins2LayerBodId[origin]
         return None
 
-    def _origins_to_ranks(self, origins):
+    @staticmethod
+    def _origins_to_ranks(origins):
         origin2Rank = {
             'zipcode': [1],
             'gg25': [2],
@@ -451,8 +461,8 @@ class Search(SearchValidation):
         try:
             for origin in origins:
                 ranks += origin2Rank[origin]
-        except KeyError:  # pragma: no cover
-            raise BadRequest('Bad value(s) in parameter origins')
+        except KeyError as e:  # pragma: no cover
+            raise e from BadRequest('Bad value(s) in parameter origins')
         return ranks
 
     def _search_lang_to_filter(self):
@@ -496,7 +506,7 @@ class Search(SearchValidation):
                 self.sphinx.AddQuery(queryText, index=translated_layer)
             else:
                 if self.searchLang:
-                    raise BadRequest('Parameter seachLang is not supported for %s' % index)
+                    raise BadRequest(f'Parameter seachLang is not supported for {index}')
                 self.sphinx.AddQuery(queryText, index=str(index))
 
     def _box2d_transform(self, res):
@@ -507,9 +517,9 @@ class Search(SearchValidation):
             b = map(float, re.split(' |,', box_str))
             shape = box(*b)
             bbox = transform_shape(shape, self.DEFAULT_SRID, self.srid).bounds
-            res['geom_st_box2d'] = "BOX({} {},{} {})".format(*bbox)
-        except Exception:
-            raise InternalServerError('Error while converting BOX2D to EPSG:{}'.format(self.srid))
+            res['geom_st_box2d'] = "BOX({} {},{} {})".format(*bbox)  # pylint: disable=line-too-long, consider-using-f-string)
+        except Exception as e:
+            raise e from InternalServerError(f'Error while converting BOX2D to EPSG:{self.srid}')
         return res
 
     def _parse_locations(self, res):
@@ -517,28 +527,24 @@ class Search(SearchValidation):
         if not self.returnGeometry:
             attrs2Del = ['x', 'y', 'lon', 'lat', 'geom_st_box2d']
             popAtrrs = lambda x: res.pop(x) if x in res else x
-            # Python2/3
-            if six.PY2:
-                map(popAtrrs, attrs2Del)
-            else:
-                list(map(popAtrrs, attrs2Del))
+            list(map(popAtrrs, attrs2Del))
         elif int(self.srid) not in (21781, 2056):
             self._box2d_transform(res)
             if int(self.srid) == 4326:
                 try:
                     res['x'] = res['lon']
                     res['y'] = res['lat']
-                except KeyError:
-                    raise InternalServerError('Sphinx location has no lat/long defined')
+                except KeyError as e:
+                    raise e from InternalServerError('Sphinx location has no lat/long defined')
             else:
                 try:
                     pnt = (res['y'], res['x'])
-                    x, y = transform_coordinate(pnt, self.DEFAULT_SRID, self.srid)
+                    x, y = transform_coordinate(pnt, self.DEFAULT_SRID, self.srid)  # DOTO pylint: disable=line-too-long, unpacking-non-sequence
                     res['x'] = x
                     res['y'] = y
-                except Exception:
-                    raise InternalServerError(
-                        'Error while converting point(x, y) to EPSG:{}'.format(self.srid)
+                except Exception as e:
+                    raise e from InternalServerError(
+                        f'Error while converting point(x, y) to EPSG:{self.srid}'
                     )
         return res
 
@@ -573,7 +579,7 @@ class Search(SearchValidation):
             self.results['results'] = self.results['results'][:limit]
 
     def _parse_feature_results(self, results):
-        for idx, result in self._yield_results(results):
+        for idx, result in self._yield_results(results):  # pylint: disable=unused-variable
             if 'error' in result:
                 if result['error'] != '':
                     raise NotFound(result['error'])  # pragma: no cover
@@ -592,7 +598,8 @@ class Search(SearchValidation):
                     ):
                         self.results['results'].append(match)
 
-    def _yield_results(self, results):
+    @staticmethod
+    def _yield_results(results):
         for idx, result in enumerate(results):
             yield idx, result
 
@@ -607,13 +614,14 @@ class Search(SearchValidation):
                 match = self._choose_lv95_coords(match, geom_entry)
         else:
             for geom_entry in geom_entries:
-                geom_entry = '%s_lv95' % geom_entry
+                geom_entry = f'{geom_entry}_lv95'
                 if geom_entry in match['attrs']:
                     del match['attrs'][geom_entry]
         return match
 
-    def _choose_lv95_coords(self, match, prefix):
-        attr = '%s_lv95' % prefix
+    @staticmethod
+    def _choose_lv95_coords(match, prefix):
+        attr = f'{prefix}_lv95'
         if attr in match['attrs']:
             match['attrs'][prefix] = match['attrs'][attr]
             del match['attrs'][attr]
@@ -621,11 +629,11 @@ class Search(SearchValidation):
 
     def _translate_label(self, label):
         translation = re.search(r'.*(<i>[\s\S]*?<\/i>).*', label) or False
-        # DOTO ugly hack
+        # DOTO ugly hack - find a way to translate
         translation = False
         if translation:
             translated = self.request.translate(translation.group(1))
-            label = label.replace(translation.group(1), u'<i>{}</i>'.format(translated))
+            label = label.replace(translation.group(1), f'<i>{translated}</i>')
 
         return label
 
@@ -655,7 +663,7 @@ class Search(SearchValidation):
             arr = parse_box2d(result)
             resbox = box(arr[0], arr[1], arr[2],
                          arr[3]) if not _is_point(arr) else Point(arr[0], arr[1])
-        except Exception:  # pragma: no cover
+        except Exception:  # pragma: no cover # pylint: disable=broad-except
             # We bail with True to be conservative and
             # not exclude this geometry from the result
             # set. Only happens if result does not
