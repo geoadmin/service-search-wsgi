@@ -1,20 +1,43 @@
 # -*- coding: utf-8 -*-
 
 import unittest
+
+from chsdi.lib.helpers import _round_bbox_coordinates
+from chsdi.lib.helpers import _round_shape_coordinates
+from chsdi.lib.helpers import _transform_coordinates
+from chsdi.lib.helpers import _transform_point
+from chsdi.lib.helpers import _transform_shape
+from chsdi.lib.helpers import center_from_box2d
+from chsdi.lib.helpers import check_even
+from chsdi.lib.helpers import check_url
+from chsdi.lib.helpers import escape_sphinx_syntax
+from chsdi.lib.helpers import float_raise_nan
+from chsdi.lib.helpers import format_scale
+from chsdi.lib.helpers import format_search_text
+from chsdi.lib.helpers import get_loaderjs_url
+from chsdi.lib.helpers import get_precision_for_proj
+from chsdi.lib.helpers import get_proj_from_srid
+from chsdi.lib.helpers import int_with_apostrophe
+from chsdi.lib.helpers import locale_negotiator
+from chsdi.lib.helpers import make_agnostic
+from chsdi.lib.helpers import make_api_url
+from chsdi.lib.helpers import parse_box2d
+from chsdi.lib.helpers import parse_date_datenstand
+from chsdi.lib.helpers import parse_date_string
+from chsdi.lib.helpers import parseHydroXML
+from chsdi.lib.helpers import quoting
+from chsdi.lib.helpers import remove_accents
+from chsdi.lib.helpers import resource_exists
+from chsdi.lib.helpers import round_geometry_coordinates
+from chsdi.lib.helpers import sanitize_url
+from chsdi.lib.helpers import transform_round_geometry
+from chsdi.lib.helpers import versioned
+from numpy.testing import assert_almost_equal
 from pyramid import testing
 from pyramid.threadlocal import get_current_registry
-from chsdi.lib.helpers import (
-    make_agnostic, make_api_url, check_url, sanitize_url, _transform_point,
-    check_even, format_search_text, remove_accents, escape_sphinx_syntax,
-    quoting, float_raise_nan, resource_exists, parseHydroXML, locale_negotiator,
-    versioned, parse_box2d, center_from_box2d, format_scale,
-    parse_date_string, parse_date_datenstand, int_with_apostrophe, get_loaderjs_url,
-    get_proj_from_srid, get_precision_for_proj, _round_bbox_coordinates, _round_shape_coordinates,
-    round_geometry_coordinates, _transform_coordinates, _transform_shape, transform_round_geometry
-)
-from shapely.geometry import Point, Polygon
+from shapely.geometry import Point
+from shapely.geometry import Polygon
 from shapely.geometry import mapping
-from numpy.testing import assert_almost_equal
 
 try:
     from urlparse import urljoin
@@ -149,17 +172,41 @@ class Test_Helpers(unittest.TestCase):
         tree = ET.parse('tests/functional/filename.xml')
         root = tree.getroot()
         test_result = parseHydroXML('idname', root)
-        self.assertEqual({'date_time': '01 September 8Uhr', 'wasserstand': '-', 'wassertemperatur': '-', 'abfluss': '141100'}, test_result)
+        self.assertEqual(
+            {
+                'date_time': '01 September 8Uhr',
+                'wasserstand': '-',
+                'wassertemperatur': '-',
+                'abfluss': '141100'
+            },
+            test_result
+        )
 
         tree2 = ET.parse('tests/functional/filename2.xml')
         root2 = tree2.getroot()
         test_result2 = parseHydroXML('idname', root2)
-        self.assertEqual({'date_time': '04 Oktober 11 Uhr', 'wasserstand': '59900', 'wassertemperatur': '-', 'abfluss': '-'}, test_result2)
+        self.assertEqual(
+            {
+                'date_time': '04 Oktober 11 Uhr',
+                'wasserstand': '59900',
+                'wassertemperatur': '-',
+                'abfluss': '-'
+            },
+            test_result2
+        )
 
         tree3 = ET.parse('tests/functional/filename3.xml')
         root3 = tree3.getroot()
         test_result3 = parseHydroXML('idname', root3)
-        self.assertEqual({'date_time': '16 Mai 18 Uhr', 'wasserstand': '-', 'wassertemperatur': '59900', 'abfluss': '-'}, test_result3)
+        self.assertEqual(
+            {
+                'date_time': '16 Mai 18 Uhr',
+                'wasserstand': '-',
+                'wassertemperatur': '59900',
+                'abfluss': '-'
+            },
+            test_result3
+        )
 
     def test_check_even(self):
         testnumber = 10
@@ -323,7 +370,13 @@ class Test_Helpers(unittest.TestCase):
 
         self.assertEqual(mapping(point_rounded), {'type': 'Point', 'coordinates': (1.3, 3.4)})
         self.assertNotEqual(mapping(point), {'type': 'Point', 'coordinates': (1.3, 3.4)})
-        self.assertEqual(mapping(polygon_rounded), {'coordinates': (((0.23, 0.34), (1.46, 1.2), (1.39, 0.98), (0.23, 0.34)),), 'type': 'Polygon'})
+        self.assertEqual(
+            mapping(polygon_rounded),
+            {
+                'coordinates': (((0.23, 0.34), (1.46, 1.2), (1.39, 0.98), (0.23, 0.34)),),
+                'type': 'Polygon'
+            }
+        )
         self.assertNotEqual(mapping(polygon)['coordinates'][0], (0.231, 0.345))
 
     def test_round_geometry_coordinates(self):
@@ -340,15 +393,23 @@ class Test_Helpers(unittest.TestCase):
         bbox_wgs84_rounded = _transform_coordinates(bbox, 2056, 4326, rounding=True)
 
         self.assertEqual(bbox_wgs84_rounded, [7.438632, 46.951083, 8.100963, 47.398925])
-        assert_almost_equal(bbox_wgs84, [7.438632420871815, 46.95108277187108, 8.100963474961302, 47.39892497922299], decimal=10)
+        assert_almost_equal(
+            bbox_wgs84,
+            [7.438632420871815, 46.95108277187108, 8.100963474961302, 47.39892497922299],
+            decimal=10
+        )
 
     def test_transform_shape(self):
         point = Point(2600000, 120000)
         point_wgs84 = _transform_shape(point, 2056, 4326, rounding=False)
         point_wgs84_rounded = _transform_shape(point, 2056, 4326)
 
-        self.assertEqual(mapping(point_wgs84_rounded), {'type': 'Point', 'coordinates': (7.438767, 37.274227)})
-        assert_almost_equal(point_wgs84.coords[0],  (7.438767146513139, 37.27422679580366))
+        self.assertEqual(
+            mapping(point_wgs84_rounded), {
+                'type': 'Point', 'coordinates': (7.438767, 37.274227)
+            }
+        )
+        assert_almost_equal(point_wgs84.coords[0], (7.438767146513139, 37.27422679580366))
 
     def test_transform_round_geometry(self):
 
@@ -357,11 +418,21 @@ class Test_Helpers(unittest.TestCase):
         bbox_wgs84_rounded = transform_round_geometry(bbox, 2056, 4326, rounding=True)
 
         self.assertEqual(bbox_wgs84_rounded, [7.438632, 46.951083, 8.100963, 47.398925])
-        assert_almost_equal(bbox_wgs84, [7.438632420871815, 46.95108277187108, 8.100963474961302, 47.39892497922299], decimal=10)
+        assert_almost_equal(
+            bbox_wgs84,
+            [7.438632420871815, 46.95108277187108, 8.100963474961302, 47.39892497922299],
+            decimal=10
+        )
 
         point = Point(2600000, 120000)
         point_wgs84 = transform_round_geometry(point, 2056, 4326, rounding=False)
         point_wgs84_rounded = transform_round_geometry(point, 2056, 4326)
 
-        self.assertEqual(mapping(point_wgs84_rounded), {'type': 'Point', 'coordinates': (7.438767, 37.274227)})
-        assert_almost_equal(point_wgs84.coords[0], (7.438767146513139, 37.27422679580366), decimal=10)
+        self.assertEqual(
+            mapping(point_wgs84_rounded), {
+                'type': 'Point', 'coordinates': (7.438767, 37.274227)
+            }
+        )
+        assert_almost_equal(
+            point_wgs84.coords[0], (7.438767146513139, 37.27422679580366), decimal=10
+        )

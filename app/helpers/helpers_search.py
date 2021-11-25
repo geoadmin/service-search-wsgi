@@ -1,36 +1,38 @@
 # -*- coding: utf-8 -*-
 
-import re
-import math
-import requests
 import datetime
 import gzip
+import logging
+import math
+import re
+import unicodedata
+import xml.etree.ElementTree as etree
+from decimal import Decimal
+from functools import partial
+from io import BytesIO
+from io import StringIO
+from urllib.parse import quote
+from urllib.parse import urljoin
+from urllib.parse import urlparse
+from urllib.parse import urlunparse
+
+import requests
 import six
 import unidecode
-from decimal import Decimal
-
-from io import StringIO, BytesIO
-
-from six.moves import zip, reduce
-
-from functools import partial
-from pyramid.threadlocal import get_current_registry
+from pyproj import Proj
+from pyproj import transform as proj_transform
+from pyramid.httpexceptions import HTTPBadRequest
+from pyramid.httpexceptions import HTTPRequestTimeout
 from pyramid.i18n import get_locale_name
+from pyramid.threadlocal import get_current_registry
 from pyramid.url import route_url
-from pyramid.httpexceptions import HTTPBadRequest, HTTPRequestTimeout
-import unicodedata
-
-from urllib.parse import urlparse, urlunparse, urljoin
-
-from urllib.parse import quote
-
-import xml.etree.ElementTree as etree
-from pyproj import Proj, transform as proj_transform
 from requests.exceptions import ConnectionError
-from shapely.ops import transform as shape_transform
-from shapely.wkt import dumps as shape_dumps, loads as shape_loads
 from shapely.geometry.base import BaseGeometry
-import logging
+from shapely.ops import transform as shape_transform
+from shapely.wkt import dumps as shape_dumps
+from shapely.wkt import loads as shape_loads
+from six.moves import reduce
+from six.moves import zip
 
 if six.PY3:
     unicode = str

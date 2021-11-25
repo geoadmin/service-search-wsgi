@@ -15,10 +15,12 @@
 # did not, you can find it at http://www.gnu.org/
 #
 
+import re
 import select
 import socket
-import re
-from struct import pack, unpack
+from struct import pack
+from struct import unpack
+
 import six
 
 long = int

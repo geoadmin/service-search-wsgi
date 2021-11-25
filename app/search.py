@@ -1,17 +1,28 @@
 import logging
-
 import re
+
 import six
-from werkzeug.exceptions import BadRequest, InternalServerError, GatewayTimeout, ServiceUnavailable, NotFound
+from shapely.geometry import Point
+from shapely.geometry import box
+from shapely.geometry import mapping
+from werkzeug.exceptions import BadRequest
+from werkzeug.exceptions import GatewayTimeout
+from werkzeug.exceptions import InternalServerError
+from werkzeug.exceptions import NotFound
+from werkzeug.exceptions import ServiceUnavailable
 
-from shapely.geometry import box, Point, mapping
-
-from app.helpers.validation_search import SearchValidation
-from app.helpers.helpers_search import format_search_text, format_locations_search_text
-from app.helpers.helpers_search import _transform_point as transform_coordinate, parse_box2d, shift_to, ilen
-from app.helpers.helpers_search import center_from_box2d, transform_round_geometry as transform_shape
-from app.helpers import sphinxapi
 from app.helpers import mortonspacekey as msk
+from app.helpers import sphinxapi
+from app.helpers.helpers_search import _transform_point as transform_coordinate
+from app.helpers.helpers_search import center_from_box2d
+from app.helpers.helpers_search import format_locations_search_text
+from app.helpers.helpers_search import format_search_text
+from app.helpers.helpers_search import ilen
+from app.helpers.helpers_search import parse_box2d
+from app.helpers.helpers_search import shift_to
+from app.helpers.helpers_search import \
+    transform_round_geometry as transform_shape
+from app.helpers.validation_search import SearchValidation
 
 logger = logging.getLogger(__name__)
 

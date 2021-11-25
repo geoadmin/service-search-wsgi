@@ -1,7 +1,9 @@
 # -*- coding: utf-8  -*-
 
-from tests.integration import TestsBase, sphinx_tests
 from chsdi.lib.sphinxapi import sphinxapi
+
+from tests.integration import TestsBase
+from tests.integration import sphinx_tests
 
 
 class Test_SphinxApi(TestsBase):
@@ -37,10 +39,18 @@ class Test_SphinxApi(TestsBase):
 
     def test_sphinx_api(self):
         api = self._callFUT()
-        docs = ['this is my test text to be highlighted', 'this is another test text to be highlighted']
+        docs = [
+            'this is my test text to be highlighted', 'this is another test text to be highlighted'
+        ]
         words = 'test text'
         index = 'layers'
-        opts = {'before_match': '<b>', 'after_match': '</b>', 'chunk_separator': ' ... ', 'limit': 400, 'around': 15}
+        opts = {
+            'before_match': '<b>',
+            'after_match': '</b>',
+            'chunk_separator': ' ... ',
+            'limit': 400,
+            'around': 15
+        }
         res = api.BuildExcerpts(docs, index, words, opts)
         self.assertFalse(res)
 
@@ -52,7 +62,9 @@ class Test_SphinxApi(TestsBase):
 
     def test_sphinx_api_no_opts(self):
         api = self._callFUT()
-        docs = ['this is my test text to be highlighted', 'this is another test text to be highlighted']
+        docs = [
+            'this is my test text to be highlighted', 'this is another test text to be highlighted'
+        ]
         words = 'test text'
         index = 'layers'
         res = api.BuildExcerpts(docs, index, words)
@@ -63,7 +75,9 @@ class Test_SphinxApi(TestsBase):
         index = 'layers'
         attrs = ['toto', 'tutu']
         values1 = {2: [123, 1000000000], 4: [456, 1234567890]}
-        values2 = {2: [[123, 1000000000], [256, 1789789687]], 4: [[456, 1234567890], [789, 2034578990]]}
+        values2 = {
+            2: [[123, 1000000000], [256, 1789789687]], 4: [[456, 1234567890], [789, 2034578990]]
+        }
 
         res1 = api.UpdateAttributes(index, attrs, values1)
         self.assertFalse(res1)
