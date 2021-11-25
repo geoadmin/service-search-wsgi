@@ -17,6 +17,7 @@ shapely = "*"
 requests = "*"
 pyproj = "~=3.2.1"
 unidecode = "*"
+werkzeug = "*"
 
 [dev-packages]
 yapf = "*"

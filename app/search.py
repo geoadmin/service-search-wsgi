@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
+import logging
 
 import re
 import six
-import pyramid.httpexceptions as exc
-from pyramid.view import view_config
+from werkzeug.exceptions import BadRequest, InternalServerError, GatewayTimeout, ServiceUnavailable, NotFound
 
 from shapely.geometry import box, Point, mapping
 
@@ -13,6 +12,8 @@ from app.helpers.helpers_search import _transform_point as transform_coordinate,
 from app.helpers.helpers_search import center_from_box2d, transform_round_geometry as transform_shape
 from app.helpers import sphinxapi
 from app.helpers import mortonspacekey as msk
+
+logger = logging.getLogger(__name__)
 
 
 class Search(SearchValidation):
@@ -72,15 +73,15 @@ class Search(SearchValidation):
         self.sphinx.SetServer('localhost', 9312)
         self.sphinx.SetMatchMode(sphinxapi.SPH_MATCH_EXTENDED)
 
-    @view_config(route_name='search', renderer='geojson', request_param='geometryFormat=geojson')
+    # is being called from routes.py directly
     def view_find_geojson(self):
         (features, bbox) = self._find_geojson()
         bounds = bbox.bounds if bbox is not None else None
         return {"type": "FeatureCollection", "bbox": bounds, "features": features}
 
-    @view_config(route_name='search', renderer='esrijson', request_param='geometryFormat=esrijson')
+    # is being called from routes.py directly
     def view_find_esrijson(self):
-        raise exc.HTTPBadRequest("Param 'geometryFormat=esrijson' is not supported")
+        raise BadRequest("Param 'geometryFormat=esrijson' is not supported")
 
     def _find_geojson(self):
         features = []
@@ -99,7 +100,7 @@ class Search(SearchValidation):
                         bounds = self.quadtree.bbox.bounds
                         bounds = transform_shape(bounds, self.DEFAULT_SRID, self.srid)
                     except ValueError:
-                        raise exc.HTTPInternalServerError(
+                        raise InternalServerError(
                             "Search error: cannot reproject result to SRID: {}".format(self.srid)
                         )
                 bbox = box(*bounds)
@@ -130,9 +131,8 @@ class Search(SearchValidation):
                 features.append(feature)
         return (features, features_bbox)
 
-    @view_config(route_name='search', renderer='jsonp')
+    # is being called from routes.py directly
     def search(self):
-        print("-------------------------------------------------------------------------")
         self.sphinx.SetConnectTimeout(10.0)
         # create a quadindex if the bbox is defined
         if self.bbox is not None and self.typeInfo not in ('layers', 'featuresearch'):
@@ -162,7 +162,7 @@ class Search(SearchValidation):
             if self.typeInfo in ('locations'):
                 temp = self.sphinx.Query(searchTextFinal, index='swisssearch_fuzzy')
         except IOError:  # pragma: no cover
-            raise exc.HTTPGatewayTimeout()
+            raise GatewayTimeout()
         temp = temp['matches'] if temp is not None else temp
         self.results['fuzzy'] = 'true'
         return temp
@@ -218,12 +218,12 @@ class Search(SearchValidation):
                 # In case RunQueries doesn't return results (reason unknown)
                 # related to issue
                 if temp is None:
-                    raise exc.HTTPServiceUnavailable(
+                    raise ServiceUnavailable(
                         'no results from sphinx service (%s)' % self.sphinx._error
                     )
 
             except IOError:  # pragma: no cover
-                raise exc.HTTPGatewayTimeout()
+                raise HTTPGatewayTimeout()
 
             temp_merged = temp[0].get('matches', []) + temp[1].get('matches', []) if len(
                 temp
@@ -286,7 +286,7 @@ class Search(SearchValidation):
         try:
             temp = self.sphinx.Query(searchText, index=index_name)
         except IOError:  # pragma: no cover
-            raise exc.HTTPGatewayTimeout()
+            raise HTTPGatewayTimeout()
         temp = temp['matches'] if temp is not None else temp
         if temp is not None and len(temp) != 0:
             self.results['results'] += temp
@@ -311,7 +311,7 @@ class Search(SearchValidation):
         # all features in given bounding box
         if self.featureIndexes is None:
             # we need bounding box and layernames. FIXME: this should be error
-            raise exc.HTTPBadRequest('Bad request: no layername given')
+            raise BadRequest('Bad request: no layername given')
         featureLimit = self.limit if self.limit and self.limit <= self.FEATURE_LIMIT else self.FEATURE_LIMIT
         self.sphinx.SetLimits(0, featureLimit)
         self.sphinx.SetRankingMode(sphinxapi.SPH_RANK_WORDCOUNT)
@@ -331,7 +331,7 @@ class Search(SearchValidation):
         try:
             temp = self.sphinx.RunQueries()
         except IOError:  # pragma: no cover
-            raise exc.HTTPGatewayTimeout()
+            raise GatewayTimeout()
         self.sphinx.ResetFilters()
         self._parse_feature_results(temp)
 
@@ -361,9 +361,7 @@ class Search(SearchValidation):
 
     def _check_timeparameters(self):
         if self.timeInstant is not None and self.timeStamps is not None:
-            raise exc.HTTPBadRequest(
-                'You are not allowed to mix timeStamps and timeInstant parameters'
-            )
+            raise BadRequest('You are not allowed to mix timeStamps and timeInstant parameters')
 
     def _get_geoanchor_from_bbox(self):
         center = center_from_box2d(self.bbox)
@@ -443,7 +441,7 @@ class Search(SearchValidation):
             for origin in origins:
                 ranks += origin2Rank[origin]
         except KeyError:  # pragma: no cover
-            raise exc.HTTPBadRequest('Bad value(s) in parameter origins')
+            raise BadRequest('Bad value(s) in parameter origins')
         return ranks
 
     def _search_lang_to_filter(self):
@@ -487,7 +485,7 @@ class Search(SearchValidation):
                 self.sphinx.AddQuery(queryText, index=translated_layer)
             else:
                 if self.searchLang:
-                    raise exc.HTTPBadRequest('Parameter seachLang is not supported for %s' % index)
+                    raise BadRequest('Parameter seachLang is not supported for %s' % index)
                 self.sphinx.AddQuery(queryText, index=str(index))
 
     def _box2d_transform(self, res):
@@ -500,9 +498,7 @@ class Search(SearchValidation):
             bbox = transform_shape(shape, self.DEFAULT_SRID, self.srid).bounds
             res['geom_st_box2d'] = "BOX({} {},{} {})".format(*bbox)
         except Exception:
-            raise exc.HTTPInternalServerError(
-                'Error while converting BOX2D to EPSG:{}'.format(self.srid)
-            )
+            raise InternalServerError('Error while converting BOX2D to EPSG:{}'.format(self.srid))
         return res
 
     def _parse_locations(self, res):
@@ -522,7 +518,7 @@ class Search(SearchValidation):
                     res['x'] = res['lon']
                     res['y'] = res['lat']
                 except KeyError:
-                    raise exc.HTTPInternalServerError('Sphinx location has no lat/long defined')
+                    raise InternalServerError('Sphinx location has no lat/long defined')
             else:
                 try:
                     pnt = (res['y'], res['x'])
@@ -530,7 +526,7 @@ class Search(SearchValidation):
                     res['x'] = x
                     res['y'] = y
                 except Exception:
-                    raise exc.HTTPInternalServerError(
+                    raise InternalServerError(
                         'Error while converting point(x, y) to EPSG:{}'.format(self.srid)
                     )
         return res
@@ -569,7 +565,7 @@ class Search(SearchValidation):
         for idx, result in self._yield_results(results):
             if 'error' in result:
                 if result['error'] != '':
-                    raise exc.HTTPNotFound(result['error'])  # pragma: no cover
+                    raise NotFound(result['error'])  # pragma: no cover
             if result is not None and 'matches' in result:
                 for match in self._yield_matches(result['matches']):
                     # Backward compatible
