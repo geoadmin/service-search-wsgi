@@ -15,11 +15,12 @@ six = "*"
 pyramid = "*"
 shapely = "*"
 requests = "*"
-pyproj = "~=3.2.1"
+pyproj = "~=1.9.6"
 unidecode = "*"
 werkzeug = "*"
 
 [dev-packages]
+gatilegrid = "*"
 yapf = "*"
 nose2 = "*"
 pylint = "*"

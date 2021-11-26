@@ -1,5 +1,4 @@
 import logging
-
 from flask import jsonify
 from flask import make_response
 from flask import request
@@ -16,10 +15,10 @@ def checker():
     return make_response(jsonify({'success': True, 'message': 'OK', 'version': APP_VERSION}))
 
 
-# DOTO: filter all {map}
-@app.route('/rest/services/all/SearchServer', methods=['GET'])
-@app.route('/search', methods=['GET'])
-def check_search():
+@app.route('/rest/services/<topic>/SearchServer', methods=['GET'])
+def search_server(topic):
+    request.matchdict = {}
+    request.matchdict['topic'] = topic
     search = Search(request)
     if request.args.get('geometryFormat') == 'geojson':
         search_result = search.view_find_geojson()

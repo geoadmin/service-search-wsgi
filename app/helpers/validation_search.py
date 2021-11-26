@@ -1,4 +1,5 @@
 import logging
+
 from werkzeug.exceptions import BadRequest
 
 from app.helpers.helpers_search import float_raise_nan
@@ -16,15 +17,16 @@ logger = logging.getLogger(__name__)
 # pylint: disable=invalid-name
 class MapNameValidation(object):  # pylint: disable=too-few-public-methods
 
-    def hasMap(self, db, mapName):  # pylint: disable=no-self-use,
+    def has_topic(self, db, topic_name):  # pylint: disable=no-self-use,unused-argument
         # DOTO - db connection and Topics Model here
         # availableMaps = [q[0] for q in db.query(Topics.id)]
         # availableMaps.append(u'all')
+        availableMaps = ['swisstopo', 'all', 'schnee']
 
-        # if mapName not in availableMaps:
-        #    raise BadRequest('The map you provided does not exist')
-        if db or mapName:
-            pass
+        if topic_name not in availableMaps:
+            raise BadRequest('The map you provided does not exist')
+        #if db or mapName:
+        #    pass
 
 
 class BaseValidation(MapNameValidation):  # pylint: disable=too-few-public-methods
@@ -33,7 +35,7 @@ class BaseValidation(MapNameValidation):  # pylint: disable=too-few-public-metho
         super().__init__()
 
         self.mapName = request.matchdict.get('map')
-        self.hasMap(request.db, self.mapName)
+        self.has_topic(request.db, self.mapName)
         self.geodataStaging = request.registry.settings['geodata_staging']
         self.cbName = request.params.get('callback')
         self.request = request

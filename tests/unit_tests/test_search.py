@@ -1,11 +1,71 @@
-# -*- coding: utf-8 -*-
+from unittest import TestCase
+from app import app
+#from flask import url_for
+#from app.helpers.helpers_search import ilen
+from app.helpers.helpers_search import parse_box2d
 
-from chsdi.lib.helpers import ilen
-from chsdi.lib.helpers import parse_box2d
+#from app.helpers.helpers_search import shift_to_lv95
 
-from tests.integration import TestsBase
-from tests.integration import shift_to_lv95
-from tests.integration import sphinx_tests
+from app.helpers.validation_search import SUPPORTED_OUTPUT_SRS
+from gatilegrid import getTileGrid
+
+sphinx_tests = True  # if there is access service-search-sphinx or not
+
+# pylint: disable=invalid-name
+
+
+class TestsBase(TestCase):
+
+    def setUp(self):
+        self.context = app.test_request_context()
+        self.context.push()
+        self.app = app.test_client()
+        self.app.testing = True
+        self.origin_headers = {"allowed": {"Origin": "some_random_domain"}}
+
+        self.grids = {
+            '21781': getTileGrid(21781),
+            '2056': getTileGrid(2056),
+            '3857': getTileGrid(3857),
+            '4326': getTileGrid(4326)
+        }
+
+    def assertGeojsonFeature(self, feature, srid, hasGeometry=True, hasLayer=True):
+        self.assertIn('id', feature)
+        self.assertIn('properties', feature)
+        self.assertNotIn('attributes', feature)
+        if hasLayer:
+            self.assertIn('layerBodId', feature)
+            self.assertIn('layerName', feature)
+        if hasGeometry:
+            self.assertIn('geometry', feature)
+            self.assertIn('type', feature)
+            self.assertIn('type', feature['geometry'])
+            self.assertIn('bbox', feature)
+            self.assertBBoxValidity(feature['bbox'], srid)
+
+    def assertEsrijsonFeature(self, feature, srid, hasGeometry=True, hasLayer=True):
+        self.assertIn('id', feature)
+        self.assertNotIn('properties', feature)
+        self.assertIn('attributes', feature)
+        if hasLayer:
+            self.assertIn('layerBodId', feature)
+            self.assertIn('layerName', feature)
+        if hasGeometry:
+            self.assertIn('geometry', feature)
+            self.assertIn('bbox', feature)
+            self.assertEqual(feature['geometry']['spatialReference']['wkid'], srid)
+            self.assertBBoxValidity(feature['bbox'], srid)
+
+    def assertBBoxValidity(self, bbox, srid):
+        self.assertIn(srid, SUPPORTED_OUTPUT_SRS)
+        grid = self.grids[str(srid)]
+        minx, miny, maxx, maxy = bbox
+
+        self.assertLessEqual(maxx, grid.MAXX)
+        self.assertLessEqual(maxy, grid.MAXY)
+        self.assertGreaterEqual(minx, grid.MINX)
+        self.assertGreaterEqual(miny, grid.MINY)
 
 
 class TestSearchServiceView(TestsBase):
@@ -13,7 +73,7 @@ class TestSearchServiceView(TestsBase):
     def setUp(self):
         if not sphinx_tests:
             self.skipTest("Service search requires access to the sphinx server")
-        super(TestSearchServiceView, self).setUp()
+        super().setUp()
 
     def assertAttrs(self, type_, attrs, srid, returnGeometry=True, spatialOrder=False):
         self.assertIn('detail', attrs)
@@ -61,9 +121,17 @@ class TestSearchServiceView(TestsBase):
         self.assertNotIn('geom_st_box2d_lv95', attrs)
 
     def test_no_type(self):
-        params = {'searchText': 'ga'}
-        self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=400)
+        query_string = {'searchText': 'ga'}
+        response = self.app.get(
+            '/rest/services/inspire/SearchServer',
+            query_string=query_string,
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 400)
+        #self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=400)
 
+
+"""
     def test_unaccepted_type(self):
         params = {'searchText': 'ga', 'type': 'unaccepted'}
         resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=400)
@@ -988,3 +1056,5 @@ class TestSearchServiceView(TestsBase):
             self.assertIn(i, ids)
         for i in ids_de:
             self.assertIn(i, ids)
+
+"""

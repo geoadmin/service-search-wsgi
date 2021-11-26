@@ -1,9 +1,10 @@
 # -*- coding: utf-8  -*-
 
-from chsdi.lib.sphinxapi import sphinxapi
+from app.helpers.sphinxapi import sphinxapi
 
 from tests.integration import TestsBase
-from tests.integration import sphinx_tests
+
+sphinx_tests = True
 
 
 class Test_SphinxApi(TestsBase):

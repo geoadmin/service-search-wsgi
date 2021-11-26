@@ -42,15 +42,11 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         # DOTO remove ugly hack
         request.registry = {}
 
-        # DOTO remove ugly hack
-        request.matchdict = {}
-        request.matchdict['map'] = 'all'
-
-        self.mapName = request.matchdict.get('map')
+        self.topic_name = request.matchdict.get('topic')
 
         # DOTO remove ugly hack
         request.db = 'to do'
-        self.hasMap(request.db, self.mapName)
+        self.has_topic(request.db, self.topic_name)
 
         # DOTO remove ugly hack
         request.lang = 'de'
@@ -287,12 +283,12 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         self.sphinx.SetFieldWeights({'@title': 4, '@detail': 2, '@layer': 1})
 
         index_name = f'layers_{self.lang}'
-        mapName = self.mapName if self.mapName != 'all' else ''
+        topic_name = self.topic_name if self.topic_name != 'all' else ''
         # Whitelist hack
-        if mapName in ('api'):
+        if topic_name in ('api'):
             topicFilter = 'api'
         else:
-            topicFilter = f'({mapName} | ech)'
+            topicFilter = f'({topic_name} | ech)'
         searchText = ' '.join(
             (
                 self._query_fields('@(title,detail,layer)'),
@@ -539,7 +535,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             else:
                 try:
                     pnt = (res['y'], res['x'])
-                    x, y = transform_coordinate(pnt, self.DEFAULT_SRID, self.srid)  # DOTO pylint: disable=line-too-long, unpacking-non-sequence
+                    x, y = transform_coordinate(pnt, self.DEFAULT_SRID, self.srid)  # DOTO pylint: disable=line-too-long, unpacking-non-sequence, unbalanced-tuple-unpacking
                     res['x'] = x
                     res['y'] = y
                 except Exception as e:
