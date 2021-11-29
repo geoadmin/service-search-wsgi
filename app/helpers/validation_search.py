@@ -21,7 +21,7 @@ class MapNameValidation(object):  # pylint: disable=too-few-public-methods
         # DOTO - db connection and Topics Model here
         # availableMaps = [q[0] for q in db.query(Topics.id)]
         # availableMaps.append(u'all')
-        availableMaps = ['swisstopo', 'all', 'schnee']
+        availableMaps = ['swisstopo', 'all', 'schnee', 'inspire', 'ech']
 
         if topic_name not in availableMaps:
             raise BadRequest('The map you provided does not exist')

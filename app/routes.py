@@ -1,4 +1,5 @@
 import logging
+
 from flask import jsonify
 from flask import make_response
 from flask import request
@@ -15,15 +16,25 @@ def checker():
     return make_response(jsonify({'success': True, 'message': 'OK', 'version': APP_VERSION}))
 
 
+@app.route('/api/search', methods=['GET'])
 @app.route('/rest/services/<topic>/SearchServer', methods=['GET'])
-def search_server(topic):
+def search_server(topic='all'):
     request.matchdict = {}
     request.matchdict['topic'] = topic
     search = Search(request)
     if request.args.get('geometryFormat') == 'geojson':
-        search_result = search.view_find_geojson()
+        response = make_response(search.view_find_geojson())
+        response.headers["Content-Type"] = "application/geo+json"
     elif request.args.get('geometryFormat') == 'esrijson':
-        search_result = search.view_find_esrijson()
+        response = make_response(search.view_find_esrijson())
     else:
-        search_result = search.search()
-    return make_response(search_result)
+        response = make_response(search.search())
+
+    # DOTO: better - callback f.ex with a renderer
+    if request.args.get('callback'):
+        callback = request.args.get('callback')
+        data = response.json
+        response.headers["Content-Type"] = "application/javascript"
+        response.data = f"/**/{callback}({data}));"
+
+    return response

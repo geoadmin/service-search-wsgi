@@ -1,17 +1,20 @@
 from unittest import TestCase
+
+from gatilegrid import getTileGrid
+
+from flask import url_for
+
 from app import app
 #from flask import url_for
 #from app.helpers.helpers_search import ilen
 from app.helpers.helpers_search import parse_box2d
+from app.helpers.validation_search import SUPPORTED_OUTPUT_SRS
 
 #from app.helpers.helpers_search import shift_to_lv95
 
-from app.helpers.validation_search import SUPPORTED_OUTPUT_SRS
-from gatilegrid import getTileGrid
-
 sphinx_tests = True  # if there is access service-search-sphinx or not
 
-# pylint: disable=invalid-name
+# pylint: disable=invalid-name,too-many-lines
 
 
 class TestsBase(TestCase):
@@ -75,7 +78,7 @@ class TestSearchServiceView(TestsBase):
             self.skipTest("Service search requires access to the sphinx server")
         super().setUp()
 
-    def assertAttrs(self, type_, attrs, srid, returnGeometry=True, spatialOrder=False):
+    def assertAttrs(self, type_, attrs, srid, returnGeometry=True, spatialOrder=False):  # pylint: disable=too-many-arguments,line-too-long
         self.assertIn('detail', attrs)
         self.assertIn('origin', attrs)
         self.assertIn('label', attrs)
@@ -121,71 +124,102 @@ class TestSearchServiceView(TestsBase):
         self.assertNotIn('geom_st_box2d_lv95', attrs)
 
     def test_no_type(self):
-        query_string = {'searchText': 'ga'}
         response = self.app.get(
-            '/rest/services/inspire/SearchServer',
-            query_string=query_string,
+            url_for('search_server', topic='inspire', searchText='ga'),
             headers=self.origin_headers["allowed"]
         )
         self.assertEqual(response.status_code, 400)
-        #self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=400)
 
-
-"""
     def test_unaccepted_type(self):
-        params = {'searchText': 'ga', 'type': 'unaccepted'}
-        resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=400)
+        response = self.app.get(
+            url_for('search_server', topic='inspire', searchText='ga', type='unaccepted'),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 400)
         acceptedTypes = ['locations', 'layers', 'featuresearch']
-        resp.mustcontain(
+        self.assertIn(
+            response.json['error']['message'],
             "The type parameter you provided is not valid. Possible values are %s" %
             (', '.join(acceptedTypes))
         )
 
     def test_searchtext_none_value_layers(self):
-        params = {'type': 'layers'}
-        resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=400)
-        resp.mustcontain("Please provide a search text")
+        response = self.app.get(
+            url_for('search_server', topic='inspire', type='layers'),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(response.json['error']['message'], "Please provide a search text")
 
     def test_searchtext_empty_string_layers(self):
-        params = {'type': 'layers', 'searchText': '    '}
-        resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=400)
-        resp.mustcontain("Please provide a search text")
+        response = self.app.get(
+            url_for('search_server', topic='inspire', type='layers', searchText='     '),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(response.json['error']['message'], "Please provide a search text")
 
     def test_searchtext_none_locations(self):
-        params = {'type': 'locations'}
-        resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=400)
-        resp.mustcontain("Please provide a search text")
+        response = self.app.get(
+            url_for('search_server', topic='inspire', type='locations'),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(response.json['error']['message'], "Please provide a search text")
 
     def test_searchtext_none_value_locations(self):
-        params = {'type': 'locations', 'searchText': '     '}
-        resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=400)
-        resp.mustcontain("Please provide a search text")
+        response = self.app.get(
+            url_for('search_server', topic='inspire', type='locations', searchText='     '),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(response.json['error']['message'], "Please provide a search text")
 
     def test_searchtext_none_featuresearch(self):
-        resp = self.testapp.get(
-            '/rest/services/inspire/SearchServer', params={'type': 'featuresearch'}, status=400
+        response = self.app.get(
+            url_for('search_server', topic='inspire', type='featuresearch'),
+            headers=self.origin_headers["allowed"]
         )
-        resp.mustcontain("Please provide a search text")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(response.json['error']['message'], "Please provide a search text")
 
     def test_searchtext_none_value_featuresearch(self):
-        params = {'type': 'featuresearch', 'searchText': '     '}
-        resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=400)
-        resp.mustcontain("Please provide a search text")
+        response = self.app.get(
+            url_for('search_server', topic='inspire', type='featuresearch', searchText='    '),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(response.json['error']['message'], "Please provide a search text")
 
+    # e2e
     def test_search_layers(self):
-        params = {'type': 'layers', 'searchText': 'wand'}
-        resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
-        self.assertEqual(resp.json['results'][0]['attrs']['lang'], 'de')
-        self.assertAttrs('layers', resp.json['results'][0]['attrs'], 21781)
+        response = self.app.get(
+            url_for('search_server', topic='inspire', type='layers', searchText='wand'),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertEqual(response.json['results'][0]['attrs']['lang'], 'de')
+        self.assertAttrs('layers', response.json['results'][0]['attrs'], 21781)
 
+    # e2e
     def test_search_layers_geojson(self):
-        params = {'type': 'layers', 'searchText': 'wand', 'geometryFormat': 'geojson'}
-        resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/geo+json')
-        self.assertEqual(resp.json['type'], 'FeatureCollection')
-        self.assertEqual(resp.json['bbox'], [420000, 30000, 900000, 510000])
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='inspire',
+                type='layers',
+                searchText='wand',
+                geometryFormat='geojson'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/geo+json')
+        self.assertEqual(response.json['type'], 'FeatureCollection')
+        self.assertEqual(response.json['bbox'], [420000, 30000, 900000, 510000])
 
+    # e2e
     def test_search_layers_geojson_with_projection(self):
         projections = {
             '2056': [2420000.0, 1029999.9, 2900000.0, 1509999.9],
@@ -193,16 +227,24 @@ class TestSearchServiceView(TestsBase):
             '3857': [572215.5, 5684416.9, 1290351.9, 6388703.1],
             '21781': [420000, 30000, 900000, 510000]
         }
-        params = {'type': 'layers', 'searchText': 'wand', 'geometryFormat': 'geojson'}
         for sr in list(projections.keys()):
-            params['sr'] = sr
-            resp = self.testapp.get(
-                '/rest/services/inspire/SearchServer', params=params, status=200
+            response = self.app.get(
+                url_for(
+                    'search_server',
+                    topic='inspire',
+                    type='layers',
+                    searchText='wand',
+                    geometryFormat='geojson',
+                    sr=sr
+                ),
+                headers=self.origin_headers["allowed"]
             )
-            self.assertEqual(resp.content_type, 'application/geo+json')
-            self.assertEqual(resp.json['type'], 'FeatureCollection')
-            self.assertEqual(resp.json['bbox'], projections[sr])
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.content_type, 'application/geo+json')
+            self.assertEqual(response.json['type'], 'FeatureCollection')
+            self.assertEqual(response.json['bbox'], projections[sr])
 
+    # e2e test
     def test_search_locations_geojson_with_projection(self):
         projections = {
             '2056': [2534437.97, 1150655.173, 2544978.008, 1161554.51],
@@ -211,157 +253,263 @@ class TestSearchServiceView(TestsBase):
             '21781': [534437.969999999, 150655.173000001, 544978.008000001, 161554.509999998]
         }
 
-        params = {
-            'type': 'locations', 'searchText': 'lausanne', 'geometryFormat': 'geojson', 'limit': 1
-        }
         for sr in list(projections.keys()):
-            params['sr'] = sr
-            resp = self.testapp.get(
-                '/rest/services/inspire/SearchServer', params=params, status=200
+            response = self.app.get(
+                url_for(
+                    'search_server',
+                    topic='inspire',
+                    type='locations',
+                    searchText='lausanne',
+                    geometryFormat='geojson',
+                    limit=1,
+                    sr=sr
+                ),
+                headers=self.origin_headers["allowed"]
             )
-            self.assertEqual(resp.content_type, 'application/geo+json')
-            self.assertEqual(resp.json['type'], 'FeatureCollection')
-            self.assertEqual(resp.json['bbox'], projections[sr])
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.content_type, 'application/geo+json')
+            self.assertEqual(response.json['type'], 'FeatureCollection')
+            self.assertEqual(response.json['bbox'], projections[sr])
 
+    # transform to unittest
     def test_search_layers_with_cb(self):
-        params = {'type': 'layers', 'searchText': 'wand', 'callback': 'cb_'}
-        resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/javascript')
-        resp.mustcontain('cb_(')
 
+        response = self.app.get(
+            url_for(
+                'search_server', topic='inspire', type='layers', searchText='wand', callback='cb_'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/javascript')
+        self.assertIn('cb_(', str(response.data.decode('utf-8')))
+
+    # transform to unittest
     def test_search_layers_all_langs(self):
         langs = ('de', 'fr', 'it', 'en', 'rm')
         for lang in langs:
-            params = {'type': 'layers', 'searchText': 'wand', 'lang': lang}
-            resp = self.testapp.get(
-                '/rest/services/inspire/SearchServer', params=params, status=200
+            response = self.app.get(
+                url_for(
+                    'search_server', topic='inspire', type='layers', searchText='wand', lang=lang
+                ),
+                headers=self.origin_headers["allowed"]
             )
-            self.assertEqual(resp.content_type, 'application/json')
-            self.assertEqual(resp.json['results'][0]['attrs']['lang'], lang)
-            self.assertAttrs('layers', resp.json['results'][0]['attrs'], 21781)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.content_type, 'application/json')
+            self.assertEqual(response.json['results'][0]['attrs']['lang'], lang)
+            self.assertAttrs('layers', response.json['results'][0]['attrs'], 21781)
 
+    # e2e test
     def test_search_layers_for_one_layer(self):
-        params = {'type': 'layers', 'searchText': 'ch.blw.klimaeignung-spezialkulturen'}
-        resp = self.testapp.get('/rest/services/blw/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
-        self.assertEqual(len(resp.json['results']), 1)
-        self.assertAttrs('layers', resp.json['results'][0]['attrs'], 21781)
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='inspire',
+                type='layers',
+                searchText='ch.blw.klimaeignung-spezialkulturen'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertEqual(len(response.json['results']), 1)
+        self.assertAttrs('layers', response.json['results'][0]['attrs'], 21781)
 
+    # unittest
     def test_search_layers_accents(self):
-        params = {'type': 'layers', 'searchText': '%+&/()=?!üäöéà$@i£$'}
-        resp = self.testapp.get('/rest/services/ech/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
-        self.assertEqual(len(resp.json['results']), 0)
+        response = self.app.get(
+            url_for('search_server', topic='ech', type='layers', searchText='%+&/()=?!üäöéà$@i£$'),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertEqual(len(response.json['results']), 0)
 
+    # e2e
     def test_search_locations(self):
-        params = {'type': 'locations', 'searchText': 'rue des berges'}
-        resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
-        self.assertGreater(len(resp.json['results']), 0)
-        self.assertAttrs('locations', resp.json['results'][0]['attrs'], 21781)
-        params['sr'] = '2056'
-        resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
-        self.assertGreater(len(resp.json['results']), 0)
-        self.assertAttrs('locations', resp.json['results'][0]['attrs'], 2056)
-        params['sr'] = '3857'
-        resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
-        self.assertGreater(len(resp.json['results']), 0)
-        self.assertAttrs('locations', resp.json['results'][0]['attrs'], 3857)
-        params['sr'] = '4326'
-        resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
-        self.assertGreater(len(resp.json['results']), 0)
-        self.assertAttrs('locations', resp.json['results'][0]['attrs'], 4326)
+        # default sr 21781
+        response = self.app.get(
+            url_for(
+                'search_server', topic='inspire', type='locations', searchText='rue des berges'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertGreater(len(response.json['results']), 0)
+        self.assertAttrs('locations', response.json['results'][0]['attrs'], 21781)
+        for sr in ('2056', '21781', '4326', '3857'):
+            response = self.app.get(
+                url_for('search_server', type='locations', searchText='rue des berges', sr=sr),
+                headers=self.origin_headers["allowed"]
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.content_type, 'application/json')
+            self.assertGreater(len(response.json['results']), 0)
+            self.assertAttrs('locations', response.json['results'][0]['attrs'], int(sr))
 
+    # unittest
     def test_bbox_wrong_number_coordinates(self):
-        params = {
-            'type': 'locations',
-            'searchText': 'rue des berges',
-            'bbox': '551306.5625,551754.125,168514.625'
-        }
-        resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=400)
-        resp.mustcontain('Please provide 4 coordinates in a comma separated list')
+        response = self.app.get(
+            url_for(
+                'search_server',
+                type='locations',
+                searchText='rue des berges',
+                bbox='551306.5625,551754.125,168514.625'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(
+            response.json['error']['message'],
+            'Please provide 4 coordinates in a comma separated list'
+        )
 
+    # unittest - testing validator
     def test_bbox_check_first_second_coordinates(self):
-        params = {
-            'type': 'locations',
-            'searchText': 'rue des berges',
-            'bbox': '420000,420010,551754.125,168514.625'
-        }
-        resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=400)
-        resp.mustcontain('The first coordinate must be higher than the second')
+        response = self.app.get(
+            url_for(
+                'search_server',
+                type='locations',
+                searchText='rue des berges',
+                bbox='420000,420010,551754.125,168514.625'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(
+            response.json['error']['message'],
+            'The first coordinate must be higher than the second'
+        )
 
+    # unittest - testing validator
     def test_bbox_check_third_fourth_coordinates(self):
-        params = {
-            'type': 'locations',
-            'searchText': 'rue des berges',
-            'bbox': '551306.5625,167918.328125,420000,420010'
-        }
-        resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=400)
-        resp.mustcontain('The third coordinate must be higher than the fourth')
+        response = self.app.get(
+            url_for(
+                'search_server',
+                type='locations',
+                searchText='rue des berges',
+                bbox='551306.5625,167918.328125,420000,420010'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 400)
 
+        self.assertIn(
+            response.json['error']['message'],
+            'The third coordinate must be higher than the fourth'
+        )
+
+    # convert to unittest
     def test_search_loactions_with_cb(self):
-        params = {
-            'type': 'locations',
-            'searchText': 'rue des berges',
-            'bbox': '551306.5625,167918.328125,551754.125,168514.625',
-            'callback': 'cb_'
-        }
-        resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/javascript')
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='inspire',
+                type='locations',
+                searchText='rue des berges',
+                bbox='551306.5625,167918.328125,551754.125,168514.625',
+                callback='cb_'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/javascript')
 
+    # e2e test
     def test_search_locations_all_langs(self):
         # even if not lang dependent
         langs = ('de', 'fr', 'it', 'en', 'rm')
         for lang in langs:
-            params = {'type': 'locations', 'searchText': 'mont d\'or', 'lang': lang}
-            resp = self.testapp.get(
-                '/rest/services/inspire/SearchServer', params=params, status=200
+            response = self.app.get(
+                url_for(
+                    'search_server',
+                    topic='inspire',
+                    type='locations',
+                    searchText='mont d\'or',
+                    lang=lang
+                ),
+                headers=self.origin_headers["allowed"]
             )
-            self.assertEqual(resp.content_type, 'application/json')
-            self.assertGreater(len(list(resp.json['results'])), 0)
-            self.assertAttrs('locations', resp.json['results'][0]['attrs'], 21781)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.content_type, 'application/json')
+            self.assertGreater(len(list(response.json['results'])), 0)
+            self.assertAttrs('locations', response.json['results'][0]['attrs'], 21781)
 
+    # e2e test
     def test_search_locations_prefix_sentence_match(self):
         params = {'type': 'locations', 'searchText': 'lausann'}
-        resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
-        self.assertGreater(len(resp.json['results']), 0)
-        self.assertEqual(resp.json['results'][0]['attrs']['detail'], 'lausanne vd')
-        self.assertEqual(resp.json['results'][0]['attrs']['origin'], 'gg25')
-        self.assertAttrs('locations', resp.json['results'][0]['attrs'], 21781)
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='inspire',
+                type='locations',
+                searchText='lausann',
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertGreater(len(response.json['results']), 0)
+        self.assertEqual(response.json['results'][0]['attrs']['detail'], 'lausanne vd')
+        self.assertEqual(response.json['results'][0]['attrs']['origin'], 'gg25')
+        self.assertAttrs('locations', response.json['results'][0]['attrs'], 21781)
         params['sr'] = '2056'
-        resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
-        self.assertGreater(len(resp.json['results']), 0)
-        self.assertEqual(resp.json['results'][0]['attrs']['detail'], 'lausanne vd')
-        self.assertEqual(resp.json['results'][0]['attrs']['origin'], 'gg25')
-        self.assertAttrs('locations', resp.json['results'][0]['attrs'], 2056)
+        response = self.app.get(
+            url_for(
+                'search_server', topic='inspire', type='locations', searchText='lausann', sr='2056'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertGreater(len(response.json['results']), 0)
+        self.assertEqual(response.json['results'][0]['attrs']['detail'], 'lausanne vd')
+        self.assertEqual(response.json['results'][0]['attrs']['origin'], 'gg25')
+        self.assertAttrs('locations', response.json['results'][0]['attrs'], 2056)
 
+    # unittest
     def test_search_locations_wrong_topic(self):
-        params = {
-            'type': 'locations',
-            'searchText': 'vd 446',
-            'bbox': '551306.5625,167918.328125,551754.125,168514.625'
-        }
-        self.testapp.get('/rest/services/toto/SearchServer', params=params, status=400)
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='toto',
+                type='locations',
+                searchText='vd 446',
+                bbox='551306.5625,167918.328125,551754.125,168514.625'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(response.json['error']['message'], 'The map you provided does not exist')
 
+    # e2e test
     def test_search_locations_lausanne(self):
-        params = {'type': 'locations', 'searchText': 'lausanne'}
-        resp = self.testapp.get('/rest/services/ech/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
-        self.assertGreater(len(list(resp.json['results'])), 0)
-        self.assertEqual(resp.json['results'][0]['attrs']['detail'], 'lausanne vd')
-        self.assertAttrs('locations', resp.json['results'][0]['attrs'], 21781)
-        params['sr'] = '2056'
-        resp = self.testapp.get('/rest/services/ech/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
-        self.assertGreater(len(list(resp.json['results'])), 0)
-        self.assertEqual(resp.json['results'][0]['attrs']['detail'], 'lausanne vd')
-        self.assertAttrs('locations', resp.json['results'][0]['attrs'], 2056)
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='locations',
+                searchText='lausanne',
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertGreater(len(list(response.json['results'])), 0)
+        self.assertEqual(response.json['results'][0]['attrs']['detail'], 'lausanne vd')
+        self.assertAttrs('locations', response.json['results'][0]['attrs'], 21781)
+        response = self.app.get(
+            url_for('search_server', topic='ech', type='locations', searchText='lausanne', sr=2056),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertGreater(len(list(response.json['results'])), 0)
+        self.assertEqual(response.json['results'][0]['attrs']['detail'], 'lausanne vd')
+        self.assertAttrs('locations', response.json['results'][0]['attrs'], 2056)
 
+    """
     def test_search_locations_wil(self):
         params = {'type': 'locations', 'searchText': 'wil'}
         resp = self.testapp.get('/rest/services/ech/SearchServer', params=params, status=200)
