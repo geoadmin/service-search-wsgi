@@ -1,28 +1,14 @@
 import logging
-import unittest
 
 from flask import url_for
 
-from app import app
+from unit_tests.base_test import SearchTest
 from app.version import APP_VERSION
 
 logger = logging.getLogger(__name__)
 
 
-class CheckerTests(unittest.TestCase):
-
-    def setUp(self):
-        self.context = app.test_request_context()
-        self.context.push()
-        self.app = app.test_client()
-        self.app.testing = True
-        self.origin_headers = {
-            "allowed": {
-                "Origin": "some_random_domain"
-            }, "bad": {
-                "Origin": "big-bad-wolf.com"
-            }
-        }
+class CheckerTests(SearchTest):
 
     def test_checker(self):
         response = self.app.get(url_for('checker'), headers=self.origin_headers["allowed"])

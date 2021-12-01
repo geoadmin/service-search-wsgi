@@ -112,9 +112,9 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                         bounds = self.quadtree.bbox.bounds
                         bounds = transform_shape(bounds, self.DEFAULT_SRID, self.srid)
                     except ValueError as e:
-                        raise e from InternalServerError(
+                        raise InternalServerError(
                             f"Search error: cannot reproject result to SRID: {self.srid}"
-                        )
+                        ) from e
                 bbox = box(*bounds)
                 if features_bbox is None:
                     features_bbox = bbox
@@ -175,7 +175,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             if self.typeInfo in ('locations'):
                 temp = self.sphinx.Query(searchTextFinal, index='swisssearch_fuzzy')
         except IOError as e:  # pragma: no cover
-            raise e from GatewayTimeout()
+            raise GatewayTimeout() from e
         temp = temp['matches'] if temp is not None else temp
         self.results['fuzzy'] = 'true'
         return temp
@@ -237,7 +237,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                     )
 
             except IOError as e:  # pragma: no cover
-                raise e from GatewayTimeout()
+                raise GatewayTimeout() from e
 
             temp_merged = temp[0].get('matches', []) + temp[1].get('matches', []) if len(
                 temp
@@ -301,7 +301,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         try:
             temp = self.sphinx.Query(searchText, index=index_name)
         except IOError as e:  # pragma: no cover
-            raise e from GatewayTimeout()
+            raise GatewayTimeout() from e
         temp = temp['matches'] if temp is not None else temp
         if temp is not None and len(temp) != 0:
             self.results['results'] += temp
@@ -348,7 +348,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         try:
             temp = self.sphinx.RunQueries()
         except IOError as e:  # pragma: no cover
-            raise e from GatewayTimeout()
+            raise GatewayTimeout() from e
         self.sphinx.ResetFilters()
         self._parse_feature_results(temp)
 
@@ -460,7 +460,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             for origin in origins:
                 ranks += origin2Rank[origin]
         except KeyError as e:  # pragma: no cover
-            raise e from BadRequest('Bad value(s) in parameter origins')
+            raise BadRequest(f'Bad value(s) in parameter origins {e}') from e
         return ranks
 
     def _search_lang_to_filter(self):
@@ -517,7 +517,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             bbox = transform_shape(shape, self.DEFAULT_SRID, self.srid).bounds
             res['geom_st_box2d'] = "BOX({} {},{} {})".format(*bbox)  # pylint: disable=line-too-long, consider-using-f-string)
         except Exception as e:
-            raise e from InternalServerError(f'Error while converting BOX2D to EPSG:{self.srid}')
+            raise InternalServerError(f'Error while converting BOX2D to EPSG:{self.srid}') from e
         return res
 
     def _parse_locations(self, res):
@@ -533,7 +533,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                     res['x'] = res['lon']
                     res['y'] = res['lat']
                 except KeyError as e:
-                    raise e from InternalServerError('Sphinx location has no lat/long defined')
+                    raise InternalServerError('Sphinx location has no lat/long defined') from e
             else:
                 try:
                     pnt = (res['y'], res['x'])
@@ -541,9 +541,9 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                     res['x'] = x
                     res['y'] = y
                 except Exception as e:
-                    raise e from InternalServerError(
+                    raise InternalServerError(
                         f'Error while converting point(x, y) to EPSG:{self.srid}'
-                    )
+                    ) from e
         return res
 
     def _parse_location_results(self, results, limit):

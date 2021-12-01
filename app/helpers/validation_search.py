@@ -21,7 +21,7 @@ class MapNameValidation(object):  # pylint: disable=too-few-public-methods
         # DOTO - db connection and Topics Model here
         # availableMaps = [q[0] for q in db.query(Topics.id)]
         # availableMaps.append(u'all')
-        availableMaps = ['swisstopo', 'all', 'schnee', 'inspire', 'ech']
+        availableMaps = ['swisstopo', 'all', 'schnee', 'inspire', 'ech', 'api']
 
         if topic_name not in availableMaps:
             raise BadRequest('The map you provided does not exist')
@@ -157,7 +157,7 @@ class SearchValidation(MapNameValidation):  # pylint: disable=too-many-instance-
                 # Python 2/3
                 values = list(map(float_raise_nan, values))
             except ValueError as e:
-                raise e from BadRequest("Please provide numerical values for the parameter bbox")
+                raise BadRequest("Please provide numerical values for the parameter bbox") from e
             if self._srid == 2056:
                 values = shift_to(values, 21781)
             # Swiss extent

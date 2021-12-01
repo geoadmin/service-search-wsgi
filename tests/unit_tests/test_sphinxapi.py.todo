@@ -1,13 +1,13 @@
 # -*- coding: utf-8  -*-
 
-from app.helpers.sphinxapi import sphinxapi
+from app.helpers import sphinxapi
 
-from tests.integration import TestsBase
+from unit_tests.base_test import SearchTest
 
 sphinx_tests = True
 
 
-class Test_SphinxApi(TestsBase):
+class Test_SphinxApi(SearchTest):
 
     def setUp(self):
         if not sphinx_tests:
@@ -16,6 +16,8 @@ class Test_SphinxApi(TestsBase):
 
     def _callFUT(self):
         api = sphinxapi.SphinxClient()
+        api.SetServer('localhost', 9312)
+        api.SetMatchMode(sphinxapi.SPH_MATCH_EXTENDED)
         return api
 
     def test_sphinx_error(self):
@@ -90,7 +92,9 @@ class Test_SphinxApi(TestsBase):
         api = self._callFUT()
         q = 'doma'
         mode = sphinxapi.SPH_MATCH_EXTENDED
-        host = self.testapp.app.registry.settings['sphinxhost']
+        # DOTO
+        #host = self.testapp.app.registry.settings['sphinxhost']
+        host = 'localhost'
         port = 9312
         index = 'swisssearch'
         filtercol = 'rank'

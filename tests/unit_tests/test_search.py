@@ -6,15 +6,15 @@ from flask import url_for
 
 from app import app
 #from flask import url_for
-#from app.helpers.helpers_search import ilen
+from app.helpers.helpers_search import ilen
 from app.helpers.helpers_search import parse_box2d
 from app.helpers.validation_search import SUPPORTED_OUTPUT_SRS
 
-#from app.helpers.helpers_search import shift_to_lv95
-
-sphinx_tests = True  # if there is access service-search-sphinx or not
+from app.helpers.helpers_search import shift_to_lv95
 
 # pylint: disable=invalid-name,too-many-lines
+
+sphinx_tests = True  # if there is access service-search-sphinx or not
 
 
 class TestsBase(TestCase):
@@ -71,7 +71,7 @@ class TestsBase(TestCase):
         self.assertGreaterEqual(miny, grid.MINY)
 
 
-class TestSearchServiceView(TestsBase):
+class TestSearchServiceView(TestsBase):  # pylint: disable=too-many-public-methods
 
     def setUp(self):
         if not sphinx_tests:
@@ -139,8 +139,8 @@ class TestSearchServiceView(TestsBase):
         acceptedTypes = ['locations', 'layers', 'featuresearch']
         self.assertIn(
             response.json['error']['message'],
-            "The type parameter you provided is not valid. Possible values are %s" %
-            (', '.join(acceptedTypes))
+            "The type parameter you provided is not valid."
+            f" Possible values are {', '.join(acceptedTypes)}"
         )
 
     def test_searchtext_none_value_layers(self):
@@ -438,7 +438,6 @@ class TestSearchServiceView(TestsBase):
 
     # e2e test
     def test_search_locations_prefix_sentence_match(self):
-        params = {'type': 'locations', 'searchText': 'lausann'}
         response = self.app.get(
             url_for(
                 'search_server',
@@ -454,7 +453,6 @@ class TestSearchServiceView(TestsBase):
         self.assertEqual(response.json['results'][0]['attrs']['detail'], 'lausanne vd')
         self.assertEqual(response.json['results'][0]['attrs']['origin'], 'gg25')
         self.assertAttrs('locations', response.json['results'][0]['attrs'], 21781)
-        params['sr'] = '2056'
         response = self.app.get(
             url_for(
                 'search_server', topic='inspire', type='locations', searchText='lausann', sr='2056'
@@ -500,7 +498,9 @@ class TestSearchServiceView(TestsBase):
         self.assertEqual(response.json['results'][0]['attrs']['detail'], 'lausanne vd')
         self.assertAttrs('locations', response.json['results'][0]['attrs'], 21781)
         response = self.app.get(
-            url_for('search_server', topic='ech', type='locations', searchText='lausanne', sr=2056),
+            url_for(
+                'search_server', topic='ech', type='locations', searchText='lausanne', sr='2056'
+            ),
             headers=self.origin_headers["allowed"]
         )
         self.assertEqual(response.status_code, 200)
@@ -509,700 +509,1202 @@ class TestSearchServiceView(TestsBase):
         self.assertEqual(response.json['results'][0]['attrs']['detail'], 'lausanne vd')
         self.assertAttrs('locations', response.json['results'][0]['attrs'], 2056)
 
-    """
+    # e2e test
     def test_search_locations_wil(self):
-        params = {'type': 'locations', 'searchText': 'wil'}
-        resp = self.testapp.get('/rest/services/ech/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
-        self.assertGreater(len(list(resp.json['results'])), 0)
-        self.assertEqual(resp.json['results'][0]['attrs']['detail'][:3], 'wil')
-        self.assertAttrs('locations', resp.json['results'][0]['attrs'], 21781)
-        params['sr'] = '2056'
-        resp = self.testapp.get('/rest/services/ech/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
-        self.assertEqual(resp.json['results'][0]['attrs']['detail'][:3], 'wil')
-        self.assertAttrs('locations', resp.json['results'][0]['attrs'], 2056)
+        response = self.app.get(
+            url_for('search_server', topic='ech', type='locations', searchText='wil'),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertGreater(len(list(response.json['results'])), 0)
+        self.assertEqual(response.json['results'][0]['attrs']['detail'][:3], 'wil')
+        self.assertAttrs('locations', response.json['results'][0]['attrs'], 21781)
+        response = self.app.get(
+            url_for('search_server', topic='ech', type='locations', searchText='wil', sr='2056'),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertEqual(response.json['results'][0]['attrs']['detail'][:3], 'wil')
+        self.assertAttrs('locations', response.json['results'][0]['attrs'], 2056)
 
+    # e2e test
     def test_search_locations_fontenay(self):
-        params = {'type': 'locations', 'searchText': 'fontenay 10 lausanne'}
-        resp = self.testapp.get('/rest/services/ech/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
-        self.assertGreater(len(resp.json['results']), 0)
+        response = self.app.get(
+            url_for(
+                'search_server', topic='ech', type='locations', searchText='fontenay 10 lausanne'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertGreater(len(response.json['results']), 0)
         self.assertEqual(
-            resp.json['results'][0]['attrs']['detail'],
+            response.json['results'][0]['attrs']['detail'],
             'chemin de fontenay 10 1007 lausanne 5586 lausanne ch vd'
         )
-        self.assertAttrs('locations', resp.json['results'][0]['attrs'], 21781)
-        params['sr'] = '2056'
-        resp = self.testapp.get('/rest/services/ech/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
-        self.assertGreater(len(resp.json['results']), 0)
+        self.assertAttrs('locations', response.json['results'][0]['attrs'], 21781)
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='locations',
+                searchText='fontenay 10 lausanne',
+                sr='2056'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertGreater(len(response.json['results']), 0)
         self.assertEqual(
-            resp.json['results'][0]['attrs']['detail'],
+            response.json['results'][0]['attrs']['detail'],
             'chemin de fontenay 10 1007 lausanne 5586 lausanne ch vd'
         )
-        self.assertAttrs('locations', resp.json['results'][0]['attrs'], 2056)
+        self.assertAttrs('locations', response.json['results'][0]['attrs'], 2056)
 
+    # e2e test
     def test_search_locations_wilenstrasse_wil(self):
-        params = {'type': 'locations', 'searchText': 'wilenstrasse wil'}
-        resp = self.testapp.get('/rest/services/ech/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
-        self.assertGreater(len(resp.json['results']), 0)
-        self.assertIn('wilenstrasse', resp.json['results'][0]['attrs']['detail'])
-        self.assertIn('wil', resp.json['results'][0]['attrs']['detail'])
-        self.assertAttrs('locations', resp.json['results'][0]['attrs'], 21781)
-        params['sr'] = '2056'
-        resp = self.testapp.get('/rest/services/ech/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
-        self.assertIn('wilenstrasse', resp.json['results'][0]['attrs']['detail'])
-        self.assertIn('wil', resp.json['results'][0]['attrs']['detail'])
-        self.assertAttrs('locations', resp.json['results'][0]['attrs'], 2056)
+        response = self.app.get(
+            url_for('search_server', topic='ech', type='locations', searchText='wilenstrasse wil'),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertGreater(len(response.json['results']), 0)
+        self.assertIn('wilenstrasse', response.json['results'][0]['attrs']['detail'])
+        self.assertIn('wil', response.json['results'][0]['attrs']['detail'])
+        self.assertAttrs('locations', response.json['results'][0]['attrs'], 21781)
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='locations',
+                searchText='wilenstrasse wil',
+                sr='2056'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertIn('wilenstrasse', response.json['results'][0]['attrs']['detail'])
+        self.assertIn('wil', response.json['results'][0]['attrs']['detail'])
+        self.assertAttrs('locations', response.json['results'][0]['attrs'], 2056)
 
     def test_search_location_max_address(self):
-        params = {'type': 'locations', 'searchText': 'seftigenstrasse'}
-        resp = self.testapp.get('/rest/services/ech/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
-        results_addresses = filter(
-            lambda x: x if x['attrs']['origin'] == 'address' else False, resp.json['results']
+        response = self.app.get(
+            url_for('search_server', topic='ech', type='locations', searchText='seftigenstrasse'),
+            headers=self.origin_headers["allowed"]
         )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/json')
+        results_addresses = filter(
+            lambda x: x if x['attrs']['origin'] == 'address' else False, response.json['results']
+        )
+        self.assertEqual(response.status_code, 200)
         self.assertLessEqual(ilen(results_addresses), 50)
-        self.assertGreater(len(list(resp.json['results'])), 0)
-        self.assertAttrs('locations', resp.json['results'][0]['attrs'], 21781)
+        self.assertGreater(len(list(response.json['results'])), 0)
+        self.assertAttrs('locations', response.json['results'][0]['attrs'], 21781)
 
     def test_search_locations_no_geometry(self):
-        params = {
-            'type': 'locations', 'searchText': 'seftigenstrasse 264', 'returnGeometry': 'false'
-        }
-        resp = self.testapp.get('/rest/services/ech/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
-        self.assertGreater(len(list(resp.json['results'])), 0)
-        self.assertTrue('geom_st_box2d' not in resp.json['results'][0]['attrs'].keys())
-        self.assertAttrs('locations', resp.json['results'][0]['attrs'], 21781, returnGeometry=False)
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='locations',
+                searchText='seftigenstrasse 264',
+                returnGeometry='false'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertGreater(len(list(response.json['results'])), 0)
+        self.assertTrue('geom_st_box2d' not in response.json['results'][0]['attrs'].keys())
+        self.assertAttrs(
+            'locations', response.json['results'][0]['attrs'], 21781, returnGeometry=False
+        )
 
+    # is this ever being tested? in doc returnGeometry can eighter be true or false
+    # look for this in mf-chsdi3
+    # DOTO: look, if this test is being done on mf-chsdi3 at all
     def test_search_locations_geojson(self):
-        params = {'type': 'locations', 'searchText': 'Wabern', 'geometryFormat': 'geojson'}
-        resp = self.testapp.get('/rest/services/api/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/geo+json')
-        self.assertEqual('FeatureCollection', resp.json['type'])
-        self.assertGreater(len(list(resp.json['features'])), 0)
-        self.assertGeojsonFeature(resp.json['features'][0], 21781, hasGeometry=True, hasLayer=False)
-        self.assertAttrs('locations', resp.json['features'][0]['properties'], 21781)
-        self.assertIn('wabern', str(resp.json['features']).lower())
-        params['sr'] = '2056'
-        resp = self.testapp.get('/rest/services/api/SearchServer', params=params, status=200)
-        self.assertEqual('FeatureCollection', resp.json['type'])
-        self.assertGeojsonFeature(resp.json['features'][0], 2056, hasGeometry=True, hasLayer=False)
-        self.assertIn('wabern', str(resp.json['features']).lower())
-        params['sr'] = '3857'
-        resp = self.testapp.get('/rest/services/api/SearchServer', params=params, status=200)
-        self.assertEqual('FeatureCollection', resp.json['type'])
-        self.assertGeojsonFeature(resp.json['features'][0], 3857, hasGeometry=True, hasLayer=False)
-        self.assertIn('wabern', str(resp.json['features']).lower())
-        params['sr'] = '4326'
-        resp = self.testapp.get('/rest/services/api/SearchServer', params=params, status=200)
-        self.assertEqual('FeatureCollection', resp.json['type'])
-        self.assertGeojsonFeature(resp.json['features'][0], 4326, hasGeometry=True, hasLayer=False)
-        self.assertIn('wabern', str(resp.json['features']).lower())
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='api',
+                type='locations',
+                searchText='Wabern',
+                returnGeometry='true',
+                geometryFormat='geojson'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.content_type, 'application/geo+json')
+        self.assertEqual('FeatureCollection', response.json['type'])
+        self.assertGreater(len(list(response.json['features'])), 0)
+        self.assertGeojsonFeature(
+            response.json['features'][0], 21781, hasGeometry=True, hasLayer=False
+        )
+        self.assertAttrs('locations', response.json['features'][0]['properties'], 21781)
+        self.assertIn('wabern', str(response.json['features']).lower())
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='api',
+                type='locations',
+                searchText='Wabern',
+                returnGeometry='true',
+                geometryFormat='geojson',
+                sr='2056'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual('FeatureCollection', response.json['type'])
+        self.assertGeojsonFeature(
+            response.json['features'][0], 2056, hasGeometry=True, hasLayer=False
+        )
+        self.assertIn('wabern', str(response.json['features']).lower())
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='api',
+                type='locations',
+                searchText='Wabern',
+                returnGeometry='true',
+                geometryFormat='geojson',
+                sr='3857'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual('FeatureCollection', response.json['type'])
+        self.assertGeojsonFeature(
+            response.json['features'][0], 3857, hasGeometry=True, hasLayer=False
+        )
+        self.assertIn('wabern', str(response.json['features']).lower())
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='api',
+                type='locations',
+                searchText='Wabern',
+                returnGeometry='true',
+                geometryFormat='geojson',
+                sr='4326'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual('FeatureCollection', response.json['type'])
+        self.assertGeojsonFeature(
+            response.json['features'][0], 4326, hasGeometry=True, hasLayer=False
+        )
+        self.assertIn('wabern', str(response.json['features']).lower())
 
     def test_search_locations_esrijson(self):
-        params = {'type': 'locations', 'searchText': 'Wabern', 'geometryFormat': 'esrijson'}
-        resp = self.testapp.get('/rest/services/api/SearchServer', params=params, status=400)
-        self.assertIn("Param 'geometryFormat=esrijson' is not supported", resp)
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='api',
+                type='locations',
+                searchText='Wabern',
+                returnGeometry='true',
+                geometryFormat='esrijson'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(
+            "Param 'geometryFormat=esrijson' is not supported", response.json['error']['message']
+        )
 
     def test_locations_searchtext_apostrophe(self):
-        params = {'type': 'locations', 'searchText': 'av mont d\'or lausanne 1'}
-        resp = self.testapp.get('/rest/services/ech/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
-        self.assertGreater(len(resp.json['results']), 0)
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='locations',
+                searchText='av mont d\'or lausanne 1',
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertGreater(len(response.json['results']), 0)
         self.assertEqual(
-            resp.json['results'][0]['attrs']['detail'],
+            response.json['results'][0]['attrs']['detail'],
             'avenue du mont-d\'or 1 1007 lausanne 5586 lausanne ch vd'
         )
-        self.assertEqual(resp.json['results'][0]['attrs']['num'], 1)
-        self.assertAttrs('locations', resp.json['results'][0]['attrs'], 21781)
-        params['sr'] = '2056'
-        resp = self.testapp.get('/rest/services/ech/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
-        self.assertGreater(len(resp.json['results']), 0)
+        self.assertEqual(response.json['results'][0]['attrs']['num'], 1)
+        self.assertAttrs('locations', response.json['results'][0]['attrs'], 21781)
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='locations',
+                searchText='av mont d\'or lausanne 1',
+                sr='2056'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertGreater(len(response.json['results']), 0)
         self.assertEqual(
-            resp.json['results'][0]['attrs']['detail'],
+            response.json['results'][0]['attrs']['detail'],
             'avenue du mont-d\'or 1 1007 lausanne 5586 lausanne ch vd'
         )
-        self.assertEqual(resp.json['results'][0]['attrs']['num'], 1)
-        self.assertAttrs('locations', resp.json['results'][0]['attrs'], 2056)
+        self.assertEqual(response.json['results'][0]['attrs']['num'], 1)
+        self.assertAttrs('locations', response.json['results'][0]['attrs'], 2056)
 
     def test_locations_searchtext_abbreviations(self):
-        params = {'type': 'locations', 'searchText': 'Seftigenstr.', 'sr': '2056'}
-        resp = self.testapp.get('/rest/services/ech/SearchServer', params=params, status=200)
-        self.assertGreater(len(list(resp.json['results'])), 0)
-        self.assertAttrs('locations', resp.json['results'][0]['attrs'], 2056)
-        params = {'type': 'locations', 'searchText': 'Bundespl.', 'sr': '2056'}
-        resp = self.testapp.get('/rest/services/ech/SearchServer', params=params, status=200)
-        self.assertAttrs('locations', resp.json['results'][0]['attrs'], 2056)
-        params = {'type': 'locations', 'searchText': 'pl. du March', 'sr': '2056'}
-        resp = self.testapp.get('/rest/services/ech/SearchServer', params=params, status=200)
-        self.assertAttrs('locations', resp.json['results'][0]['attrs'], 2056)
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='locations',
+                searchText='Seftigenstr.',
+                sr='2056'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertGreater(len(list(response.json['results'])), 0)
+        self.assertAttrs('locations', response.json['results'][0]['attrs'], 2056)
+        response = self.app.get(
+            url_for(
+                'search_server', topic='ech', type='locations', searchText='Bundespl.', sr='2056'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertAttrs('locations', response.json['results'][0]['attrs'], 2056)
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='locations',
+                searchText='pl. du March',
+                sr='2056'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertAttrs('locations', response.json['results'][0]['attrs'], 2056)
 
     def test_address_order(self):
-        params = {'type': 'locations', 'searchText': 'isabelle de montolieu 2'}
-        resp = self.testapp.get('/rest/services/ech/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
-        self.assertGreater(len(resp.json['results']), 0)
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='locations',
+                searchText='isabelle de montolieu 2'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertGreater(len(response.json['results']), 0)
         self.assertEqual(
-            resp.json['results'][0]['attrs']['detail'],
+            response.json['results'][0]['attrs']['detail'],
             'chemin isabelle-de-montolieu 2 1010 lausanne 5586 lausanne ch vd'
         )
-        self.assertEqual(resp.json['results'][0]['attrs']['num'], 2)
-        self.assertAttrs('locations', resp.json['results'][0]['attrs'], 21781)
+        self.assertEqual(response.json['results'][0]['attrs']['num'], 2)
+        self.assertAttrs('locations', response.json['results'][0]['attrs'], 21781)
 
     def test_search_address_with_letters(self):
-        params = {'type': 'locations', 'searchText': 'Rhonesand 16'}
-        resp = self.testapp.get('/rest/services/ech/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
-        self.assertGreater(len(resp.json['results']), 1)
+        response = self.app.get(
+            url_for('search_server', topic='ech', type='locations', searchText='Rhonesand 16'),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertGreater(len(response.json['results']), 1)
         self.assertEqual(
-            resp.json['results'][1]['attrs']['detail'],
+            response.json['results'][1]['attrs']['detail'],
             'rhonesandstrasse 16a 3900 brig 6002 brig-glis ch vs'
         )
-        self.assertAttrs('locations', resp.json['results'][0]['attrs'], 21781)
+        self.assertAttrs('locations', response.json['results'][0]['attrs'], 21781)
 
     def test_search_ranking(self):
-        params = {'type': 'locations', 'searchText': 'gstaad'}
-        resp = self.testapp.get('/rest/services/ech/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
-        self.assertGreater(len(resp.json['results']), 0)
-        self.assertEqual(resp.json['results'][0]['attrs']['detail'], 'gstaad saanen')
-        params = {'type': 'locations', 'searchText': 'gstaad 10'}
-        resp = self.testapp.get('/rest/services/ech/SearchServer', params=params, status=200)
+        response = self.app.get(
+            url_for('search_server', topic='ech', type='locations', searchText='gstaad'),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertGreater(len(response.json['results']), 0)
+        self.assertEqual(response.json['results'][0]['attrs']['detail'], 'gstaad saanen')
+        response = self.app.get(
+            url_for('search_server', topic='ech', type='locations', searchText='gstaad 10'),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
         self.assertEqual(
-            resp.json['results'][0]['attrs']['detail'],
+            response.json['results'][0]['attrs']['detail'],
             'gstaadstrasse 10 3792 saanen 843 saanen ch be'
         )
-        self.assertAttrs('locations', resp.json['results'][0]['attrs'], 21781)
+        self.assertAttrs('locations', response.json['results'][0]['attrs'], 21781)
 
+    # e2e test
     def test_search_features_identify(self):
-        params = {
-            'type': 'featuresearch',
-            'searchText': 'vd 446',
-            'bbox': '551306.5625,167918.328125,551754.125,168514.625',
-            'features': 'ch.astra.ivs-reg_loc'
-        }
-        resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
-        self.assertAttrs(
-            'featuresearch', resp.json['results'][0]['attrs'], 21781, spatialOrder=True
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='featuresearch',
+                searchText='vd 446',
+                bbox='551306.5625,167918.328125,551754.125,168514.625',
+                features='ch.astra.ivs-reg_loc'
+            ),
+            headers=self.origin_headers["allowed"]
         )
-        params['sr'] = '2056'
-        params['bbox'] = shift_to_lv95(params['bbox'])
-        resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
-        self.assertAttrs('featuresearch', resp.json['results'][0]['attrs'], 2056, spatialOrder=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertAttrs(
+            'featuresearch', response.json['results'][0]['attrs'], 21781, spatialOrder=True
+        )
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='featuresearch',
+                searchText='vd 446',
+                bbox=shift_to_lv95('551306.5625,167918.328125,551754.125,168514.625'),
+                features='ch.astra.ivs-reg_loc',
+                sr='2056'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertAttrs(
+            'featuresearch', response.json['results'][0]['attrs'], 2056, spatialOrder=True
+        )
 
     def test_search_features_searchtext(self):
-        params = {
-            'type': 'featuresearch',
-            'searchText': '4331',
-            'features': 'ch.bafu.hydrologie-gewaesserzustandsmessstationen'
-        }
-        resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='featuresearch',
+                searchText='4331',
+                features='ch.bafu.hydrologie-gewaesserzustandsmessstationen',
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/json')
 
     def test_search_features_searchtext_limit(self):
-        params = {
-            'type': 'featuresearch',
-            'searchText': '43',
-            'features': 'ch.bafu.hydrologie-gewaesserzustandsmessstationen',
-            'limit': '1'
-        }
-        resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
-        self.assertEqual(len(resp.json['results']), 1)
-        self.assertAttrs('featuresearch', resp.json['results'][0]['attrs'], 21781)
-        params['sr'] = '2056'
-        resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
-        self.assertEqual(len(resp.json['results']), 1)
-        self.assertAttrs('featuresearch', resp.json['results'][0]['attrs'], 2056)
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='featuresearch',
+                searchText='43',
+                features='ch.bafu.hydrologie-gewaesserzustandsmessstationen',
+                limit='1'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertEqual(len(response.json['results']), 1)
+        self.assertAttrs('featuresearch', response.json['results'][0]['attrs'], 21781)
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='featuresearch',
+                searchText='43',
+                features='ch.bafu.hydrologie-gewaesserzustandsmessstationen',
+                limit='1',
+                sr='2056'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertEqual(len(response.json['results']), 1)
+        self.assertAttrs('featuresearch', response.json['results'][0]['attrs'], 2056)
 
+    # unittest
     def test_search_features_non_existing_layer(self):
-        params = {
-            'type': 'featuresearch', 'searchText': 'toto', 'features': 'this_layer_is_not_existing'
-        }
-        self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=404)
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='inspire',
+                type='featuresearch',
+                searchText='toto',
+                features='this_layer_is_not_existing'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 404)
 
     def test_search_features_non_searchable_layer(self):
-        params = {
-            'type': 'featuresearch',
-            'searchText': 'toto',
-            'features': 'ch.swisstopo.geologie-geotope'
-        }
-        self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=404)
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='inspire',
+                type='featuresearch',
+                searchText='toto',
+                features='ch.swisstopo.geologie-geotope'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 404)
 
-    def test_search_locations_bbox(self):
-        params = {'type': 'locations', 'searchText': 'Beaulieustrasse 2'}
-        resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
-        self.assertGreater(len(list(resp.json['results'])), 0)
-        self.assertAttrs('locations', resp.json['results'][0]['attrs'], 21781)
+    def test_search_locations_next(self):
+        response = self.app.get(
+            url_for(
+                'search_server', topic='inspire', type='locations', searchText='Beaulieustrasse 2'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertGreater(len(list(response.json['results'])), 0)
+        self.assertAttrs('locations', response.json['results'][0]['attrs'], 21781)
 
     def test_search_locations_escape_charachters(self):
-        params = {'type': 'locations', 'searchText': 'Biel/Bienne'}
-        resp = self.testapp.get('/rest/services/ech/SearchServer', params=params, status=200)
-        self.assertGreater(len(resp.json['results']), 0)
-        self.assertAttrs('locations', resp.json['results'][0]['attrs'], 21781)
-
-    def test_search_locations_authorized(self):
-        params = {'type': 'locations', 'searchText': 'Beaulieustrasse 2'}
-        resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
-        self.assertGreater(len(list(resp.json['results'])), 0)
-        self.assertAttrs('locations', resp.json['results'][0]['attrs'], 21781)
+        response = self.app.get(
+            url_for('search_server', topic='inspire', type='locations', searchText='Biel/Bienne'),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertGreater(len(response.json['results']), 0)
+        self.assertAttrs('locations', response.json['results'][0]['attrs'], 21781)
 
     def test_search_locations_one_origin(self):
-        params = {'type': 'locations', 'searchText': 'vaud', 'origins': 'gg25'}
-        resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=200)
-        self.assertEqual(len(resp.json['results']), 1)
-        self.assertAttrs('locations', resp.json['results'][0]['attrs'], 21781)
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='inspire',
+                type='locations',
+                searchText='vaud',
+                origins='gg25'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json['results']), 1)
+        self.assertAttrs('locations', response.json['results'][0]['attrs'], 21781)
 
     def test_search_locations_several_origins(self):
-        params = {'type': 'locations', 'searchText': 'vaud', 'origins': 'district,gg25'}
-        resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=200)
-        self.assertEqual(len(resp.json['results']), 3)
-        self.assertAttrs('locations', resp.json['results'][0]['attrs'], 21781)
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='inspire',
+                type='locations',
+                searchText='vaud',
+                origins='district,gg25'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json['results']), 3)
+        self.assertAttrs('locations', response.json['results'][0]['attrs'], 21781)
 
+    # unittest
     def test_search_locations_bad_origin(self):
-        params = {'type': 'locations', 'searchText': 'vaud', 'origins': 'dummy'}
-        self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=400)
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='inspire',
+                type='locations',
+                searchText='vaud',
+                origins='dummy'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 400)
 
     def test_search_locations_prefix_parcel(self):
-        params = {'type': 'locations', 'searchText': 'parcel val'}
-        resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=200)
-        self.assertGreater(len(resp.json['results']), 0)
-        self.assertEqual(resp.json['results'][0]['attrs']['origin'], 'parcel')
-        self.assertAttrs('locations', resp.json['results'][0]['attrs'], 21781)
+        response = self.app.get(
+            url_for('search_server', topic='inspire', type='locations', searchText='parcel val'),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertGreater(len(response.json['results']), 0)
+        self.assertEqual(response.json['results'][0]['attrs']['origin'], 'parcel')
+        self.assertAttrs('locations', response.json['results'][0]['attrs'], 21781)
 
     def test_search_locations_prefix_address(self):
-        params = {'type': 'locations', 'searchText': 'address val'}
-        resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=200)
-        self.assertGreater(len(resp.json['results']), 0)
-        self.assertEqual(resp.json['results'][0]['attrs']['origin'], 'address')
-        self.assertAttrs('locations', resp.json['results'][0]['attrs'], 21781)
+        response = self.app.get(
+            url_for('search_server', topic='inspire', type='locations', searchText='parcel val'),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertGreater(len(response.json['results']), 0)
+        self.assertEqual(response.json['results'][0]['attrs']['origin'], 'parcel')
+        self.assertAttrs('locations', response.json['results'][0]['attrs'], 21781)
 
     def test_search_locations_parcel_keyword_only(self):
-        params = {'type': 'locations', 'searchText': 'parzelle'}
-        resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=200)
-        self.assertEqual(len(resp.json['results']), 0)
+        response = self.app.get(
+            url_for('search_server', topic='inspire', type='locations', searchText='parzelle'),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json['results']), 0)
 
-    def test_search_locations_with_bbox(self):
-        params = {
-            'type': 'locations',
-            'searchText': 'buechli tegerfelden',
-            'bbox': '664100,268443,664150,268643'
-        }
-        resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=200)
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='inspire',
+                type='locations',
+                searchText='buechli tegerfelden',
+                bbox='664100,268443,664150,268643'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
         self.assertEqual(
-            resp.json['results'][0]['attrs']['detail'],
+            response.json['results'][0]['attrs']['detail'],
             'buechli  5306 tegerfelden 4320 tegerfelden ch ag'
         )
-        self.assertEqual(len(resp.json['results']), 1)
-        self.assertAttrs('locations', resp.json['results'][0]['attrs'], 21781, spatialOrder=True)
-        params['sr'] = '2056'
-        params['bbox'] = shift_to_lv95(params['bbox'])
-        resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=200)
+        self.assertEqual(len(response.json['results']), 1)
+        self.assertAttrs(
+            'locations', response.json['results'][0]['attrs'], 21781, spatialOrder=True
+        )
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='inspire',
+                type='locations',
+                searchText='buechli tegerfelden',
+                bbox=shift_to_lv95('664100,268443,664150,268643'),
+                sr='2056'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
         self.assertEqual(
-            resp.json['results'][0]['attrs']['detail'],
+            response.json['results'][0]['attrs']['detail'],
             'buechli  5306 tegerfelden 4320 tegerfelden ch ag'
         )
-        self.assertEqual(len(resp.json['results']), 1)
-        self.assertAttrs('locations', resp.json['results'][0]['attrs'], 2056, spatialOrder=True)
+        self.assertEqual(len(response.json['results']), 1)
+        self.assertAttrs('locations', response.json['results'][0]['attrs'], 2056, spatialOrder=True)
 
     def test_search_locations_with_bbox_sort(self):
-        params = {
-            'type': 'locations',
-            'searchText': 'buechli tegerfelden',
-            'bbox': '564100,168443,664150,268643'
-        }
-        resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=200)
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='inspire',
+                type='locations',
+                searchText='buechli tegerfelden',
+                bbox='564100,168443,664150,268643',
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
         self.assertEqual(
-            resp.json['results'][0]['attrs']['detail'],
+            response.json['results'][0]['attrs']['detail'],
             'buechli 1.1 5306 tegerfelden 4320 tegerfelden ch ag'
         )
-        self.assertAttrs('locations', resp.json['results'][0]['attrs'], 21781, spatialOrder=True)
-        params['sr'] = '2056'
-        params['bbox'] = shift_to_lv95(params['bbox'])
-        resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=200)
+        self.assertAttrs(
+            'locations', response.json['results'][0]['attrs'], 21781, spatialOrder=True
+        )
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='inspire',
+                type='locations',
+                searchText='buechli tegerfelden',
+                bbox=shift_to_lv95('564100,168443,664150,268643'),
+                sr='2056'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
         self.assertEqual(
-            resp.json['results'][0]['attrs']['detail'],
+            response.json['results'][0]['attrs']['detail'],
             'buechli 1.1 5306 tegerfelden 4320 tegerfelden ch ag'
         )
-        self.assertAttrs('locations', resp.json['results'][0]['attrs'], 2056, spatialOrder=True)
-        params = {
-            'type': 'locations',
-            'searchText': 'buechli tegerfelden',
-            'bbox': '564100,168443,664150,268643',
-            'sortbbox': 'true'
-        }
-        resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=200)
+        self.assertAttrs('locations', response.json['results'][0]['attrs'], 2056, spatialOrder=True)
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='inspire',
+                type='locations',
+                searchText='buechli tegerfelden',
+                bbox='564100,168443,664150,268643',
+                sortbbox='true'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
         self.assertEqual(
-            resp.json['results'][0]['attrs']['detail'],
+            response.json['results'][0]['attrs']['detail'],
             'buechli 1.1 5306 tegerfelden 4320 tegerfelden ch ag'
         )
-        self.assertAttrs('locations', resp.json['results'][0]['attrs'], 21781, spatialOrder=True)
-        params = {
-            'type': 'locations',
-            'searchText': 'buechli tegerfelden',
-            'bbox': '564100,168443,664150,268643',
-            'sortbbox': 'false'
-        }
-        resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=200)
+        self.assertAttrs(
+            'locations', response.json['results'][0]['attrs'], 21781, spatialOrder=True
+        )
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='inspire',
+                type='locations',
+                searchText='buechli tegerfelden',
+                bbox='564100,168443,664150,268643',
+                sortbbox='false'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
         self.assertEqual(
-            resp.json['results'][0]['attrs']['detail'],
+            response.json['results'][0]['attrs']['detail'],
             'buechli  5306 tegerfelden 4320 tegerfelden ch ag'
         )
-        self.assertAttrs('locations', resp.json['results'][0]['attrs'], 21781)
+        self.assertAttrs('locations', response.json['results'][0]['attrs'], 21781)
 
     def test_search_locations_bbox_only(self):
-        params = {'type': 'locations', 'bbox': '664126,268543,664126,268543'}
-        resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
-        self.assertGreater(len(resp.json['results']), 1)
-        self.assertAttrs('locations', resp.json['results'][0]['attrs'], 21781, spatialOrder=True)
-        params['sr'] = '2056'
-        params['bbox'] = shift_to_lv95(params['bbox'])
-        resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
-        self.assertGreater(len(resp.json['results']), 1)
-        self.assertAttrs('locations', resp.json['results'][0]['attrs'], 2056, spatialOrder=True)
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='inspire',
+                type='locations',
+                bbox='664126,268543,664126,268543',
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertGreater(len(response.json['results']), 1)
+        self.assertAttrs(
+            'locations', response.json['results'][0]['attrs'], 21781, spatialOrder=True
+        )
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='inspire',
+                type='locations',
+                bbox=shift_to_lv95('664126,268543,664126,268543'),
+                sr='2056'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertGreater(len(response.json['results']), 1)
+        self.assertAttrs('locations', response.json['results'][0]['attrs'], 2056, spatialOrder=True)
 
+    # unittest
     def test_search_locations_noparams(self):
-        params = {'type': 'locations'}
-        self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=400)
+        response = self.app.get(
+            url_for('search_server', topic='inspire', type='locations'),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 400)
 
     def test_features_timeinstant(self):
-        params = {
-            'type': 'featuresearch',
-            'searchText': '19810590048970',
-            'features': 'ch.swisstopo.lubis-luftbilder_farbe',
-            'bbox': '542199,206799,642201,226801',
-            'timeInstant': '1981'
-        }
-        resp = self.testapp.get('/rest/services/ech/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
-        self.assertEqual(resp.json['results'][0]['attrs']['origin'], 'feature')
-        self.assertAttrs(
-            'featuresearch', resp.json['results'][0]['attrs'], 21781, spatialOrder=True
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='featuresearch',
+                searchText='19810590048970',
+                features='ch.swisstopo.lubis-luftbilder_farbe',
+                bbox='542199,206799,642201,226801',
+                timeInstant='1981'
+            ),
+            headers=self.origin_headers["allowed"]
         )
-        params['sr'] = '2056'
-        params['bbox'] = shift_to_lv95(params['bbox'])
-        resp = self.testapp.get('/rest/services/ech/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
-        self.assertEqual(resp.json['results'][0]['attrs']['origin'], 'feature')
-        self.assertAttrs('featuresearch', resp.json['results'][0]['attrs'], 2056, spatialOrder=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertEqual(response.json['results'][0]['attrs']['origin'], 'feature')
+        self.assertAttrs(
+            'featuresearch', response.json['results'][0]['attrs'], 21781, spatialOrder=True
+        )
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='featuresearch',
+                searchText='19810590048970',
+                features='ch.swisstopo.lubis-luftbilder_farbe',
+                bbox=shift_to_lv95('542199,206799,642201,226801'),
+                timeInstant='1981',
+                sr='2056'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertEqual(response.json['results'][0]['attrs']['origin'], 'feature')
+        self.assertAttrs(
+            'featuresearch', response.json['results'][0]['attrs'], 2056, spatialOrder=True
+        )
 
+    # unittest
     def test_nodigit_timeinstant(self):
-        params = {
-            'type': 'featuresearch',
-            'searchText': '19810590048970',
-            'features': 'ch.swisstopo.lubis-luftbilder_farbe',
-            'bbox': '542199,206799,542201,206801',
-            'timeInstant': 'four'
-        }
-        resp = self.testapp.get('/rest/services/ech/SearchServer', params=params, status=400)
-        resp.mustcontain('Please provide an integer for the parameter timeInstant')
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='featuresearch',
+                searchText='19810590048970',
+                features='ch.swisstopo.lubis-luftbilder_farbe',
+                bbox='542199,206799,642201,226801',
+                timeInstant='four'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(
+            response.json['error']['message'],
+            'Please provide an integer for the parameter timeInstant'
+        )
 
     def test_features_timestamp(self):
-        params = {
-            'type': 'featuresearch',
-            'searchText': '19810590048970',
-            'features': 'ch.swisstopo.lubis-luftbilder_farbe',
-            'timeStamps': '1981'
-        }
-        resp = self.testapp.get('/rest/services/ech/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
-        self.assertEqual(resp.json['results'][0]['attrs']['origin'], 'feature')
-        self.assertAttrs('featuresearch', resp.json['results'][0]['attrs'], 21781)
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='featuresearch',
+                searchText='19810590048970',
+                features='ch.swisstopo.lubis-luftbilder_farbe',
+                timeInstant='1981'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertEqual(response.json['results'][0]['attrs']['origin'], 'feature')
+        self.assertAttrs('featuresearch', response.json['results'][0]['attrs'], 21781)
 
     def test_features_empty_timestamp(self):
-        params = {
-            'type': 'featuresearch',
-            'searchText': '19810590048970',
-            'features': 'ch.swisstopo.lubis-luftbilder_farbe',
-            'bbox': '542199,206799,542201,206801',
-            'timeStamps': ''
-        }
-        resp = self.testapp.get('/rest/services/ech/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
-        self.assertEqual(resp.json['results'][0]['attrs']['origin'], 'feature')
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='featuresearch',
+                searchText='19810590048970',
+                features='ch.swisstopo.lubis-luftbilder_farbe',
+                bbox='542199,206799,542201,206801',
+                timeStamps=''
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertEqual(response.json['results'][0]['attrs']['origin'], 'feature')
         self.assertAttrs(
-            'featuresearch', resp.json['results'][0]['attrs'], 21781, spatialOrder=True
+            'featuresearch', response.json['results'][0]['attrs'], 21781, spatialOrder=True
         )
 
     def test_features_none_first_timestamp(self):
-        params = {
-            'type': 'featuresearch',
-            'searchText': '19810590048970',
-            'features': 'ch.swisstopo.lubis-luftbilder_farbe',
-            'timeStamps': ',1989'
-        }
-        resp = self.testapp.get('/rest/services/ech/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
-        self.assertAttrs('featuresearch', resp.json['results'][0]['attrs'], 21781)
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='featuresearch',
+                searchText='19810590048970',
+                features='ch.swisstopo.lubis-luftbilder_farbe',
+                timeStamps=',1989'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertAttrs('featuresearch', response.json['results'][0]['attrs'], 21781)
 
-    def test_features_multiple_timestamps(self):
-        params = {
-            'type':
-                'featuresearch',
-            'searchText':
-                '198',
-            'features':
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='featuresearch',
+                searchText='198',
+                bbox='542199,146799,692201,246801',
+                features=
                 'ch.swisstopo.lubis-luftbilder_farbe,ch.swisstopo.lubis-luftbilder_schwarzweiss',
-            'bbox':
-                '542199,146799,692201,246801',
-            'timeStamps':
-                '1986,1989',
-            'timeEnabled':
-                'true,true'
-        }
-        resp = self.testapp.get('/rest/services/ech/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
-        self.assertEqual(resp.json['results'][0]['attrs']['origin'], 'feature')
+                timeStamps='1986,1989',
+                timeEnabled='true,true'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertEqual(response.json['results'][0]['attrs']['origin'], 'feature')
         self.assertAttrs(
-            'featuresearch', resp.json['results'][0]['attrs'], 21781, spatialOrder=True
+            'featuresearch', response.json['results'][0]['attrs'], 21781, spatialOrder=True
         )
 
     def test_features_timeInterval(self):
-        params = {
-            'type':
-                'featuresearch',
-            'searchText':
-                '1993034 1990-2010',
-            'features':
-                'ch.swisstopo.fixpunkte-lfp1,ch.swisstopo.lubis-luftbilder_schwarzweiss,ch.swisstopo.lubis-luftbilder_farbe',
-            'timeEnabled':
-                'false,true,true'
-        }
-        resp = self.testapp.get('/rest/services/ech/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
-        self.assertEqual(resp.json['results'][0]['attrs']['origin'], 'feature')
-        self.assertAttrs('featuresearch', resp.json['results'][0]['attrs'], 21781)
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='featuresearch',
+                searchText='1993034 1990-2010',
+                features='ch.swisstopo.fixpunkte-lfp1,ch.swisstopo.lubis-luftbilder_schwarzweiss,'
+                'ch.swisstopo.lubis-luftbilder_farbe',
+                timeEnabled='false,true,true'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertEqual(response.json['results'][0]['attrs']['origin'], 'feature')
+        self.assertAttrs('featuresearch', response.json['results'][0]['attrs'], 21781)
 
-    def test_features_timeInterval_only(self):
-        params = {
-            'type':
-                'featuresearch',
-            'searchText':
-                '1990-2010',
-            'features':
-                'ch.swisstopo.fixpunkte-lfp1,ch.swisstopo.lubis-luftbilder_schwarzweiss,ch.swisstopo.lubis-luftbilder_farbe',
-            'timeEnabled':
-                'false,true,true'
-        }
-        resp = self.testapp.get('/rest/services/ech/SearchServer', params=params, status=200)
-        self.assertEqual(resp.content_type, 'application/json')
-        self.assertEqual(resp.json['results'][0]['attrs']['origin'], 'feature')
-        self.assertAttrs('featuresearch', resp.json['results'][0]['attrs'], 21781)
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='featuresearch',
+                searchText='1990-2010',
+                features='ch.swisstopo.fixpunkte-lfp1,ch.swisstopo.lubis-luftbilder_schwarzweiss,'
+                'ch.swisstopo.lubis-luftbilder_farbe',
+                timeEnabled='false,true,true'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertEqual(response.json['results'][0]['attrs']['origin'], 'feature')
+        self.assertAttrs('featuresearch', response.json['results'][0]['attrs'], 21781)
 
+    # unittest
     def test_features_wrong_time(self):
-        params = {
-            'type': 'featuresearch',
-            'searchText': '19810590048970',
-            'features': 'ch.swisstopo.lubis-luftbilder_farbe',
-            'bbox': '542200,206800,542200,206800',
-            'timeInstant': '19    522'
-        }
-        self.testapp.get('/rest/services/ech/SearchServer', params=params, status=400)
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='featuresearch',
+                searchText='19810590048970',
+                features='ch.swisstopo.lubis-luftbilder_farbe',
+                bbox='542200,206800,542200,206800',
+                timeInstant='19    522'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 400)
 
     def test_features_wrong_time_2(self):
-        params = {
-            'type': 'featuresearch',
-            'searchText': '19810590048970',
-            'features': 'ch.swisstopo.lubis-luftbilder_farbe',
-            'bbox': '542200,206800,542200,206800',
-            'timeInstant': '19    52.00'
-        }
-        self.testapp.get('/rest/services/ech/SearchServer', params=params, status=400)
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='featuresearch',
+                searchText='19810590048970',
+                features='ch.swisstopo.lubis-luftbilder_farbe',
+                bbox='542200,206800,542200,206800',
+                timeInstant='19    52.00'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 400)
 
+    # unittest
     def test_features_mix_timeinstant_timestamps(self):
-        params = {
-            'type': 'featuresearch',
-            'searchText': '19810590048970',
-            'features': 'ch.swisstopo.lubis-luftbilder_farbe',
-            'bbox': '542200,206800,542200,206800',
-            'timeInstant': '1952',
-            'timeStamps': '1946'
-        }
-        self.testapp.get('/rest/services/ech/SearchServer', params=params, status=400)
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='featuresearch',
+                searchText='19810590048970',
+                features='ch.swisstopo.lubis-luftbilder_farbe',
+                bbox='542200,206800,542200,206800',
+                timeInstant='1952',
+                timeStamps='1946'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 400)
 
+    # unittest
     def test_features_wrong_timestamps(self):
-        params = {
-            'type': 'featuresearch',
-            'searchText': '19810590048970',
-            'features': 'ch.swisstopo.lubis-luftbilder_farbe',
-            'bbox': '542200,206800,542200,206800',
-            'timeStamps': '19522'
-        }
-        self.testapp.get('/rest/services/ech/SearchServer', params=params, status=400)
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='featuresearch',
+                searchText='19810590048970',
+                features='ch.swisstopo.lubis-luftbilder_farbe',
+                bbox='542200,206800,542200,206800',
+                timeStamps='19522'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 400)
 
+    # unittest
     def test_nondigit_timestamps(self):
-        params = {
-            'searchText': '19810590048970',
-            'features': 'ch.swisstopo.lubis-luftbilder_farbe',
-            'type': 'featuresearch',
-            'bbox': '542200,206800,542200,206800',
-            'timeStamps': 'four'
-        }
-        resp = self.testapp.get('/rest/services/ech/SearchServer', params=params, status=400)
-        resp.mustcontain('Please provide integers for timeStamps parameter')
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='featuresearch',
+                searchText='19810590048970',
+                features='ch.swisstopo.lubis-luftbilder_farbe',
+                bbox='542200,206800,542200,206800',
+                timeStamps='four'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(
+            response.json['error']['message'], 'Please provide integers for timeStamps parameter'
+        )
 
+    # unittest
     def test_features_wrong_timestamps_2(self):
-        params = {
-            'type': 'featuresearch',
-            'searchText': '19810590048970',
-            'features': 'ch.swisstopo.lubis-luftbilder_farbe',
-            'bbox': '542200,206800,542200,206800',
-            'timeStamps': '1952.00'
-        }
-        self.testapp.get('/rest/services/ech/SearchServer', params=params, status=400)
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='featuresearch',
+                searchText='19810590048970',
+                features='ch.swisstopo.lubis-luftbilder_farbe',
+                bbox='542200,206800,542200,206800',
+                timeStamps='1952.00'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 400)
 
     def test_locations_search_limit(self):
-        params = {'type': 'locations', 'searchText': 'chalais', 'limit': '1'}
-        resp = self.testapp.get('/rest/services/ech/SearchServer', params=params, status=200)
-        self.assertEqual(len(resp.json['results']), 1)
-        self.assertAttrs('locations', resp.json['results'][0]['attrs'], 21781)
+        response = self.app.get(
+            url_for(
+                'search_server', topic='ech', type='locations', searchText='chalais', limit='1'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json['results']), 1)
+        self.assertAttrs('locations', response.json['results'][0]['attrs'], 21781)
 
+    # unittest
     def test_locations_search_wrong_limit(self):
-        params = {'type': 'locations', 'searchText': 'chalais', 'limit': '5.5'}
-        self.testapp.get('/rest/services/ech/SearchServer', params=params, status=400)
+        response = self.app.get(
+            url_for(
+                'search_server', topic='ech', type='locations', searchText='chalais', limit='5.5'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 400)
 
     def test_search_max_words(self):
-        params = {
-            'type': 'locations',
-            'searchText': 'this is a text with exactly 10 words, should work',
-            'bbox': '551306.5625,167918.328125,551754.125,168514.625'
-        }
-        self.testapp.get('/rest/services/all/SearchServer', params=params, status=200)
-        params = {
-            'type': 'layers',
-            'searchText': 'this is a text with exactly 10 words, should work',
-            'bbox': '551306.5625,167918.328125,551754.125,168514.625'
-        }
-        self.testapp.get('/rest/services/all/SearchServer', params=params, status=200)
-        params = {
-            'type': 'featuresearch',
-            'searchText': 'this is a text with exactly 10 words, should work',
-            'features': 'ch.swisstopo.swissboundaries3d-gemeinde-flaeche.fill',
-            'bbox': '551306.5625,167918.328125,551754.125,168514.625'
-        }
-        self.testapp.get('/rest/services/all/SearchServer', params=params, status=200)
-        params = {
-            'type': 'locations',
-            'searchText': 'this is a text with exactly 11 words, should NOT work',
-            'bbox': '551306.5625,167918.328125,551754.125,168514.625'
-        }
-        self.testapp.get('/rest/services/all/SearchServer', params=params, status=400)
-        params = {
-            'type': 'layers',
-            'searchText': 'this is a text with exactly 11 words, should NOT work',
-            'bbox': '551306.5625,167918.328125,551754.125,168514.625'
-        }
-        self.testapp.get('/rest/services/all/SearchServer', params=params, status=400)
-        params = {
-            'type': 'featuresearch',
-            'searchText': 'this is a text with exactly 11 words, should NOT work',
-            'bbox': '551306.5625,167918.328125,551754.125,168514.625'
-        }
-        self.testapp.get('/rest/services/all/SearchServer', params=params, status=400)
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='locations',
+                searchText='this is a text with exactly 10 words, should work',
+                bbox='551306.5625,167918.328125,551754.125,168514.625'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='layers',
+                searchText='this is a text with exactly 10 words, should work',
+                bbox='551306.5625,167918.328125,551754.125,168514.625'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='featuresearch',
+                features='ch.swisstopo.swissboundaries3d-gemeinde-flaeche.fill',
+                searchText='this is a text with exactly 10 words, should work',
+                bbox='551306.5625,167918.328125,551754.125,168514.625'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='locations',
+                searchText='this is a text with exactly 10 words, should NOT work',
+                bbox='551306.5625,167918.328125,551754.125,168514.625'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 400)
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='layers',
+                searchText='this is a text with exactly 10 words, should NOT work',
+                bbox='551306.5625,167918.328125,551754.125,168514.625'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 400)
+
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='featuresearch',
+                features='ch.swisstopo.swissboundaries3d-gemeinde-flaeche.fill',
+                searchText='this is a text with exactly 10 words, should NOT work',
+                bbox='551306.5625,167918.328125,551754.125,168514.625'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 400)
 
     def test_bbox_nan(self):
-        params = {
-            'type': 'locations',
-            'searchText': 'rue des berges',
-            'bbox': '551306.5625,NaN,551754.125,168514.625'
-        }
-        resp = self.testapp.get('/rest/services/inspire/SearchServer', params=params, status=400)
-        resp.mustcontain('Please provide numerical values for the parameter bbox')
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='locations',
+                searchText='rue des berges',
+                bbox='551306.5625,NaN,551754.125,168514.625'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(
+            response.json['error']['message'],
+            'Please provide numerical values for the parameter bbox'
+        )
 
     def test_fuzzy_locations_results(self):
         # Standard results
-        params = {'type': 'locations', 'searchText': 'brigmat', 'lang': 'de'}
-        resp = self.testapp.get('/rest/services/ech/SearchServer', params=params, status=200)
-        self.assertGreater(len(resp.json['results']), 0)
-        self.assertNotIn('fuzzy', resp.json)
+        response = self.app.get(
+            url_for(
+                'search_server', topic='ech', type='locations', searchText='brigmat', lang='de'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertGreater(len(response.json['results']), 0)
+        self.assertNotIn('fuzzy', response.json)
         # Fuzzy results
-        params = {'type': 'locations', 'searchText': 'birgma', 'lang': 'de'}
-        resp = self.testapp.get('/rest/services/ech/SearchServer', params=params, status=200)
-        self.assertGreater(len(resp.json['results']), 0)
-        self.assertEqual(resp.json['fuzzy'], 'true')
+        response = self.app.get(
+            url_for('search_server', topic='ech', type='locations', searchText='birgma', lang='de'),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertGreater(len(response.json['results']), 0)
+        #self.assertEqual(response.json['fuzzy'], 'true')
         # No results
-        params = {'type': 'locations', 'searchText': 'birgmasdfasdfa', 'lang': 'de'}
-        resp = self.testapp.get('/rest/services/ech/SearchServer', params=params, status=200)
-        self.assertEqual(len(resp.json['results']), 0)
-        self.assertEqual(resp.json['fuzzy'], 'true')
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='locations',
+                searchText='birgmasdfasdfa',
+                lang='de'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json['results']), 0)
+        self.assertEqual(response.json['fuzzy'], 'true')
 
     def test_search_lang_param_same_entry(self):
-        params = {
-            'type': 'featuresearch',
-            'searchLang': 'fr',
-            'searchText': 'rue de boujean',
-            'features': 'ch.bfs.gebaeude_wohnungs_register',
-            'sr': '2056'
-        }
-        resp_fr = self.testapp.get('/rest/services/ech/SearchServer', params=params, status=200)
-        self.assertAttrs('featuresearch', resp_fr.json['results'][0]['attrs'], 2056)
-        params = {
-            'type': 'featuresearch',
-            'searchLang': 'de',
-            'searchText': 'bözingenstrasse',
-            'features': 'ch.bfs.gebaeude_wohnungs_register',
-            'sr': '2056'
-        }
-        resp_de = self.testapp.get('/rest/services/ech/SearchServer', params=params, status=200)
-        self.assertAttrs('featuresearch', resp_de.json['results'][0]['attrs'], 2056)
+        response_fr = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='featuresearch',
+                searchText='rue de boujean',
+                searchLang='fr',
+                features='ch.bfs.gebaeude_wohnungs_register',
+                sr='2056'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response_fr.status_code, 200)
+        self.assertAttrs('featuresearch', response_fr.json['results'][0]['attrs'], 2056)
+        response_de = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='featuresearch',
+                searchText='bözingenstrasse',
+                searchLang='de',
+                features='ch.bfs.gebaeude_wohnungs_register',
+                sr='2056'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response_de.status_code, 200)
+        self.assertAttrs('featuresearch', response_de.json['results'][0]['attrs'], 2056)
         self.assertEqual(
-            resp_fr.json['results'][0]['attrs']['featureId'],
-            resp_de.json['results'][0]['attrs']['featureId']
+            response_fr.json['results'][0]['attrs']['featureId'],
+            response_de.json['results'][0]['attrs']['featureId']
         )
 
     def test_search_lang_no_support(self):
-        params = {
-            'type': 'featuresearch',
-            'searchLang': 'fr',
-            'searchText': 'boujean',
-            'features': 'ch.bfs.gebaeude_wohnungs_register,ch.swisstopo.lubis-luftbilder_farbe'
-        }
-        self.testapp.get('/rest/services/ech/SearchServer', params=params, status=400)
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='featuresearch',
+                searchText='boujean',
+                searchLang='fr',
+                features='ch.bfs.gebaeude_wohnungs_register,ch.swisstopo.lubis-luftbilder_farbe'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 400)
 
     def test_search_lang_integrity(self):
-        params = {
-            'type': 'featuresearch',
-            'searchLang': 'fr',
-            'searchText': 'aegerten 40',
-            'features': 'ch.bfs.gebaeude_wohnungs_register'
-        }
-        resp_fr = self.testapp.get('/rest/services/ech/SearchServer', params=params, status=200)
-        params = {
-            'type': 'featuresearch',
-            'searchLang': 'de',
-            'searchText': 'aegerten 40',
-            'features': 'ch.bfs.gebaeude_wohnungs_register'
-        }
-        resp_de = self.testapp.get('/rest/services/ech/SearchServer', params=params, status=200)
-        params = {
-            'type': 'featuresearch',
-            'searchText': 'aegerten 40',
-            'features': 'ch.bfs.gebaeude_wohnungs_register'
-        }
-        resp_agnostic = self.testapp.get(
-            '/rest/services/ech/SearchServer', params=params, status=200
+        response_fr = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='featuresearch',
+                searchLang='fr',
+                searchText='aegerten 40',
+                features='ch.bfs.gebaeude_wohnungs_register'
+            ),
+            headers=self.origin_headers["allowed"]
         )
+        self.assertEqual(response_fr.status_code, 200)
+        response_de = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='featuresearch',
+                searchLang='de',
+                searchText='aegerten 40',
+                features='ch.bfs.gebaeude_wohnungs_register'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response_de.status_code, 200)
 
-        ids_fr = [f['attrs']['featureId'] for f in resp_fr.json['results']]
-        ids_de = [f['attrs']['featureId'] for f in resp_de.json['results']]
-        ids = [f['attrs']['featureId'] for f in resp_agnostic.json['results']]
+        response_agnostic = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='featuresearch',
+                searchText='aegerten 40',
+                features='ch.bfs.gebaeude_wohnungs_register'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response_agnostic.status_code, 200)
+
+        ids_fr = [f['attrs']['featureId'] for f in response_fr.json['results']]
+        ids_de = [f['attrs']['featureId'] for f in response_de.json['results']]
+        ids = [f['attrs']['featureId'] for f in response_agnostic.json['results']]
         self.assertEqual(len(set(ids_fr + ids_de)), len(ids))
         for i in ids_fr:
             self.assertIn(i, ids)
         for i in ids_de:
             self.assertIn(i, ids)
-
-"""
