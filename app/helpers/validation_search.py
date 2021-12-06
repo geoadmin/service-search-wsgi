@@ -5,6 +5,7 @@ from werkzeug.exceptions import BadRequest
 from app.helpers.helpers_search import float_raise_nan
 from app.helpers.helpers_search import ilen
 from app.helpers.helpers_search import shift_to
+from app.helpers.utils import topics
 
 SUPPORTED_OUTPUT_SRS = (21781, 2056, 3857, 4326)
 
@@ -17,16 +18,9 @@ logger = logging.getLogger(__name__)
 # pylint: disable=invalid-name
 class MapNameValidation(object):  # pylint: disable=too-few-public-methods
 
-    def has_topic(self, db, topic_name):  # pylint: disable=no-self-use,unused-argument
-        # DOTO - db connection and Topics Model here
-        # availableMaps = [q[0] for q in db.query(Topics.id)]
-        # availableMaps.append(u'all')
-        availableMaps = ['swisstopo', 'all', 'schnee', 'inspire', 'ech', 'api']
-
-        if topic_name not in availableMaps:
+    def has_topic(self, topic_name):  # pylint: disable=no-self-use,unused-argument
+        if topic_name not in topics:
             raise BadRequest('The map you provided does not exist')
-        #if db or mapName:
-        #    pass
 
 
 class BaseValidation(MapNameValidation):  # pylint: disable=too-few-public-methods
@@ -34,8 +28,8 @@ class BaseValidation(MapNameValidation):  # pylint: disable=too-few-public-metho
     def __init__(self, request):
         super().__init__()
 
-        self.mapName = request.matchdict.get('map')
-        self.has_topic(request.db, self.mapName)
+        self.topic_name = request.matchdict.get('topic')
+        self.has_topic(self.topic_name)
         self.geodataStaging = request.registry.settings['geodata_staging']
         self.cbName = request.params.get('callback')
         self.request = request

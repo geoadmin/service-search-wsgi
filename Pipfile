@@ -18,6 +18,8 @@ requests = "*"
 pyproj = "~=1.9.6"
 unidecode = "*"
 werkzeug = "*"
+flask-sqlalchemy = "*"
+psycopg2-binary = "*"
 
 [dev-packages]
 gatilegrid = "*"

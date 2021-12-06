@@ -3,6 +3,7 @@ import os
 import re
 import time
 
+from flask_sqlalchemy import SQLAlchemy
 from werkzeug.exceptions import HTTPException
 
 from flask import Flask
@@ -20,6 +21,9 @@ route_logger = logging.getLogger('app.routes')
 
 app = Flask(__name__)
 app.config.from_object(settings)
+
+# Setup the DB
+db = SQLAlchemy(app)
 
 
 # NOTE it is better to have this method registered first (before validate_origin) otherwise

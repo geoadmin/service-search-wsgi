@@ -43,10 +43,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         request.registry = {}
 
         self.topic_name = request.matchdict.get('topic')
-
-        # DOTO remove ugly hack
-        request.db = 'to do'
-        self.has_topic(request.db, self.topic_name)
+        self.has_topic(self.topic_name)
 
         # treat lang, de as default
         if not request.args.get('lang'):
