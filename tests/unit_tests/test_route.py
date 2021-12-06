@@ -2,7 +2,7 @@ import logging
 
 from flask import url_for
 
-from unit_tests.base_test import SearchTest
+from tests.unit_tests.base_test import SearchTest
 from app.version import APP_VERSION
 
 logger = logging.getLogger(__name__)

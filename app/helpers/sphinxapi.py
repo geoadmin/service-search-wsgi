@@ -21,8 +21,6 @@ import socket
 from struct import pack
 from struct import unpack
 
-import six
-
 # pylint: disable=too-many-lines, invalid-name
 long = int
 text_type = str
@@ -1044,16 +1042,14 @@ class SphinxClient:  # pylint: disable=too-many-instance-attributes, too-many-pu
                     AssertInt32(val)
 
         # build request
-        req = [pack('>L', len(index)), index]
+        req = [pack('>L', len(index)), index.encode('utf-8')]
 
         req.append(pack('>L', len(attrs)))
         mva_attr = 0
         if mva:
             mva_attr = 1
         for attr in attrs:
-            # DOTO Python2/3
-            if six.PY3:
-                attr = attr.encode('utf8')
+            attr = attr.encode('utf8')
             req.append(pack('>L', len(attr)) + attr)
             req.append(pack('>L', mva_attr))
 
@@ -1074,7 +1070,7 @@ class SphinxClient:  # pylint: disable=too-many-instance-attributes, too-many-pu
         if not sock:
             return None
 
-        req = ''.join(req)
+        req = b''.join(req)
         length = len(req)
         req = pack('>2HL', SEARCHD_COMMAND_UPDATE, VER_COMMAND_UPDATE, length) + req
         self._Send(sock, req)
@@ -1111,7 +1107,8 @@ class SphinxClient:  # pylint: disable=too-many-instance-attributes, too-many-pu
             return None
 
         req_all = bytearray()
-        req_all.extend(pack('>2HL', SEARCHD_COMMAND_KEYWORDS, VER_COMMAND_KEYWORDS, length=None))
+        length = len(req_all)
+        req_all.extend(pack('>2HL', SEARCHD_COMMAND_KEYWORDS, VER_COMMAND_KEYWORDS, length))
         req_all.extend(req)
         self._Send(sock, req_all)
 

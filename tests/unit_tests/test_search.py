@@ -1,10 +1,7 @@
-from unittest import TestCase
-
 from gatilegrid import getTileGrid
 
 from flask import url_for
 
-from app import app
 #from flask import url_for
 from app.helpers.helpers_search import ilen
 from app.helpers.helpers_search import parse_box2d
@@ -12,20 +9,17 @@ from app.helpers.validation_search import SUPPORTED_OUTPUT_SRS
 
 from app.helpers.helpers_search import shift_to_lv95
 
+from tests.unit_tests.base_test import SearchTest
+
 # pylint: disable=invalid-name,too-many-lines
 
 sphinx_tests = True  # if there is access service-search-sphinx or not
 
 
-class TestsBase(TestCase):
+class TestsBase(SearchTest):
 
     def setUp(self):
-        self.context = app.test_request_context()
-        self.context.push()
-        self.app = app.test_client()
-        self.app.testing = True
-        self.origin_headers = {"allowed": {"Origin": "some_random_domain"}}
-
+        super(TestsBase, self).setUp()
         self.grids = {
             '21781': getTileGrid(21781),
             '2056': getTileGrid(2056),
@@ -626,9 +620,6 @@ class TestSearchServiceView(TestsBase):  # pylint: disable=too-many-public-metho
             'locations', response.json['results'][0]['attrs'], 21781, returnGeometry=False
         )
 
-    # is this ever being tested? in doc returnGeometry can eighter be true or false
-    # look for this in mf-chsdi3
-    # DOTO: look, if this test is being done on mf-chsdi3 at all
     def test_search_locations_geojson(self):
         response = self.app.get(
             url_for(
