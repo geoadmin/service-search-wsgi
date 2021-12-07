@@ -22,6 +22,9 @@ from app.helpers.helpers_search import shift_to
 from app.helpers.helpers_search import \
     transform_round_geometry as transform_shape
 from app.helpers.validation_search import SearchValidation
+from app.settings import GEODATA_STAGING
+from app.settings import SEARCH_SPHINX_HOST
+from app.settings import SEARCH_SPHINX_PORT
 
 logger = logging.getLogger(__name__)
 
@@ -66,9 +69,6 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         self.typeInfo = request.args.get('type')
         self.limit = request.args.get('limit')
 
-        # DOTO remove this hack
-        #self.geodataStaging = request.registry.settings['geodata_staging']
-        self.geodataStaging = 'dev'
         self.results = {'results': []}
         self.request = request
 
@@ -77,7 +77,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         self.sphinx = sphinxapi.SphinxClient()
         # DOTO remove this hack
         #self.sphinx.SetServer(request.registry.settings['sphinxhost'], 9312)
-        self.sphinx.SetServer('localhost', 9312)
+        self.sphinx.SetServer(SEARCH_SPHINX_HOST, SEARCH_SPHINX_PORT)
         self.sphinx.SetMatchMode(sphinxapi.SPH_MATCH_EXTENDED)
 
     # is being called from routes.py directly
@@ -264,10 +264,21 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
     def _layer_search(self):
 
         def staging_filter(staging):
+            '''
+            only layers in correct staging are searched
+            translating staging to data_staging
+            dev -> test
+            int -> integration
+            prod -> prod
+            Args:
+                String with the staging
+            Return:
+                String with the query for an explicit staging
+            '''
             ret = '@staging prod'
-            if staging in ('integration', 'test'):
+            if staging in ('int', 'dev'):
                 ret += ' | @staging integration'
-                if staging == 'test':
+                if staging == 'dev':
                     ret += ' | @staging test'
             return ret
 
@@ -292,7 +303,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             (
                 self._query_fields('@(title,detail,layer)'),
                 f'& @topics {topicFilter}'  # Filter by to topic if string not empty, ech whitelist hack pylint: disable=line-too-long
-                f'& {staging_filter(self.geodataStaging)}'  # Only layers in correct staging are searched pylint: disable=line-too-long
+                f'& {staging_filter(GEODATA_STAGING)}'  # Only layers in correct staging are searched pylint: disable=line-too-long
             )
         )
         try:

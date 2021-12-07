@@ -19,7 +19,7 @@ sphinx_tests = True  # if there is access service-search-sphinx or not
 class TestsBase(SearchTest):
 
     def setUp(self):
-        super(TestsBase, self).setUp()
+        super().setUp()
         self.grids = {
             '21781': getTileGrid(21781),
             '2056': getTileGrid(2056),
