@@ -1,191 +1,15 @@
-from gatilegrid import getTileGrid
-
 from flask import url_for
 
 #from flask import url_for
 from app.helpers.helpers_search import ilen
-from app.helpers.helpers_search import parse_box2d
-from app.helpers.validation_search import SUPPORTED_OUTPUT_SRS
-
 from app.helpers.helpers_search import shift_to_lv95
-
-from tests.unit_tests.base_test import SearchTest
+from tests.unit_tests.base_test import BaseSearchTest
 
 # pylint: disable=invalid-name,too-many-lines
 
-sphinx_tests = True  # if there is access service-search-sphinx or not
 
+class TestSearchService(BaseSearchTest):  # pylint: disable=too-many-public-methods
 
-class TestsBase(SearchTest):
-
-    def setUp(self):
-        super().setUp()
-        self.grids = {
-            '21781': getTileGrid(21781),
-            '2056': getTileGrid(2056),
-            '3857': getTileGrid(3857),
-            '4326': getTileGrid(4326)
-        }
-
-    def assertGeojsonFeature(self, feature, srid, hasGeometry=True, hasLayer=True):
-        self.assertIn('id', feature)
-        self.assertIn('properties', feature)
-        self.assertNotIn('attributes', feature)
-        if hasLayer:
-            self.assertIn('layerBodId', feature)
-            self.assertIn('layerName', feature)
-        if hasGeometry:
-            self.assertIn('geometry', feature)
-            self.assertIn('type', feature)
-            self.assertIn('type', feature['geometry'])
-            self.assertIn('bbox', feature)
-            self.assertBBoxValidity(feature['bbox'], srid)
-
-    def assertEsrijsonFeature(self, feature, srid, hasGeometry=True, hasLayer=True):
-        self.assertIn('id', feature)
-        self.assertNotIn('properties', feature)
-        self.assertIn('attributes', feature)
-        if hasLayer:
-            self.assertIn('layerBodId', feature)
-            self.assertIn('layerName', feature)
-        if hasGeometry:
-            self.assertIn('geometry', feature)
-            self.assertIn('bbox', feature)
-            self.assertEqual(feature['geometry']['spatialReference']['wkid'], srid)
-            self.assertBBoxValidity(feature['bbox'], srid)
-
-    def assertBBoxValidity(self, bbox, srid):
-        self.assertIn(srid, SUPPORTED_OUTPUT_SRS)
-        grid = self.grids[str(srid)]
-        minx, miny, maxx, maxy = bbox
-
-        self.assertLessEqual(maxx, grid.MAXX)
-        self.assertLessEqual(maxy, grid.MAXY)
-        self.assertGreaterEqual(minx, grid.MINX)
-        self.assertGreaterEqual(miny, grid.MINY)
-
-
-class TestSearchServiceView(TestsBase):  # pylint: disable=too-many-public-methods
-
-    def setUp(self):
-        if not sphinx_tests:
-            self.skipTest("Service search requires access to the sphinx server")
-        super().setUp()
-
-    def assertAttrs(self, type_, attrs, srid, returnGeometry=True, spatialOrder=False):  # pylint: disable=too-many-arguments,line-too-long
-        self.assertIn('detail', attrs)
-        self.assertIn('origin', attrs)
-        self.assertIn('label', attrs)
-        if type_ in ('locations'):
-            self.assertIn('geom_quadindex', attrs)
-            if returnGeometry:
-                self.assertIn('lon', attrs)
-                self.assertIn('lat', attrs)
-                if srid == 21781:
-                    self.assertLess(attrs['y'], self.grids['2056'].MINX)
-                    self.assertLess(attrs['x'], self.grids['2056'].MINY)
-                if srid in (2056, 4326, 3857):
-                    self.assertGreater(attrs['y'], self.grids[str(srid)].MINX)
-                    self.assertGreater(attrs['x'], self.grids[str(srid)].MINY)
-            else:
-                self.assertNotIn('lon', attrs)
-                self.assertNotIn('lat', attrs)
-                self.assertNotIn('geom_st_box2d', attrs)
-                self.assertNotIn('x', attrs)
-                self.assertNotIn('y', attrs)
-        elif type_ == 'layers':
-            self.assertIn('lang', attrs)
-            self.assertIn('staging', attrs)
-            self.assertIn('title', attrs)
-            self.assertIn('topics', attrs)
-        elif type_ == 'featuresearch':
-            self.assertIn('lon', attrs)
-            self.assertIn('lat', attrs)
-            self.assertIn('geom_quadindex', attrs)
-            self.assertIn('featureId', attrs)
-            self.assertIn('layer', attrs)
-
-        if type_ in ('locations', 'featuresearch') and returnGeometry:
-            if hasattr(attrs, 'geom_st_box2d'):
-                bbox = parse_box2d(attrs['geom_st_box2d'])
-                self.assertBBoxValidity(bbox, srid)
-            if spatialOrder:
-                self.assertIn('@geodist', attrs)
-            else:
-                self.assertNotIn('@geodist', attrs)
-        self.assertNotIn('x_lv95', attrs)
-        self.assertNotIn('y_lv95', attrs)
-        self.assertNotIn('geom_st_box2d_lv95', attrs)
-
-    def test_no_type(self):
-        response = self.app.get(
-            url_for('search_server', topic='inspire', searchText='ga'),
-            headers=self.origin_headers["allowed"]
-        )
-        self.assertEqual(response.status_code, 400)
-
-    def test_unaccepted_type(self):
-        response = self.app.get(
-            url_for('search_server', topic='inspire', searchText='ga', type='unaccepted'),
-            headers=self.origin_headers["allowed"]
-        )
-        self.assertEqual(response.status_code, 400)
-        acceptedTypes = ['locations', 'layers', 'featuresearch']
-        self.assertIn(
-            response.json['error']['message'],
-            "The type parameter you provided is not valid."
-            f" Possible values are {', '.join(acceptedTypes)}"
-        )
-
-    def test_searchtext_none_value_layers(self):
-        response = self.app.get(
-            url_for('search_server', topic='inspire', type='layers'),
-            headers=self.origin_headers["allowed"]
-        )
-        self.assertEqual(response.status_code, 400)
-        self.assertIn(response.json['error']['message'], "Please provide a search text")
-
-    def test_searchtext_empty_string_layers(self):
-        response = self.app.get(
-            url_for('search_server', topic='inspire', type='layers', searchText='     '),
-            headers=self.origin_headers["allowed"]
-        )
-        self.assertEqual(response.status_code, 400)
-        self.assertIn(response.json['error']['message'], "Please provide a search text")
-
-    def test_searchtext_none_locations(self):
-        response = self.app.get(
-            url_for('search_server', topic='inspire', type='locations'),
-            headers=self.origin_headers["allowed"]
-        )
-        self.assertEqual(response.status_code, 400)
-        self.assertIn(response.json['error']['message'], "Please provide a search text")
-
-    def test_searchtext_none_value_locations(self):
-        response = self.app.get(
-            url_for('search_server', topic='inspire', type='locations', searchText='     '),
-            headers=self.origin_headers["allowed"]
-        )
-        self.assertEqual(response.status_code, 400)
-        self.assertIn(response.json['error']['message'], "Please provide a search text")
-
-    def test_searchtext_none_featuresearch(self):
-        response = self.app.get(
-            url_for('search_server', topic='inspire', type='featuresearch'),
-            headers=self.origin_headers["allowed"]
-        )
-        self.assertEqual(response.status_code, 400)
-        self.assertIn(response.json['error']['message'], "Please provide a search text")
-
-    def test_searchtext_none_value_featuresearch(self):
-        response = self.app.get(
-            url_for('search_server', topic='inspire', type='featuresearch', searchText='    '),
-            headers=self.origin_headers["allowed"]
-        )
-        self.assertEqual(response.status_code, 400)
-        self.assertIn(response.json['error']['message'], "Please provide a search text")
-
-    # e2e
     def test_search_layers(self):
         response = self.app.get(
             url_for('search_server', topic='inspire', type='layers', searchText='wand'),
@@ -196,7 +20,6 @@ class TestSearchServiceView(TestsBase):  # pylint: disable=too-many-public-metho
         self.assertEqual(response.json['results'][0]['attrs']['lang'], 'de')
         self.assertAttrs('layers', response.json['results'][0]['attrs'], 21781)
 
-    # e2e
     def test_search_layers_geojson(self):
         response = self.app.get(
             url_for(
@@ -213,7 +36,6 @@ class TestSearchServiceView(TestsBase):  # pylint: disable=too-many-public-metho
         self.assertEqual(response.json['type'], 'FeatureCollection')
         self.assertEqual(response.json['bbox'], [420000, 30000, 900000, 510000])
 
-    # e2e
     def test_search_layers_geojson_with_projection(self):
         projections = {
             '2056': [2420000.0, 1029999.9, 2900000.0, 1509999.9],
@@ -238,7 +60,6 @@ class TestSearchServiceView(TestsBase):  # pylint: disable=too-many-public-metho
             self.assertEqual(response.json['type'], 'FeatureCollection')
             self.assertEqual(response.json['bbox'], projections[sr])
 
-    # e2e test
     def test_search_locations_geojson_with_projection(self):
         projections = {
             '2056': [2534437.97, 1150655.173, 2544978.008, 1161554.51],
@@ -265,7 +86,6 @@ class TestSearchServiceView(TestsBase):  # pylint: disable=too-many-public-metho
             self.assertEqual(response.json['type'], 'FeatureCollection')
             self.assertEqual(response.json['bbox'], projections[sr])
 
-    # transform to unittest
     def test_search_layers_with_cb(self):
 
         response = self.app.get(
@@ -278,7 +98,6 @@ class TestSearchServiceView(TestsBase):  # pylint: disable=too-many-public-metho
         self.assertEqual(response.content_type, 'application/javascript')
         self.assertIn('cb_(', str(response.data.decode('utf-8')))
 
-    # transform to unittest
     def test_search_layers_all_langs(self):
         langs = ('de', 'fr', 'it', 'en', 'rm')
         for lang in langs:
@@ -293,7 +112,6 @@ class TestSearchServiceView(TestsBase):  # pylint: disable=too-many-public-metho
             self.assertEqual(response.json['results'][0]['attrs']['lang'], lang)
             self.assertAttrs('layers', response.json['results'][0]['attrs'], 21781)
 
-    # e2e test
     def test_search_layers_for_one_layer(self):
         response = self.app.get(
             url_for(
@@ -309,7 +127,6 @@ class TestSearchServiceView(TestsBase):  # pylint: disable=too-many-public-metho
         self.assertEqual(len(response.json['results']), 1)
         self.assertAttrs('layers', response.json['results'][0]['attrs'], 21781)
 
-    # unittest
     def test_search_layers_accents(self):
         response = self.app.get(
             url_for('search_server', topic='ech', type='layers', searchText='%+&/()=?!üäöéà$@i£$'),
@@ -319,7 +136,6 @@ class TestSearchServiceView(TestsBase):  # pylint: disable=too-many-public-metho
         self.assertEqual(response.content_type, 'application/json')
         self.assertEqual(len(response.json['results']), 0)
 
-    # e2e
     def test_search_locations(self):
         # default sr 21781
         response = self.app.get(
@@ -342,59 +158,6 @@ class TestSearchServiceView(TestsBase):  # pylint: disable=too-many-public-metho
             self.assertGreater(len(response.json['results']), 0)
             self.assertAttrs('locations', response.json['results'][0]['attrs'], int(sr))
 
-    # unittest
-    def test_bbox_wrong_number_coordinates(self):
-        response = self.app.get(
-            url_for(
-                'search_server',
-                type='locations',
-                searchText='rue des berges',
-                bbox='551306.5625,551754.125,168514.625'
-            ),
-            headers=self.origin_headers["allowed"]
-        )
-        self.assertEqual(response.status_code, 400)
-        self.assertIn(
-            response.json['error']['message'],
-            'Please provide 4 coordinates in a comma separated list'
-        )
-
-    # unittest - testing validator
-    def test_bbox_check_first_second_coordinates(self):
-        response = self.app.get(
-            url_for(
-                'search_server',
-                type='locations',
-                searchText='rue des berges',
-                bbox='420000,420010,551754.125,168514.625'
-            ),
-            headers=self.origin_headers["allowed"]
-        )
-        self.assertEqual(response.status_code, 400)
-        self.assertIn(
-            response.json['error']['message'],
-            'The first coordinate must be higher than the second'
-        )
-
-    # unittest - testing validator
-    def test_bbox_check_third_fourth_coordinates(self):
-        response = self.app.get(
-            url_for(
-                'search_server',
-                type='locations',
-                searchText='rue des berges',
-                bbox='551306.5625,167918.328125,420000,420010'
-            ),
-            headers=self.origin_headers["allowed"]
-        )
-        self.assertEqual(response.status_code, 400)
-
-        self.assertIn(
-            response.json['error']['message'],
-            'The third coordinate must be higher than the fourth'
-        )
-
-    # convert to unittest
     def test_search_loactions_with_cb(self):
         response = self.app.get(
             url_for(
@@ -410,7 +173,6 @@ class TestSearchServiceView(TestsBase):  # pylint: disable=too-many-public-metho
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content_type, 'application/javascript')
 
-    # e2e test
     def test_search_locations_all_langs(self):
         # even if not lang dependent
         langs = ('de', 'fr', 'it', 'en', 'rm')
@@ -430,7 +192,6 @@ class TestSearchServiceView(TestsBase):  # pylint: disable=too-many-public-metho
             self.assertGreater(len(list(response.json['results'])), 0)
             self.assertAttrs('locations', response.json['results'][0]['attrs'], 21781)
 
-    # e2e test
     def test_search_locations_prefix_sentence_match(self):
         response = self.app.get(
             url_for(
@@ -460,22 +221,6 @@ class TestSearchServiceView(TestsBase):  # pylint: disable=too-many-public-metho
         self.assertEqual(response.json['results'][0]['attrs']['origin'], 'gg25')
         self.assertAttrs('locations', response.json['results'][0]['attrs'], 2056)
 
-    # unittest
-    def test_search_locations_wrong_topic(self):
-        response = self.app.get(
-            url_for(
-                'search_server',
-                topic='toto',
-                type='locations',
-                searchText='vd 446',
-                bbox='551306.5625,167918.328125,551754.125,168514.625'
-            ),
-            headers=self.origin_headers["allowed"]
-        )
-        self.assertEqual(response.status_code, 400)
-        self.assertIn(response.json['error']['message'], 'The map you provided does not exist')
-
-    # e2e test
     def test_search_locations_lausanne(self):
         response = self.app.get(
             url_for(
@@ -503,7 +248,6 @@ class TestSearchServiceView(TestsBase):  # pylint: disable=too-many-public-metho
         self.assertEqual(response.json['results'][0]['attrs']['detail'], 'lausanne vd')
         self.assertAttrs('locations', response.json['results'][0]['attrs'], 2056)
 
-    # e2e test
     def test_search_locations_wil(self):
         response = self.app.get(
             url_for('search_server', topic='ech', type='locations', searchText='wil'),
@@ -523,7 +267,6 @@ class TestSearchServiceView(TestsBase):  # pylint: disable=too-many-public-metho
         self.assertEqual(response.json['results'][0]['attrs']['detail'][:3], 'wil')
         self.assertAttrs('locations', response.json['results'][0]['attrs'], 2056)
 
-    # e2e test
     def test_search_locations_fontenay(self):
         response = self.app.get(
             url_for(
@@ -558,7 +301,6 @@ class TestSearchServiceView(TestsBase):  # pylint: disable=too-many-public-metho
         )
         self.assertAttrs('locations', response.json['results'][0]['attrs'], 2056)
 
-    # e2e test
     def test_search_locations_wilenstrasse_wil(self):
         response = self.app.get(
             url_for('search_server', topic='ech', type='locations', searchText='wilenstrasse wil'),
@@ -694,23 +436,6 @@ class TestSearchServiceView(TestsBase):  # pylint: disable=too-many-public-metho
             response.json['features'][0], 4326, hasGeometry=True, hasLayer=False
         )
         self.assertIn('wabern', str(response.json['features']).lower())
-
-    def test_search_locations_esrijson(self):
-        response = self.app.get(
-            url_for(
-                'search_server',
-                topic='api',
-                type='locations',
-                searchText='Wabern',
-                returnGeometry='true',
-                geometryFormat='esrijson'
-            ),
-            headers=self.origin_headers["allowed"]
-        )
-        self.assertEqual(response.status_code, 400)
-        self.assertIn(
-            "Param 'geometryFormat=esrijson' is not supported", response.json['error']['message']
-        )
 
     def test_locations_searchtext_apostrophe(self):
         response = self.app.get(
@@ -923,7 +648,6 @@ class TestSearchServiceView(TestsBase):  # pylint: disable=too-many-public-metho
         self.assertEqual(len(response.json['results']), 1)
         self.assertAttrs('featuresearch', response.json['results'][0]['attrs'], 2056)
 
-    # unittest
     def test_search_features_non_existing_layer(self):
         response = self.app.get(
             url_for(
@@ -1000,20 +724,6 @@ class TestSearchServiceView(TestsBase):  # pylint: disable=too-many-public-metho
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.json['results']), 3)
         self.assertAttrs('locations', response.json['results'][0]['attrs'], 21781)
-
-    # unittest
-    def test_search_locations_bad_origin(self):
-        response = self.app.get(
-            url_for(
-                'search_server',
-                topic='inspire',
-                type='locations',
-                searchText='vaud',
-                origins='dummy'
-            ),
-            headers=self.origin_headers["allowed"]
-        )
-        self.assertEqual(response.status_code, 400)
 
     def test_search_locations_prefix_parcel(self):
         response = self.app.get(
@@ -1185,14 +895,6 @@ class TestSearchServiceView(TestsBase):  # pylint: disable=too-many-public-metho
         self.assertGreater(len(response.json['results']), 1)
         self.assertAttrs('locations', response.json['results'][0]['attrs'], 2056, spatialOrder=True)
 
-    # unittest
-    def test_search_locations_noparams(self):
-        response = self.app.get(
-            url_for('search_server', topic='inspire', type='locations'),
-            headers=self.origin_headers["allowed"]
-        )
-        self.assertEqual(response.status_code, 400)
-
     def test_features_timeinstant(self):
         response = self.app.get(
             url_for(
@@ -1230,26 +932,6 @@ class TestSearchServiceView(TestsBase):  # pylint: disable=too-many-public-metho
         self.assertEqual(response.json['results'][0]['attrs']['origin'], 'feature')
         self.assertAttrs(
             'featuresearch', response.json['results'][0]['attrs'], 2056, spatialOrder=True
-        )
-
-    # unittest
-    def test_nodigit_timeinstant(self):
-        response = self.app.get(
-            url_for(
-                'search_server',
-                topic='ech',
-                type='featuresearch',
-                searchText='19810590048970',
-                features='ch.swisstopo.lubis-luftbilder_farbe',
-                bbox='542199,206799,642201,226801',
-                timeInstant='four'
-            ),
-            headers=self.origin_headers["allowed"]
-        )
-        self.assertEqual(response.status_code, 400)
-        self.assertIn(
-            response.json['error']['message'],
-            'Please provide an integer for the parameter timeInstant'
         )
 
     def test_features_timestamp(self):
@@ -1361,105 +1043,6 @@ class TestSearchServiceView(TestsBase):  # pylint: disable=too-many-public-metho
         self.assertEqual(response.json['results'][0]['attrs']['origin'], 'feature')
         self.assertAttrs('featuresearch', response.json['results'][0]['attrs'], 21781)
 
-    # unittest
-    def test_features_wrong_time(self):
-        response = self.app.get(
-            url_for(
-                'search_server',
-                topic='ech',
-                type='featuresearch',
-                searchText='19810590048970',
-                features='ch.swisstopo.lubis-luftbilder_farbe',
-                bbox='542200,206800,542200,206800',
-                timeInstant='19    522'
-            ),
-            headers=self.origin_headers["allowed"]
-        )
-        self.assertEqual(response.status_code, 400)
-
-    def test_features_wrong_time_2(self):
-        response = self.app.get(
-            url_for(
-                'search_server',
-                topic='ech',
-                type='featuresearch',
-                searchText='19810590048970',
-                features='ch.swisstopo.lubis-luftbilder_farbe',
-                bbox='542200,206800,542200,206800',
-                timeInstant='19    52.00'
-            ),
-            headers=self.origin_headers["allowed"]
-        )
-        self.assertEqual(response.status_code, 400)
-
-    # unittest
-    def test_features_mix_timeinstant_timestamps(self):
-        response = self.app.get(
-            url_for(
-                'search_server',
-                topic='ech',
-                type='featuresearch',
-                searchText='19810590048970',
-                features='ch.swisstopo.lubis-luftbilder_farbe',
-                bbox='542200,206800,542200,206800',
-                timeInstant='1952',
-                timeStamps='1946'
-            ),
-            headers=self.origin_headers["allowed"]
-        )
-        self.assertEqual(response.status_code, 400)
-
-    # unittest
-    def test_features_wrong_timestamps(self):
-        response = self.app.get(
-            url_for(
-                'search_server',
-                topic='ech',
-                type='featuresearch',
-                searchText='19810590048970',
-                features='ch.swisstopo.lubis-luftbilder_farbe',
-                bbox='542200,206800,542200,206800',
-                timeStamps='19522'
-            ),
-            headers=self.origin_headers["allowed"]
-        )
-        self.assertEqual(response.status_code, 400)
-
-    # unittest
-    def test_nondigit_timestamps(self):
-        response = self.app.get(
-            url_for(
-                'search_server',
-                topic='ech',
-                type='featuresearch',
-                searchText='19810590048970',
-                features='ch.swisstopo.lubis-luftbilder_farbe',
-                bbox='542200,206800,542200,206800',
-                timeStamps='four'
-            ),
-            headers=self.origin_headers["allowed"]
-        )
-        self.assertEqual(response.status_code, 400)
-        self.assertIn(
-            response.json['error']['message'], 'Please provide integers for timeStamps parameter'
-        )
-
-    # unittest
-    def test_features_wrong_timestamps_2(self):
-        response = self.app.get(
-            url_for(
-                'search_server',
-                topic='ech',
-                type='featuresearch',
-                searchText='19810590048970',
-                features='ch.swisstopo.lubis-luftbilder_farbe',
-                bbox='542200,206800,542200,206800',
-                timeStamps='1952.00'
-            ),
-            headers=self.origin_headers["allowed"]
-        )
-        self.assertEqual(response.status_code, 400)
-
     def test_locations_search_limit(self):
         response = self.app.get(
             url_for(
@@ -1470,16 +1053,6 @@ class TestSearchServiceView(TestsBase):  # pylint: disable=too-many-public-metho
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.json['results']), 1)
         self.assertAttrs('locations', response.json['results'][0]['attrs'], 21781)
-
-    # unittest
-    def test_locations_search_wrong_limit(self):
-        response = self.app.get(
-            url_for(
-                'search_server', topic='ech', type='locations', searchText='chalais', limit='5.5'
-            ),
-            headers=self.origin_headers["allowed"]
-        )
-        self.assertEqual(response.status_code, 400)
 
     def test_search_max_words(self):
         response = self.app.get(
@@ -1554,23 +1127,6 @@ class TestSearchServiceView(TestsBase):  # pylint: disable=too-many-public-metho
         )
         self.assertEqual(response.status_code, 400)
 
-    def test_bbox_nan(self):
-        response = self.app.get(
-            url_for(
-                'search_server',
-                topic='ech',
-                type='locations',
-                searchText='rue des berges',
-                bbox='551306.5625,NaN,551754.125,168514.625'
-            ),
-            headers=self.origin_headers["allowed"]
-        )
-        self.assertEqual(response.status_code, 400)
-        self.assertIn(
-            response.json['error']['message'],
-            'Please provide numerical values for the parameter bbox'
-        )
-
     def test_fuzzy_locations_results(self):
         # Standard results
         response = self.app.get(
@@ -1589,7 +1145,7 @@ class TestSearchServiceView(TestsBase):  # pylint: disable=too-many-public-metho
         )
         self.assertEqual(response.status_code, 200)
         self.assertGreater(len(response.json['results']), 0)
-        #self.assertEqual(response.json['fuzzy'], 'true')
+        #self.assertEqual(response.json['fuzzy'], 'true') DOTO
         # No results
         response = self.app.get(
             url_for(
@@ -1638,20 +1194,6 @@ class TestSearchServiceView(TestsBase):  # pylint: disable=too-many-public-metho
             response_fr.json['results'][0]['attrs']['featureId'],
             response_de.json['results'][0]['attrs']['featureId']
         )
-
-    def test_search_lang_no_support(self):
-        response = self.app.get(
-            url_for(
-                'search_server',
-                topic='ech',
-                type='featuresearch',
-                searchText='boujean',
-                searchLang='fr',
-                features='ch.bfs.gebaeude_wohnungs_register,ch.swisstopo.lubis-luftbilder_farbe'
-            ),
-            headers=self.origin_headers["allowed"]
-        )
-        self.assertEqual(response.status_code, 400)
 
     def test_search_lang_integrity(self):
         response_fr = self.app.get(

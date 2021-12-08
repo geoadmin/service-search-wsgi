@@ -9,9 +9,10 @@ from flask import jsonify
 from flask import make_response
 
 from app import settings
-from app.settings import ALLOWED_DOMAINS, TESTING
+from app.settings import ALLOWED_DOMAINS
 from app.settings import LOGGING_CFG
 from app.settings import LOGS_DIR
+from app.settings import TESTING
 
 logger = logging.getLogger(__name__)
 

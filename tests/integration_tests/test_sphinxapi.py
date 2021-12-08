@@ -3,14 +3,14 @@
 import unittest
 
 from app.helpers import sphinxapi
-from tests.unit_tests.base_test import SearchTest
+from tests.unit_tests.base_test import BaseSearchTest
 
 # pylint: disable=invalid-name
 
 sphinx_tests = True
 
 
-class Test_SphinxApi(SearchTest):
+class Test_SphinxApi(BaseSearchTest):
 
     def setUp(self):
         if not sphinx_tests:
@@ -60,7 +60,7 @@ class Test_SphinxApi(SearchTest):
         self.assertFalse(res)
 
     # DOTO - fixing test
-    @unittest.skip("it does not seem to work (on python3 - we will have to invest some time here")
+    @unittest.skip("it does not seem to work (on python3 - we will have to invest some time here)")
     def test_shinx_api_searchquery(self):
         api = self._callFUT()
         query = 'toto'
@@ -78,7 +78,7 @@ class Test_SphinxApi(SearchTest):
         self.assertFalse(res)
 
     # DOTO - fixing test
-    @unittest.skip("it does not seem to work (on python3- we will have to invest some time here")
+    @unittest.skip("it does not seem to work (on python3- we will have to invest some time here)")
     def test_update_attributes(self):
         api = self._callFUT()
         index = 'layers'

@@ -3,12 +3,12 @@ import logging
 from flask import url_for
 
 from app.version import APP_VERSION
-from tests.unit_tests.base_test import SearchTest
+from tests.unit_tests.base_test import BaseSearchTest
 
 logger = logging.getLogger(__name__)
 
 
-class CheckerTests(SearchTest):
+class CheckerTests(BaseSearchTest):
 
     def test_checker(self):
         response = self.app.get(url_for('checker'), headers=self.origin_headers["allowed"])
