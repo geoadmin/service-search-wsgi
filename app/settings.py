@@ -29,6 +29,8 @@ BOD_DB_CONNECT_RETRIES = int(os.getenv('BOD_DB_CONNECT_RETRIES', '3'))
 SEARCH_SPHINX_HOST = str(os.getenv('SEARCH_SPHINX_HOST', 'localhost'))
 SEARCH_SPHINX_PORT = int(os.getenv('SEARCH_SPHINX_PORT', '9312'))
 
+SCRIPT_NAME = os.getenv('SCRIPT_NAME', '')  # This is used by unicorn for route prefix
+
 # geodata stagings can be dev, int or prod
 GEODATA_STAGING = str(os.getenv('GEODATA_STAGING', 'prod'))
 

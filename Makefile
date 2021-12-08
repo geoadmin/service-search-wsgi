@@ -37,7 +37,8 @@ PIP_FILE_LOCK = Pipfile.lock
 # default configuration
 ENV_FILE ?= .env.local
 HTTP_PORT ?= 5000
-ROUTE_PREFIX ?= /api/$(SERVICE_NAME)
+# DOTO ROUTE_PREFIX ?= /api/$(SERVICE_NAME)
+ROUTE_PREFIX ?=''
 
 # Commands
 PIPENV_RUN := pipenv run
