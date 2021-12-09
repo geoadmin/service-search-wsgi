@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "4bcb5dd4d72b96b984a7e15fe1dd1692487ee75485e114e20851a31560703dd4"
+            "sha256": "6defbd7215c2c81b72f6b44448ea55ede7fd5d76f3a0e721e50604414b39797c"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -148,13 +148,6 @@
             "index": "pypi",
             "version": "==19.9.0"
         },
-        "hupper": {
-            "hashes": [
-                "sha256:cd6f51b72c7587bc9bce8a65ecd025a1e95f1b03284519bfe91284d010316cd9",
-                "sha256:f683850d62598c02faf3c7cdaaa727d8cbe3c5a2497a5737a8358386903b2601"
-            ],
-            "version": "==1.10.3"
-        },
         "idna": {
             "hashes": [
                 "sha256:84d9dd047ffa80596e0f246e2eab0b391788b0503584e8945f2368256d2735ff",
@@ -267,13 +260,6 @@
             ],
             "version": "==2.0.1"
         },
-        "pastedeploy": {
-            "hashes": [
-                "sha256:14923cfd6ad4281b570693afc278bab5076fbdd4cd15aa9d99b042d694aa4217",
-                "sha256:6dead6ab9823a85d585ef27f878bc647f787edb9ca8da0716aa9f1261b464817"
-            ],
-            "version": "==2.1.1"
-        },
         "pillow": {
             "hashes": [
                 "sha256:15306d71a1e96d7e271fd2a0737038b5a92ca2978d2e38b6ced7966583e3d5af",
@@ -312,20 +298,6 @@
             ],
             "index": "pypi",
             "version": "==8.1.2"
-        },
-        "plaster": {
-            "hashes": [
-                "sha256:215c921a438b5349931fd7df9a5a11a3572947f20f4bc6dd622ac08f1c3ba249",
-                "sha256:8351c7c7efdf33084c1de88dd0f422cbe7342534537b553c49b857b12d98c8c3"
-            ],
-            "version": "==1.0"
-        },
-        "plaster-pastedeploy": {
-            "hashes": [
-                "sha256:391d93a4e1ff81fc3bae27508ebb765b61f1724ae6169f83577f06b6357be7fd",
-                "sha256:7c8aa37c917b615c70bf942b24dc1e0455c49f62f1a2214b1a0dd98871644bbb"
-            ],
-            "version": "==0.7"
         },
         "psycopg2-binary": {
             "hashes": [
@@ -393,14 +365,6 @@
             ],
             "index": "pypi",
             "version": "==3.1.0"
-        },
-        "pyramid": {
-            "hashes": [
-                "sha256:45431b387587ed0fac6213b54d6e9f0936f0cc85238a8f5af7852fc9484c5c77",
-                "sha256:de7f097fa2fa43bead1f690761e56594d24954ae7dc7cbf69a5d84bb75c5a099"
-            ],
-            "index": "pypi",
-            "version": "==2.0"
         },
         "python-dotenv": {
             "hashes": [
@@ -529,13 +493,6 @@
             ],
             "version": "==1.4.27"
         },
-        "translationstring": {
-            "hashes": [
-                "sha256:5f4dc4d939573db851c8d840551e1a0fb27b946afe3b95aafc22577eed2d6262",
-                "sha256:bf947538d76e69ba12ab17283b10355a9ecfbc078e6123443f43f2107f6376f3"
-            ],
-            "version": "==1.4"
-        },
         "typing-extensions": {
             "hashes": [
                 "sha256:4ca091dea149f945ec56afb48dae714f21e8692ef22a395223bcd328961b6a0e",
@@ -559,20 +516,6 @@
             ],
             "version": "==1.26.7"
         },
-        "venusian": {
-            "hashes": [
-                "sha256:06e7385786ad3a15c70740b2af8d30dfb063a946a851dcb4159f9e2a2302578f",
-                "sha256:f6842b7242b1039c0c28f6feef29016e7e7dd3caaeb476a193acf737db31ee38"
-            ],
-            "version": "==3.0.0"
-        },
-        "webob": {
-            "hashes": [
-                "sha256:73aae30359291c14fa3b956f8b5ca31960e420c28c1bec002547fb04928cf89b",
-                "sha256:b64ef5141be559cfade448f044fa45c2260351edcb6a8ef6b7e00c7dcef0c323"
-            ],
-            "version": "==1.8.7"
-        },
         "werkzeug": {
             "hashes": [
                 "sha256:2de2a5db0baeae7b2d2664949077c2ac63fbd16d98da0ff71837f7d1dea3fd43",
@@ -587,13 +530,6 @@
                 "sha256:9fe5ea21568a0a70e50f273397638d39b03353731e6cbbb3fd8502a33fec40bc"
             ],
             "version": "==3.6.0"
-        },
-        "zope.deprecation": {
-            "hashes": [
-                "sha256:0d453338f04bacf91bbfba545d8bcdf529aa829e67b705eac8c1a7fdce66e2df",
-                "sha256:f1480b74995958b24ce37b0ef04d3663d2683e5d6debc96726eff18acf4ea113"
-            ],
-            "version": "==4.4.0"
         },
         "zope.event": {
             "hashes": [
