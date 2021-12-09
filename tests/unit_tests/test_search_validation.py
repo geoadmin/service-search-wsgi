@@ -81,6 +81,7 @@ class TestSearchServiceValidation(BaseSearchTest):  # pylint: disable=line-too-l
         response = self.app.get(
             url_for(
                 'search_server',
+                topic='all',
                 type='locations',
                 searchText='rue des berges',
                 bbox='551306.5625,551754.125,168514.625'
@@ -97,6 +98,7 @@ class TestSearchServiceValidation(BaseSearchTest):  # pylint: disable=line-too-l
         response = self.app.get(
             url_for(
                 'search_server',
+                topic='all',
                 type='locations',
                 searchText='rue des berges',
                 bbox='420000,420010,551754.125,168514.625'
@@ -113,6 +115,7 @@ class TestSearchServiceValidation(BaseSearchTest):  # pylint: disable=line-too-l
         response = self.app.get(
             url_for(
                 'search_server',
+                topic='all',
                 type='locations',
                 searchText='rue des berges',
                 bbox='551306.5625,167918.328125,420000,420010'

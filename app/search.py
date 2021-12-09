@@ -42,9 +42,6 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
     def __init__(self, request):
         super().__init__(request)
 
-        # DOTO remove ugly hack
-        request.registry = {}
-
         self.topic_name = request.matchdict.get('topic')
         self.has_topic(self.topic_name)
 
@@ -75,8 +72,6 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         morton_box = [420000, 30000, 900000, 510000]
         self.quadtree = msk.QuadTree(msk.BBox(*morton_box), 20)
         self.sphinx = sphinxapi.SphinxClient()
-        # DOTO remove this hack
-        #self.sphinx.SetServer(request.registry.settings['sphinxhost'], 9312)
         self.sphinx.SetServer(SEARCH_SPHINX_HOST, SEARCH_SPHINX_PORT)
         self.sphinx.SetMatchMode(sphinxapi.SPH_MATCH_EXTENDED)
 

@@ -16,7 +16,6 @@ def checker():
     return make_response(jsonify({'success': True, 'message': 'OK', 'version': APP_VERSION}))
 
 
-@app.route('/api/search', methods=['GET'])
 @app.route('/rest/services/<topic>/SearchServer', methods=['GET'])
 def search_server(topic='all'):
     request.matchdict = {}

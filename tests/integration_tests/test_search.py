@@ -150,7 +150,13 @@ class TestSearchService(BaseSearchTest):  # pylint: disable=too-many-public-meth
         self.assertAttrs('locations', response.json['results'][0]['attrs'], 21781)
         for sr in ('2056', '21781', '4326', '3857'):
             response = self.app.get(
-                url_for('search_server', type='locations', searchText='rue des berges', sr=sr),
+                url_for(
+                    'search_server',
+                    topic='inspire',
+                    type='locations',
+                    searchText='rue des berges',
+                    sr=sr
+                ),
                 headers=self.origin_headers["allowed"]
             )
             self.assertEqual(response.status_code, 200)
