@@ -2,7 +2,7 @@ SHELL = /bin/bash
 
 .DEFAULT_GOAL := help
 
-SERVICE_NAME := service-search
+SERVICE_NAME := service-search-wsgi
 
 CURRENT_DIR := $(shell pwd)
 
@@ -182,9 +182,10 @@ dockerpush: dockerbuild
 dockerrun: clean_logs dockerbuild $(LOGS_DIR)
 	docker run \
 		-it -p $(HTTP_PORT):8080 \
-		--env-file=${PWD}/${ENV_FILE} \
+		--env-file=${PWD}/$(ENV_FILE) \
 		--env LOGS_DIR=/logs \
 		--env SCRIPT_NAME=$(ROUTE_PREFIX) \
+		--net host \
 		--mount type=bind,source="${LOGS_DIR}",target=/logs \
 		$(DOCKER_IMG_LOCAL_TAG)
 
