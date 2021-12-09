@@ -77,8 +77,11 @@ class Test_Helpers(TestCase):
     def test_get_proj_from_srid(self):
         srid = 21781
         proj = get_proj_from_srid(srid)
-        self.assertFalse(proj.is_latlong())
-        self.assertEqual(proj.srs, '+units=m +init=epsg:21781 ')
+        self.assertFalse(proj.crs.is_geographic)
+        # defined crs without ntv2 grid
+        str_proj_lv03 = '+proj=somerc +lat_0=46.9524055555556 +lon_0=7.43958333333333 ' \
+        '+k_0=1 +x_0=600000 +y_0=200000 +ellps=bessel +units=m +no_defs'
+        self.assertEqual(proj.srs, str_proj_lv03)
 
     def test__transform_point(self):
         srid_from = 4326

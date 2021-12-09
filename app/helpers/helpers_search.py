@@ -84,7 +84,7 @@ def get_proj_from_srid(srid):
     if srid in PROJECTIONS:
         return PROJECTIONS[srid]
 
-    proj = Proj(init=f'EPSG:{srid}')
+    proj = Proj(f'EPSG:{srid}')
     PROJECTIONS[srid] = proj
     return proj
 
@@ -92,7 +92,7 @@ def get_proj_from_srid(srid):
 def get_precision_for_proj(srid):
     precision = COORDINATES_DECIMALS_FOR_METRIC_PROJ
     proj = get_proj_from_srid(srid)
-    if proj.is_latlong():
+    if proj.crs.is_geographic:
         precision = COORDINATES_DECIMALS_FOR_DEGREE_PROJ
     return precision
 
@@ -125,7 +125,7 @@ def round_geometry_coordinates(geom, precision=None):
 def _transform_point(coords, srid_from, srid_to):
     proj_in = get_proj_from_srid(srid_from)
     proj_out = get_proj_from_srid(srid_to)
-    return proj_transform(proj_in, proj_out, coords[0], coords[1])
+    return proj_transform(proj_in, proj_out, coords[0], coords[1], always_xy=True)
 
 
 def transform_round_geometry(geom, srid_from, srid_to, rounding=True):
@@ -169,7 +169,7 @@ def _transform_shape(geom, srid_from, srid_to, rounding=True):
     proj_in = get_proj_from_srid(srid_from)
     proj_out = get_proj_from_srid(srid_to)
 
-    projection_func = partial(proj_transform, proj_in, proj_out)
+    projection_func = partial(proj_transform, proj_in, proj_out, always_xy=True)
 
     new_geom = shape_transform(projection_func, geom)
     if rounding:

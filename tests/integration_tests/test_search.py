@@ -36,11 +36,11 @@ class TestSearchService(BaseSearchTest):  # pylint: disable=too-many-public-meth
         self.assertEqual(response.json['type'], 'FeatureCollection')
         self.assertEqual(response.json['bbox'], [420000, 30000, 900000, 510000])
 
-    def test_search_layers_geojson_with_projection(self):
+    def test_search_layers_geojson_with_projection_one(self):
         projections = {
-            '2056': [2420000.0, 1029999.9, 2900000.0, 1509999.9],
-            '4326': [5.140299, 45.398122, 11.591428, 49.66641],
-            '3857': [572215.5, 5684416.9, 1290351.9, 6388703.1],
+            '2056': [2420000.0, 1030000.0, 2900000.0, 1510000.0],
+            '4326': [5.140299, 45.398122, 11.591427, 49.666411],
+            '3857': [572215.4, 5684417.0, 1290351.8, 6388703.2],
             '21781': [420000, 30000, 900000, 510000]
         }
         for sr in list(projections.keys()):
@@ -60,11 +60,11 @@ class TestSearchService(BaseSearchTest):  # pylint: disable=too-many-public-meth
             self.assertEqual(response.json['type'], 'FeatureCollection')
             self.assertEqual(response.json['bbox'], projections[sr])
 
-    def test_search_locations_geojson_with_projection(self):
+    def test_search_locations_geojson_with_projection_two(self):
         projections = {
             '2056': [2534437.97, 1150655.173, 2544978.008, 1161554.51],
-            '4326': [6.582954, 46.503985, 6.721812, 46.602977],
-            '3857': [732811.1, 5861484.2, 748268.7, 5877509.0],
+            '4326': [6.582954, 46.503985, 6.721811, 46.602978],
+            '3857': [732811.1, 5861484.3, 748268.6, 5877509.0],
             '21781': [534437.969999999, 150655.173000001, 544978.008000001, 161554.509999998]
         }
 
