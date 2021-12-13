@@ -17,7 +17,6 @@ LOGS_DIR = os.getenv('LOGS_DIR', str(BASE_DIR / 'logs'))
 os.environ['LOGS_DIR'] = LOGS_DIR  # Set default if not set
 LOGGING_CFG = os.getenv('LOGGING_CFG', 'logging-cfg-local.yml')
 TRAP_HTTP_EXCEPTIONS = True
-DEBUG = strtobool(os.getenv('DEBUG', 'False'))
 BOD_DB_NAME = str(os.getenv('BOD_DB_NAME', None))
 BOD_DB_HOST = str(os.getenv('BOD_DB_HOST', None))
 BOD_DB_PORT = int(os.getenv('BOD_DB_PORT', '5432'))

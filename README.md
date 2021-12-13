@@ -77,6 +77,13 @@ gopass show infra-gopass-bgdi/postgres/users/www-data
 #### Access to service-search-sphinx ####
 For local development it showed, that it was easiest to access the productiv running service-search-shpinx directly. The access to the service-search-sphinx is being defined in the .env.local file as well.
 
+For local dev in .ssh/config f.ex.
+```bash
+Host vpc_sphinx_prod_n0
+HostName 10.220.5.253
+LocalForward 9312 localhost:9312
+```
+
 One possibility is to make a ssh tunnel and to access the service-search-sphinx via localhost.
 
 
@@ -168,7 +175,6 @@ The service is configured by Environment Variable:
 | Env         | Default               | Description                |
 | ----------- | --------------------- | -------------------------- |
 | HTTP_PORT | 5000 | The port on which the service can be queried. |
-| DEBUG | False | This can be made better. Right now the header origin is not being checked when DEBUG=True is set. |
 | TESTING | False | When TESTING=True, the application does not need a db connection to retrieve a list of topics. A list with the topics used in the tests is being set. |
 | BOD_DB_NAME | None | Depending on the staging level usually `bod_{dev, int or prod}`
 | BOD_DB_HOST | None | The db host. Usually `pg.bgdi.ch` or `localhost` |
@@ -181,4 +187,4 @@ The service is configured by Environment Variable:
 | LOGGING_CFG | logging-cfg-local.yml | Logging configuration file |
 | FORWARED_ALLOW_IPS | `*` | Sets the gunicorn `forwarded_allow_ips` (see https://docs.gunicorn.org/en/stable/settings.html#forwarded-allow-ips). This is required in order to `secure_scheme_headers` to works. |
 | FORWARDED_PROTO_HEADER_NAME | `X-Forwarded-Proto` | Sets gunicorn `secure_scheme_headers` parameter to `{FORWARDED_PROTO_HEADER_NAME: 'https'}`, see https://docs.gunicorn.org/en/stable/settings.html#secure-scheme-headers. |
-| SCRIPT_NAME | '' | The script name. This will be used once, when we have an idea about how to query search-wsgi later on. F.ex. `/api/search/` f.ex. used by unicorn (wsgi-server). |
+| SCRIPT_NAME | '' | The script name. This will be used once, when we have an idea about how to query search-wsgi later on. F.ex. `/api/search/` f.ex. used by gunicorn (wsgi-server). |
