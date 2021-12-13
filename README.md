@@ -22,16 +22,17 @@
 
 ## Description
 
-A simple description of the service should go here
-A detailed descriptions of the endpoints can be found in the [OpenAPI Spec](openapi.yaml).
+This is the SearchServer service from mf-chsdi3. How the service can be queried, is currently described here:
+[api3.geo.admin.ch/search](https://api3.geo.admin.ch/services/sdiservices.html#search). But this will have to be migrated in some way to this repository.
 
 ### Staging Environments
+The author is not sure, if this is going to be the staging environment.
 
 | Environments | URL                                                                                                                   |
 | ------------ | --------------------------------------------------------------------------------------------------------------------- |
-| DEV          | [https://service-name.bgdi-dev.swisstopo.cloud/v4/name/](https://service-name.bgdi-dev.swisstopo.cloud/v4/name/)  |
-| INT          | [https://service-name.bgdi-int.swisstopo.cloud/v4/name/](https://service-name.bgdi-int.swisstopo.cloud/v4/name/)  |
-| PROD         | [https://service-name.bgdi-prod.swisstopo.cloud/v4/name/](https://service-name.bgdi-int.swisstopo.cloud/v4/name/) |
+| DEV          | [https://service-search.bgdi-dev.swisstopo.cloud/rest/services/all/SearchServer](https://service-search.bgdi-dev.swisstopo.cloud/rest/services/all/SearchServer)  |
+| INT          | [https://service-search.bgdi-int.swisstopo.cloud/rest/services/all/SearchServer](https://service-search.bgdi-int.swisstopo.cloud/rest/services/all/SearchServer)  |
+| PROD         | [https://api.geo.admin.ch/rest/services/all/SearchServer](https://api.geo.admin.ch/rest/services/all/SearchServer) |
 
 ## Versioning
 
@@ -43,23 +44,42 @@ See also [Git Flow - Versioning](https://github.com/geoadmin/doc-guidelines/blob
 
 ### Make Dependencies
 
-The **Make** targets assume you have **python3.7**, **pipenv**, **bash**, **curl**, **tar**, **docker** and **docker-compose** installed.
+The **Make** targets assume you have **python3.7**, **pipenv**, **bash**, **curl**, **tar** and **docker** installed.
 
 ### Setting up to work
 
 First, you'll need to clone the repo
 
 ```bash
-git clone git@github.com:geoadmin/service-name
+git clone git@github.com:geoadmin/service-search-wsgi
 ```
 
 Then, you can run the setup target to ensure you have everything needed to develop, test and serve locally
 
+.venv to run the service (f.ex. make serve)
 ```bash
 make setup
 ```
+.venv to develop and debug the service
+```bash
+make dev
+```
 
-That's it, you're ready to work.
+To run the service you will have to *copy* **.env.default** to **.env.local**. And to set the variables.
+
+#### Database access ###
+Right now the database is being accessed to validate, if the <topic> in the search path exists or not. It is not even being filtered on this. It is just a validation. To minimise the number of requests on the db, the application is only querying this during startup and writes the list of topics into a variable.
+Anyhow. The db user is www-data. The password can be found in gopass:
+```bash
+gopass show infra-gopass-bgdi/postgres/users/www-data
+```
+
+#### Access to service-search-sphinx ####
+For local development it showed, that it was easiest to access the productiv running service-search-shpinx directly. The access to the service-search-sphinx is being defined in the .env.local file as well.
+
+One possibility is to make a ssh tunnel and to access the service-search-sphinx via localhost.
+
+
 
 ### Linting and formatting your work
 
@@ -137,8 +157,9 @@ docker ps --format="table {{.ID}}\t{{.Image}}\t{{.Labels}}"
 
 ## Deployment
 
-This service is to be deployed to the Kubernetes cluster once it is merged.
-TO DO: give instructions to deploy to kubernetes.
+This service is going to be deployed on a vhost, once it is merged. The configuration of the ***docker-compose.yml*** of the vhost setup is going to be here:
+[https://github.com/geoadmin/infra-vhost](https://github.com/geoadmin/infra-vhost)
+
 
 ### Deployment configuration
 
@@ -146,6 +167,18 @@ The service is configured by Environment Variable:
 
 | Env         | Default               | Description                |
 | ----------- | --------------------- | -------------------------- |
+| HTTP_PORT | 5000 | The port on which the service can be queried. |
+| DEBUG | False | This can be made better. Right now the header origin is not being checked when DEBUG=True is set. |
+| TESTING | False | When TESTING=True, the application does not need a db connection to retrieve a list of topics. A list with the topics used in the tests is being set. |
+| BOD_DB_NAME | None | Depending on the staging level usually `bod_{dev, int or prod}`
+| BOD_DB_HOST | None | The db host. Usually `pg.bgdi.ch` or `localhost` |
+| BOD_DB_PORT | 5432 | The db port |
+| BOD_DB_USER | www-data | The read-only db user |
+| BOD_DB_PASSWD | None | The db password. `gopass show infra-gopass-bgdi/postgres/users/www-data` |
+| GEODATA_STAGING | prod | In the database bod, a dataset itself has the attribute staging. This staging (dev, int and prod) is being filtered when querying the indexes. |
+| SEARCH_SPHINX_HOST | localhost | The host for service-search-sphinx. |
+| SEARCH_SPHINX_PORT | 9321 | The port for service-search-sphinx. |
 | LOGGING_CFG | logging-cfg-local.yml | Logging configuration file |
 | FORWARED_ALLOW_IPS | `*` | Sets the gunicorn `forwarded_allow_ips` (see https://docs.gunicorn.org/en/stable/settings.html#forwarded-allow-ips). This is required in order to `secure_scheme_headers` to works. |
 | FORWARDED_PROTO_HEADER_NAME | `X-Forwarded-Proto` | Sets gunicorn `secure_scheme_headers` parameter to `{FORWARDED_PROTO_HEADER_NAME: 'https'}`, see https://docs.gunicorn.org/en/stable/settings.html#secure-scheme-headers. |
+| SCRIPT_NAME | '' | The script name. This will be used once, when we have an idea about how to query search-wsgi later on. F.ex. `/api/search/` f.ex. used by unicorn (wsgi-server). |
