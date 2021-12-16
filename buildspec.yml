@@ -12,7 +12,7 @@ env:
 phases:
   install:
     runtime-versions:
-      python: 3.7
+      python: 3.9
     commands:
       - aws --version
       - echo "Login to AWS ECR docker registry"
@@ -62,7 +62,7 @@ phases:
       - make test
       # Only push image to registry for merge to develop and master
       - |
-        if [ "${GITHUB_BRANCH}" = "master" ] || [ "${GITHUB_BRANCH}" = "develop" ]; then
+        if [ "${GITHUB_BRANCH}" = "master" ] || [ "${GITHUB_BRANCH}" = "develop" ] || [ "${GITHUB_BRANCH}" = "feature_BGDIINF_SB-1982_pyramids_towards_igeb-b_flask_service" ]; then
           echo "Pushing image ${DOCKER_IMG_TAG} to the registry"
           docker push ${DOCKER_IMG_TAG}
         fi
