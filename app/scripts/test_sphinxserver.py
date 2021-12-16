@@ -2,8 +2,6 @@ import os
 import socket
 import sys
 
-import six
-
 from app.helpers import sphinxapi
 
 # pylint: disable=invalid-name
@@ -40,9 +38,6 @@ temp = temp['matches'] if temp is not None else temp
 if temp is not None and len(temp) > 0:
     print("Querying Sphinx server successful")
     for l in temp:
-        if six.PY2:
-            print(l['attrs']['label'].encode("utf-8"))
-        else:
-            print(l['attrs']['label'])
+        print(l['attrs']['label'])
 else:
     print("Not the expected result while querying Sphinx Server")
