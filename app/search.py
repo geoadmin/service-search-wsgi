@@ -99,7 +99,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                     bounds = parse_box2d(attributes['geom_st_box2d'])
                 else:
                     try:
-                        # DOTO: This is the requested QuadTree,
+                        # TODO: This is the requested QuadTree,
                         # because sphinx layer indices do not have extent
                         bounds = self.quadtree.bbox.bounds
                         bounds = transform_shape(bounds, self.DEFAULT_SRID, self.srid)
@@ -178,7 +178,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         # Define ranking mode
         if self.bbox is not None and self.sortbbox:
             coords = self._get_geoanchor_from_bbox()
-            self.sphinx.SetGeoAnchor('lat', 'lon', coords[1], coords[0])  # pylint: disable=unsubscriptable-object, line-too-long
+            self.sphinx.SetGeoAnchor('lat', 'lon', coords[1], coords[0])
             self.sphinx.SetSortMode(sphinxapi.SPH_SORT_EXTENDED, '@geodist ASC')
             limit = self.BBOX_SEARCH_LIMIT
         else:
@@ -337,7 +337,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         self.sphinx.SetRankingMode(sphinxapi.SPH_RANK_WORDCOUNT)
         if self.bbox and self.sortbbox:
             coords = self._get_geoanchor_from_bbox()
-            self.sphinx.SetGeoAnchor('lat', 'lon', coords[1], coords[0])  # pylint: disable=unsubscriptable-object, line-too-long
+            self.sphinx.SetGeoAnchor('lat', 'lon', coords[1], coords[0])
             self.sphinx.SetSortMode(sphinxapi.SPH_SORT_EXTENDED, '@weight DESC, @geodist ASC')
         else:
             self.sphinx.SetSortMode(sphinxapi.SPH_SORT_EXTENDED, '@weight DESC')
@@ -518,7 +518,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             b = map(float, re.split(' |,', box_str))
             shape = box(*b)
             bbox = transform_shape(shape, self.DEFAULT_SRID, self.srid).bounds
-            res['geom_st_box2d'] = "BOX({} {},{} {})".format(*bbox)  # pylint: disable=line-too-long, consider-using-f-string)
+            res['geom_st_box2d'] = "BOX({} {},{} {})".format(*bbox)  # pylint: disable=consider-using-f-string
         except Exception as e:
             raise InternalServerError(f'Error while converting BOX2D to EPSG:{self.srid}') from e
         return res
@@ -540,7 +540,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             else:
                 try:
                     pnt = (res['y'], res['x'])
-                    x, y = transform_coordinate(pnt, self.DEFAULT_SRID, self.srid)  # DOTO pylint: disable=line-too-long, unpacking-non-sequence, unbalanced-tuple-unpacking
+                    x, y = transform_coordinate(pnt, self.DEFAULT_SRID, self.srid)
                     res['x'] = x
                     res['y'] = y
                 except Exception as e:
@@ -580,10 +580,10 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             self.results['results'] = self.results['results'][:limit]
 
     def _parse_feature_results(self, results):
-        for idx, result in self._yield_results(results):  # pylint: disable=unused-variable
+        for _, result in self._yield_results(results):
             if 'error' in result:
                 if result['error'] != '':
-                    raise NotFound(result['error'])  # pragma: no cover
+                    raise NotFound(result['error'])
             if result is not None and 'matches' in result:
                 for match in self._yield_matches(result['matches']):
                     # Backward compatible
@@ -630,7 +630,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
 
     def _translate_label(self, label):
         translation = re.search(r'.*(<i>[\s\S]*?<\/i>).*', label) or False
-        # DOTO ugly hack - find a way to translate
+        # TODO ugly hack - find a way to translate
         translation = False
         if translation:
             translated = self.request.translate(translation.group(1))

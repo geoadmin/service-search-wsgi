@@ -124,7 +124,7 @@ ci-check-format: format
 
 .PHONY: lint
 lint:
-	$(PYLINT) -d duplicate-code tests/ $(PYTHON_FILES)
+	$(PYLINT) $(PYTHON_FILES)
 
 
 .PHONY: format-lint

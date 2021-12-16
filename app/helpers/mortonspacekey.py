@@ -123,7 +123,7 @@ class QuadTree:
         if not self.bbox.contains(x, y):
             return ''
         curQuads = self.bbox.create_quads()
-        for i in range(self.levels):  # pylint: disable=unused-variable
+        for _ in range(self.levels):
             for j in range(4):
                 if curQuads[j].contains(x, y):
                     res += str(j)
@@ -146,7 +146,7 @@ class QuadTree:
             return ''
 
         curQuads = self.bbox.create_quads()
-        for i in range(self.levels):  # DOTO pylint: disable=unused-variable
+        for _ in range(self.levels):
             has_quad = False
             for j in range(4):
                 if contains_all_points(curQuads[j], points):
@@ -168,16 +168,14 @@ class QuadTree:
         intbox = self.bbox.getIntersection(bbox)
         return self._multi_points_dia1(intbox)
 
-    '''
-    next 6 functions should deliver the same result
-      -> the morton space key of the the quad that fully contains the bbox
-    functions written to
-     a) verify different strategies (3 for each base algorithm)
-     b) compare performance
-
-    get key for each corner point of bounding box
-    return key which is common to all results (from the start)
-    ''' # pylint: disable=pointless-string-statement
+    # next 6 functions should deliver the same result
+    #   -> the morton space key of the the quad that fully contains the bbox
+    # functions written to
+    #  a) verify different strategies (3 for each base algorithm)
+    #  b) compare performance
+    #
+    # get key for each corner point of bounding box
+    # return key which is common to all results (from the start)
 
     def _getCommonKey(self, keys):
         res = ''

@@ -29,7 +29,7 @@ def search_server(topic='all'):
     else:
         response = make_response(search.search())
 
-    # DOTO: better - callback f.ex with a renderer
+    # TODO: better - callback f.ex with a renderer
     if request.args.get('callback'):
         callback = request.args.get('callback')
         data = response.json

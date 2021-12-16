@@ -18,7 +18,8 @@ logger = logging.getLogger(__name__)
 # pylint: disable=invalid-name
 class MapNameValidation(object):  # pylint: disable=too-few-public-methods
 
-    def has_topic(self, topic_name):  # pylint: disable=no-self-use,unused-argument
+    @staticmethod
+    def has_topic(topic_name):
         if topic_name not in topics:
             raise BadRequest('The map you provided does not exist')
 
@@ -41,13 +42,11 @@ class SearchValidation(MapNameValidation):  # pylint: disable=too-many-instance-
 
     def __init__(self, request):
         super().__init__()
-        # DOTO remove this hack
-        #self.availableLangs = request.registry.settings['available_languages'].split(' ')
-        self.not_used_at_all_doto_delete = request
+        self.request = request
         self.availableLangs = ['de', 'fr', 'it', 'rm', 'en']
-        self.locationTypes = [u'locations']
-        self.layerTypes = [u'layers']
-        self.featureTypes = [u'featuresearch']
+        self.locationTypes = ['locations']
+        self.layerTypes = ['layers']
+        self.featureTypes = ['featuresearch']
         self.supportedTypes = self.locationTypes + self.layerTypes + self.featureTypes
 
         self._searchText = None
@@ -123,7 +122,7 @@ class SearchValidation(MapNameValidation):  # pylint: disable=too-many-instance-
             values = value.split(',')
             result = []
             for val in values:
-                result.append(val.lower() in [u'true', u't', u'1'])
+                result.append(val.lower() in ['true', 't', '1'])
             self._timeEnabled = result
 
     @searchText.setter
@@ -204,7 +203,7 @@ class SearchValidation(MapNameValidation):  # pylint: disable=too-many-instance-
 
     @returnGeometry.setter
     def returnGeometry(self, value):
-        if value is False or value == u'false':
+        if value is False or value == 'false':
             self._returnGeometry = False
         else:
             self._returnGeometry = True

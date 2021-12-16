@@ -639,7 +639,7 @@ class SphinxClient:  # pylint: disable=too-many-instance-attributes, too-many-pu
         req.extend(pack('>2L', self._groupfunc, len(self._groupby)))
         req.extend(self._groupby)
         req.extend(pack('>2L', self._maxmatches, len(self._groupsort)))
-        # DOTO Python2/3
+        # TODO Python2/3
         # _groupsort is a str
         req.extend(self._groupsort)
         req.extend(pack('>LLL', self._cutoff, self._retrycount, self._retrydelay))
@@ -819,7 +819,7 @@ class SphinxClient:  # pylint: disable=too-many-instance-attributes, too-many-pu
                     p += 8
 
                 match = {'id': doc, 'weight': weight, 'attrs': {}}
-                for j in range(len(attrs)):  # DOTO pylint: disable=consider-using-enumerate
+                for j in range(len(attrs)):  # TODO pylint: disable=consider-using-enumerate
                     if attrs[j][1] == SPH_ATTR_FLOAT:
                         match['attrs'][attrs[j][0]] = unpack('>f', response[p:p + 4])[0]
                     elif attrs[j][1] == SPH_ATTR_BIGINT:
@@ -836,7 +836,7 @@ class SphinxClient:  # pylint: disable=too-many-instance-attributes, too-many-pu
                         match['attrs'][attrs[j][0]] = []
                         nvals = unpack('>L', response[p:p + 4])[0]
                         p += 4
-                        for n in range(0, nvals, 1):  # pylint: disable=unused-variable
+                        for _ in range(0, nvals, 1):
                             match['attrs'][attrs[j][0]].append(unpack('>L', response[p:p + 4])[0])
                             p += 4
                         p -= 4
@@ -845,7 +845,7 @@ class SphinxClient:  # pylint: disable=too-many-instance-attributes, too-many-pu
                         nvals = unpack('>L', response[p:p + 4])[0]
                         nvals = nvals / 2
                         p += 4
-                        for n in range(0, nvals, 1):
+                        for _ in range(0, nvals, 1):
                             match['attrs'][attrs[j][0]].append(unpack('>q', response[p:p + 8])[0])
                             p += 8
                         p -= 4
@@ -996,7 +996,7 @@ class SphinxClient:  # pylint: disable=too-many-instance-attributes, too-many-pu
         res = []
         rlen = len(response)
 
-        for i in range(len(docs)):  # pylint: disable=unused-variable
+        for _ in range(len(docs)):
             length = unpack('>L', response[pos:pos + 4])[0]
             pos += 4
 

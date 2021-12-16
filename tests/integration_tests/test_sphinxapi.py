@@ -17,7 +17,8 @@ class Test_SphinxApi(BaseSearchTest):
             self.skipTest("Service search requires access to the sphinx server")
         super().setUp()
 
-    def _callFUT(self):  # pylint: disable=no-self-use
+    @staticmethod
+    def _callFUT():
         api = sphinxapi.SphinxClient()
         api.SetServer('localhost', 9312)
         api.SetMatchMode(sphinxapi.SPH_MATCH_EXTENDED)
@@ -31,7 +32,7 @@ class Test_SphinxApi(BaseSearchTest):
         api = self._callFUT()
         api.GetLastWarning()
 
-    # DOTO - there is no return value. so the only test here is that no exception is being raised
+    # TODO - there is no return value. so the only test here is that no exception is being raised
     def test_sphinx_set_server(self):
         api = self._callFUT()
         host1 = 'unix://host1'
@@ -59,7 +60,7 @@ class Test_SphinxApi(BaseSearchTest):
         res = api.BuildExcerpts(docs, index, words, opts)
         self.assertFalse(res)
 
-    # DOTO - fixing test
+    # TODO - fixing test
     @unittest.skip("it does not seem to work (on python3 - we will have to invest some time here)")
     def test_shinx_api_searchquery(self):
         api = self._callFUT()
@@ -77,7 +78,7 @@ class Test_SphinxApi(BaseSearchTest):
         res = api.BuildExcerpts(docs, index, words)
         self.assertFalse(res)
 
-    # DOTO - fixing test
+    # TODO - fixing test
     @unittest.skip("it does not seem to work (on python3- we will have to invest some time here)")
     def test_update_attributes(self):
         api = self._callFUT()
@@ -98,7 +99,7 @@ class Test_SphinxApi(BaseSearchTest):
         api = self._callFUT()
         q = 'doma'
         mode = sphinxapi.SPH_MATCH_EXTENDED
-        # DOTO
+        # TODO
         #host = self.testapp.app.registry.settings['sphinxhost']
         host = 'localhost'
         port = 9312
@@ -133,7 +134,7 @@ class Test_SphinxApi(BaseSearchTest):
         res = api.Query(q, index=index)
         self.assertIsInstance(res, dict)
 
-    # DOTO - there is no return value. so the only test here is that no exception is being raised
+    # TODO - there is no return value. so the only test here is that no exception is being raised
     def test_sphinxapi_query2(self):
         api = self._callFUT()
         attribute = 'toto'

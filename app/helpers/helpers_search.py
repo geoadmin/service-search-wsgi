@@ -1,4 +1,4 @@
-# DOTO: merge this into utils.py
+# TODO: merge this into utils.py
 import logging
 import math
 import unicodedata
@@ -47,12 +47,12 @@ def format_locations_search_text(input_str):
 def remove_accents(input_str):
     if input_str is None:
         return input_str
-    input_str = input_str.replace(u'ü', u'ue')
-    input_str = input_str.replace(u'Ü', u'ue')
-    input_str = input_str.replace(u'ä', u'ae')
-    input_str = input_str.replace(u'Ä', u'ae')
-    input_str = input_str.replace(u'ö', u'oe')
-    input_str = input_str.replace(u'Ö', u'oe')
+    input_str = input_str.replace('ü', 'ue')
+    input_str = input_str.replace('Ü', 'ue')
+    input_str = input_str.replace('ä', 'ae')
+    input_str = input_str.replace('Ä', 'ae')
+    input_str = input_str.replace('ö', 'oe')
+    input_str = input_str.replace('Ö', 'oe')
     return ''.join(
         c for c in unicodedata.normalize('NFD', input_str) if unicodedata.category(c) != 'Mn'
     )
@@ -233,7 +233,7 @@ def shift_to(coords, srid):
     return cds
 
 
-# only used in test_search. DOTO
+# only used in test_search. TODO
 def shift_to_lv95(string_coords):
     coords = string_coords.split(',')
     for idx, coord in enumerate(coords):  # pylint: disable=unused-variable

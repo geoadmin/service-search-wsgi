@@ -1151,7 +1151,7 @@ class TestSearchService(BaseSearchTest):  # pylint: disable=too-many-public-meth
         )
         self.assertEqual(response.status_code, 200)
         self.assertGreater(len(response.json['results']), 0)
-        #self.assertEqual(response.json['fuzzy'], 'true') DOTO
+        #self.assertEqual(response.json['fuzzy'], 'true') TODO
         # No results
         response = self.app.get(
             url_for(
