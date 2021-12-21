@@ -2,10 +2,10 @@ import logging
 
 from werkzeug.exceptions import BadRequest
 
+from app import topics
 from app.helpers.helpers_search import float_raise_nan
 from app.helpers.helpers_search import ilen
 from app.helpers.helpers_search import shift_to
-from app.helpers.utils import topics
 
 SUPPORTED_OUTPUT_SRS = (21781, 2056, 3857, 4326)
 
@@ -21,7 +21,7 @@ class MapNameValidation(object):  # pylint: disable=too-few-public-methods
     @staticmethod
     def has_topic(topic_name):
         if topic_name not in topics:
-            raise BadRequest('The map you provided does not exist')
+            raise BadRequest(f'The map ({topic_name}) you provided does not exist')
 
 
 class BaseValidation(MapNameValidation):  # pylint: disable=too-few-public-methods
@@ -119,11 +119,9 @@ class SearchValidation(MapNameValidation):  # pylint: disable=too-many-instance-
     @timeEnabled.setter
     def timeEnabled(self, value):
         if value is not None and value != '':
-            values = value.split(',')
-            result = []
-            for val in values:
-                result.append(val.lower() in ['true', 't', '1'])
-            self._timeEnabled = result
+            self._timeEnabled = list(
+                map(lambda val: val.lower() in ['true', 't', '1'], value.split(','))
+            )
 
     @searchText.setter
     def searchText(self, value):
@@ -145,12 +143,18 @@ class SearchValidation(MapNameValidation):  # pylint: disable=too-many-instance-
         if value is not None and value != '':
             values = value.split(',')
             if len(values) != 4:
-                raise BadRequest("Please provide 4 coordinates in a comma separated list")
+                raise BadRequest(
+                    "Please provide 4 coordinates in a comma separated list"
+                    f" and and not {value}"
+                )
             try:
                 # Python 2/3
                 values = list(map(float_raise_nan, values))
             except ValueError as e:
-                raise BadRequest("Please provide numerical values for the parameter bbox") from e
+                raise BadRequest(
+                    "Please provide numerical values for the parameter bbox"
+                    f" and not {value}"
+                ) from e
             if self._srid == 2056:
                 values = shift_to(values, 21781)
             # Swiss extent
@@ -166,11 +170,17 @@ class SearchValidation(MapNameValidation):  # pylint: disable=too-many-instance-
     def timeInstant(self, value):
         if value is not None:
             if len(value) != 4:
-                raise BadRequest('Only years are supported as timeInstant parameter')
+                raise BadRequest(
+                    "Only years are supported as timeInstant parameter"
+                    f" and not {value}"
+                )
             if value.isdigit():
                 self._timeInstant = int(value)
             else:
-                raise BadRequest('Please provide an integer for the parameter timeInstant')
+                raise BadRequest(
+                    "Please provide an integer for the parameter timeInstant"
+                    f" and not {value}"
+                )
         else:
             self._timeInstant = value
 
@@ -191,7 +201,10 @@ class SearchValidation(MapNameValidation):  # pylint: disable=too-many-instance-
                     if val.isdigit():
                         result.append(int(val))
                     else:
-                        raise BadRequest('Please provide integers for timeStamps parameter')
+                        raise BadRequest(
+                            "Please provide integers for timeStamps parameter"
+                            f" and not {value}"
+                        )
             self._timeStamps = result
 
     @srid.setter
@@ -199,7 +212,7 @@ class SearchValidation(MapNameValidation):  # pylint: disable=too-many-instance-
         if value in map(str, SUPPORTED_OUTPUT_SRS):
             self._srid = int(value)
         elif value is not None:
-            raise BadRequest(f'Unsupported spatial reference {value}')
+            raise BadRequest(f"Unsupported spatial reference {value}")
 
     @returnGeometry.setter
     def returnGeometry(self, value):
@@ -240,5 +253,5 @@ class SearchValidation(MapNameValidation):  # pylint: disable=too-many-instance-
         if value == 'en':
             value = 'de'
         if value is not None and value not in self.availableLangs:
-            raise BadRequest(f'Usupported lang filter {value}')
+            raise BadRequest(f"Usupported lang filter {value}")
         self._searchLang = value

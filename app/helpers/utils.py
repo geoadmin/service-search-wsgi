@@ -12,13 +12,10 @@ from app import settings
 from app.settings import ALLOWED_DOMAINS
 from app.settings import LOGGING_CFG
 from app.settings import LOGS_DIR
-from app.settings import TESTING
 
 logger = logging.getLogger(__name__)
 
 ALLOWED_DOMAINS_PATTERN = f"({'|'.join(ALLOWED_DOMAINS)})"
-
-topics = []
 
 
 def make_error_msg(code, msg):
@@ -48,9 +45,6 @@ def get_topics_from_db():
     Returns:
         A List with the topics or an empty list
     '''
-    # Connect to database
-    if TESTING:
-        return ['swisstopo', 'all', 'schnee', 'inspire', 'ech', 'api']
     logger.debug('Connecting to %s db on host %s', settings.BOD_DB_NAME, settings.BOD_DB_HOST)
     try:
         connection = psy.connect(
@@ -92,6 +86,3 @@ def get_topics_from_db():
 
     logger.info("List of topics has been generated")
     return _topics
-
-
-topics = get_topics_from_db()

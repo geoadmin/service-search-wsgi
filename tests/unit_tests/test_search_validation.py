@@ -4,8 +4,6 @@ from tests.unit_tests.base_test import BaseSearchTest
 
 # pylint: disable=invalid-name,too-many-lines
 
-sphinx_tests = True  # if there is access service-search-sphinx or not
-
 
 class TestSearchServiceValidation(BaseSearchTest):  # pylint: disable=line-too-long,too-many-public-methods
 
@@ -90,8 +88,8 @@ class TestSearchServiceValidation(BaseSearchTest):  # pylint: disable=line-too-l
         )
         self.assertEqual(response.status_code, 400)
         self.assertIn(
-            response.json['error']['message'],
-            'Please provide 4 coordinates in a comma separated list'
+            'Please provide 4 coordinates in a comma separated list',
+            response.json['error']['message']
         )
 
     def test_bbox_check_first_second_coordinates(self):
@@ -141,7 +139,7 @@ class TestSearchServiceValidation(BaseSearchTest):  # pylint: disable=line-too-l
             headers=self.origin_headers["allowed"]
         )
         self.assertEqual(response.status_code, 400)
-        self.assertIn(response.json['error']['message'], 'The map you provided does not exist')
+        self.assertIn('you provided does not exist', response.json['error']['message'])
 
     def test_search_locations_esrijson(self):
         response = self.app.get(
@@ -195,8 +193,8 @@ class TestSearchServiceValidation(BaseSearchTest):  # pylint: disable=line-too-l
         )
         self.assertEqual(response.status_code, 400)
         self.assertIn(
-            response.json['error']['message'],
-            'Please provide an integer for the parameter timeInstant'
+            'Please provide an integer for the parameter timeInstant',
+            response.json['error']['message']
         )
 
     def test_features_wrong_time(self):
@@ -275,7 +273,7 @@ class TestSearchServiceValidation(BaseSearchTest):  # pylint: disable=line-too-l
         )
         self.assertEqual(response.status_code, 400)
         self.assertIn(
-            response.json['error']['message'], 'Please provide integers for timeStamps parameter'
+            'Please provide integers for timeStamps parameter', response.json['error']['message']
         )
 
     def test_features_wrong_timestamps_2(self):
@@ -351,8 +349,8 @@ class TestSearchServiceValidation(BaseSearchTest):  # pylint: disable=line-too-l
         )
         self.assertEqual(response.status_code, 400)
         self.assertIn(
+            'Please provide numerical values for the parameter bbox',
             response.json['error']['message'],
-            'Please provide numerical values for the parameter bbox'
         )
 
     def test_search_lang_no_support(self):

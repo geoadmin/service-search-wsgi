@@ -510,21 +510,25 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                     raise BadRequest(f'Parameter seachLang is not supported for {index}')
                 self.sphinx.AddQuery(queryText, index=str(index))
 
-    def _box2d_transform(self, res):
+    def _box2d_transform(self, res_in):
         """Reproject a ST_BOX2 from EPSG:21781 to SRID"""
+        res = res_in
         try:
             box2d = res['geom_st_box2d']
             box_str = box2d[4:-1]
             b = map(float, re.split(' |,', box_str))
             shape = box(*b)
             bbox = transform_shape(shape, self.DEFAULT_SRID, self.srid).bounds
-            res['geom_st_box2d'] = "BOX({} {},{} {})".format(*bbox)  # pylint: disable=consider-using-f-string
+            res['geom_st_box2d'] = f"BOX({bbox[0]} {bbox[1]},{bbox[2]} {bbox[3]})"
         except Exception as e:
-            raise InternalServerError(f'Error while converting BOX2D to EPSG:{self.srid}') from e
+            raise InternalServerError(
+                f'Error while converting BOX2D ({res_in}) to EPSG:{self.srid}'
+            ) from e
         return res
 
-    def _parse_locations(self, res):
+    def _parse_locations(self, res_in):
 
+        res = res_in
         if not self.returnGeometry:
             attrs2Del = ['x', 'y', 'lon', 'lat', 'geom_st_box2d']
             popAtrrs = lambda x: res.pop(x) if x in res else x
@@ -545,7 +549,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                     res['y'] = y
                 except Exception as e:
                     raise InternalServerError(
-                        f'Error while converting point(x, y) to EPSG:{self.srid}'
+                        f'Error while converting point({res_in}), to EPSG:{self.srid}'
                     ) from e
         return res
 

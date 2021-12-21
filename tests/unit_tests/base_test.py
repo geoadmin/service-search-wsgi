@@ -15,14 +15,9 @@ class BaseSearchTest(unittest.TestCase):
         self.context = app.test_request_context()
         self.context.push()
         self.app = app.test_client()
-        self.app.testing = True
-        self.origin_headers = {
-            "allowed": {
-                "Origin": "some_random_domain"
-            }, "bad": {
-                "Origin": "big-bad-wolf.com"
-            }
-        }
+
+        # an origin header has to be set
+        self.origin_headers = {"allowed": {"Origin": "unittesting"}}
         self.grids = {
             '21781': getTileGrid(21781),
             '2056': getTileGrid(2056),
