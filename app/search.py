@@ -104,9 +104,9 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                         bounds = self.quadtree.bbox.bounds
                         bounds = transform_shape(bounds, self.DEFAULT_SRID, self.srid)
                     except ValueError as e:
-                        raise InternalServerError(
-                            f"Search error: cannot reproject result to SRID: {self.srid}"
-                        ) from e
+                        msg = f"Search error: cannot reproject result to SRID: {self.srid}"
+                        logger.error(msg, e)
+                        raise InternalServerError(msg) from e
                 bbox = box(*bounds)
                 if features_bbox is None:
                     features_bbox = bbox
@@ -167,6 +167,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             if self.typeInfo in ('locations'):
                 temp = self.sphinx.Query(searchTextFinal, index='swisssearch_fuzzy')
         except IOError as e:  # pragma: no cover
+            logger.error(e)
             raise GatewayTimeout() from e
         temp = temp['matches'] if temp is not None else temp
         self.results['fuzzy'] = 'true'
@@ -224,11 +225,12 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                 # In case RunQueries doesn't return results (reason unknown)
                 # related to issue
                 if temp is None:
-                    raise ServiceUnavailable(
-                        f'no results from sphinx service ({self.sphinx._error})'  # pylint: disable=line-too-long, protected-access
-                    )
+                    msg = f'no results from sphinx service ({self.sphinx._error})'  # pylint: disable=line-too-long, protected-access
+                    logger.error(msg)
+                    raise ServiceUnavailable(msg)
 
             except IOError as e:  # pragma: no cover
+                logger.error(e)
                 raise GatewayTimeout() from e
 
             temp_merged = temp[0].get('matches', []) + temp[1].get('matches', []) if len(
@@ -304,6 +306,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         try:
             temp = self.sphinx.Query(searchText, index=index_name)
         except IOError as e:  # pragma: no cover
+            logger.error(e)
             raise GatewayTimeout() from e
         temp = temp['matches'] if temp is not None else temp
         if temp is not None and len(temp) != 0:
@@ -351,6 +354,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         try:
             temp = self.sphinx.RunQueries()
         except IOError as e:  # pragma: no cover
+            logger.error(e)
             raise GatewayTimeout() from e
         self.sphinx.ResetFilters()
         self._parse_feature_results(temp)
@@ -381,7 +385,11 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
 
     def _check_timeparameters(self):
         if self.timeInstant is not None and self.timeStamps is not None:
-            raise BadRequest('You are not allowed to mix timeStamps and timeInstant parameters')
+            msg = 'You are not allowed to mix timeStamps and timeInstant parameters'
+            logger.error(
+                "%s, timeInstant=%s, timeStamps=%s", msg, self.timeInstant, self.timeStamps
+            )
+            raise BadRequest(msg)
 
     def _get_geoanchor_from_bbox(self):
         center = center_from_box2d(self.bbox)
@@ -463,7 +471,9 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             for origin in origins:
                 ranks += origin2Rank[origin]
         except KeyError as e:  # pragma: no cover
-            raise BadRequest(f'Bad value(s) in parameter origins {e}') from e
+            msg = f'Bad value(s) in parameter origins {e}'
+            logger.error(msg)
+            raise BadRequest(msg) from e
         return ranks
 
     def _search_lang_to_filter(self):
@@ -507,7 +517,9 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                 self.sphinx.AddQuery(queryText, index=translated_layer)
             else:
                 if self.searchLang:
-                    raise BadRequest(f'Parameter seachLang is not supported for {index}')
+                    msg = f'Parameter seachLang is not supported for {index}'
+                    logger.error(msg)
+                    raise BadRequest(msg)
                 self.sphinx.AddQuery(queryText, index=str(index))
 
     def _box2d_transform(self, res_in):
@@ -521,9 +533,9 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             bbox = transform_shape(shape, self.DEFAULT_SRID, self.srid).bounds
             res['geom_st_box2d'] = f"BOX({bbox[0]} {bbox[1]},{bbox[2]} {bbox[3]})"
         except Exception as e:
-            raise InternalServerError(
-                f'Error while converting BOX2D ({res_in}) to EPSG:{self.srid}'
-            ) from e
+            msg = f'Error while converting BOX2D ({res_in}) to EPSG:{self.srid}'
+            logger.error(msg, e)
+            raise InternalServerError(msg) from e
         return res
 
     def _parse_locations(self, res_in):
@@ -540,7 +552,9 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                     res['x'] = res['lon']
                     res['y'] = res['lat']
                 except KeyError as e:
-                    raise InternalServerError('Sphinx location has no lat/long defined') from e
+                    raise InternalServerError(
+                        f'Sphinx location has no lat/long defined {res_in}'
+                    ) from e
             else:
                 try:
                     pnt = (res['y'], res['x'])

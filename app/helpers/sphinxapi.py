@@ -216,7 +216,7 @@ class SphinxClient:  # pylint: disable=too-many-instance-attributes, too-many-pu
         # so timeout got clipped to reasonable minimum
         self._timeout = max(0.001, timeout)
 
-    def _Connect(self):  # pylint: disable=inconsistent-return-statements
+    def _Connect(self):
         """
         INTERNAL METHOD, DO NOT CALL. Connects to searchd server.
         """
@@ -248,11 +248,13 @@ class SphinxClient:  # pylint: disable=too-many-instance-attributes, too-many-pu
             if sock:
                 sock.close()
             self._error = f'connection to {desc} failed ({msg})'
+            return None
 
         v = unpack('>L', sock.recv(4))[0]
         if v < 1:
             sock.close()
             self._error = f'expected searchd protocol version, got {v}'
+            return None
 
         # all ok, send my version
         sock.send(pack('>L', 1))
@@ -750,7 +752,7 @@ class SphinxClient:  # pylint: disable=too-many-instance-attributes, too-many-pu
         p = 0
 
         results = []
-        for i in range(0, nreqs, 1):  # pylint: disable=unused-variable
+        for _ in range(0, nreqs, 1):
             result = {}
             results.append(result)
 

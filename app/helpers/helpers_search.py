@@ -1,4 +1,4 @@
-# TODO: merge this into utils.py
+# TODO: maybe merge this into utils.py
 import logging
 import math
 import unicodedata
@@ -13,7 +13,7 @@ from shapely.ops import transform as shape_transform
 from shapely.wkt import dumps as shape_dumps
 from shapely.wkt import loads as shape_loads
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 # pylint: disable=invalid-name
 
@@ -158,9 +158,12 @@ def _transform_coordinates(coordinates, srid_from, srid_to, rounding=True):
             precision = get_precision_for_proj(srid_to)
             new_coords = _round_bbox_coordinates(new_coords, precision=precision)
     except Exception as e:
-        raise e from ValueError(
-            f"Cannot transform coordinates {coordinates} from {srid_from} to {srid_to}"
+        logger.error(
+            "Cannot transform coordinates %s from %s to %s, %s", coordinates, srid_from, srid_to, e
         )
+        raise ValueError(
+            f"Cannot transform coordinates {coordinates} from {srid_from} to {srid_to}"
+        ) from e
     return new_coords
 
 

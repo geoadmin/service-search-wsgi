@@ -135,7 +135,9 @@ class SearchValidation(MapNameValidation):  # pylint: disable=too-many-instance-
         # Python2/3
         searchTextList = list(filter(None, searchTextList))
         if ilen(searchTextList) > MAX_SEARCH_TERMS:
-            raise BadRequest("The searchText parameter can not contain more than 10 words")
+            msg = "The searchText parameter can not contain more than 10 words"
+            logger.warning(msg)
+            raise BadRequest(msg)
         self._searchText = searchTextList
 
     @bbox.setter
@@ -143,27 +145,29 @@ class SearchValidation(MapNameValidation):  # pylint: disable=too-many-instance-
         if value is not None and value != '':
             values = value.split(',')
             if len(values) != 4:
-                raise BadRequest(
-                    "Please provide 4 coordinates in a comma separated list"
-                    f" and and not {value}"
-                )
+                msg = f"Please provide 4 coordinates in a comma separated list and not {value}"
+                logger.warning(msg)
+                raise BadRequest(msg)
             try:
                 # Python 2/3
                 values = list(map(float_raise_nan, values))
             except ValueError as e:
-                raise BadRequest(
-                    "Please provide numerical values for the parameter bbox"
-                    f" and not {value}"
-                ) from e
+                msg = f"Please provide numerical values for the parameter bbox and not {value}"
+                logger.error("%s, %s", msg, e)
+                raise BadRequest(msg) from e
             if self._srid == 2056:
                 values = shift_to(values, 21781)
             # Swiss extent
             if values[0] >= 420000 and values[1] >= 30000:
                 if values[0] < values[1]:
-                    raise BadRequest("The first coordinate must be higher than the second")
+                    msg = "The first coordinate must be higher than the second"
+                    logger.warning(msg)
+                    raise BadRequest(msg)
             if values[2] >= 420000 and values[3] >= 30000:
                 if values[2] < values[3]:
-                    raise BadRequest("The third coordinate must be higher than the fourth")
+                    msg = "The third coordinate must be higher than the fourth"
+                    logger.warning(msg)
+                    raise BadRequest(msg)
             self._bbox = values
 
     @timeInstant.setter

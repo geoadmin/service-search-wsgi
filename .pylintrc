@@ -65,6 +65,7 @@ disable=missing-docstring,
     bad-continuation,   # bad-continuation doesn't comply with yapf, so lets
                         # yapf correct indentation continuation issue
     useless-object-inheritance,
+    fixme
 
 
 # Enable the message, report, category or checker with the given id(s). You can
@@ -414,7 +415,8 @@ redefining-builtins-modules=six.moves,past.builtins,future.builtins,builtins,io
 
 # List of note tags to take in consideration, separated by a comma.
 notes=FIXME,
-      XXX
+      XXX,
+      TODO
 
 # Regular expression of note tags to take in consideration.
 #notes-rgx=

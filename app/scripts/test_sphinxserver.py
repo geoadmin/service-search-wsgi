@@ -29,10 +29,7 @@ if isinstance(resp, socket.socket):
 else:
     print(f"Cannot connect to Sphinx server <{sphinxhost}>. Exit")
 
-try:
-    temp = sphinx.Query(searchText, index=index_name)
-except IOError as e:
-    raise e
+temp = sphinx.Query(searchText, index=index_name)
 temp = temp['matches'] if temp is not None else temp
 
 if temp is not None and len(temp) > 0:
