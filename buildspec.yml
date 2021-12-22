@@ -2,7 +2,7 @@ version: 0.2
 
 env:
   variables:
-    IMAGE_BASE_NAME: "service-name"
+    IMAGE_BASE_NAME: "service-search-wsgi"
     REGISTRY: "974517877189.dkr.ecr.eu-central-1.amazonaws.com"
     SHELL: /bin/bash
     AWS_DEFAULT_REGION: eu-central-1
@@ -12,7 +12,7 @@ env:
 phases:
   install:
     runtime-versions:
-      python: 3.7
+      python: 3.9
     commands:
       - aws --version
       - echo "Login to AWS ECR docker registry"
@@ -39,8 +39,6 @@ phases:
       - make ci-check-format
       - echo "Linting code"
       - make lint
-      - echo "Linting openapi spec"
-      - make lint-spec
       - echo Build started on $(date)
       - export DOCKER_IMG_TAG=${REGISTRY}/${IMAGE_BASE_NAME}:${GITHUB_TAG}
       - export DOCKER_IMG_TAG_LATEST=${REGISTRY}/${IMAGE_BASE_NAME}:${GITHUB_BRANCH}.latest

@@ -1,42 +1,21 @@
-# -*- coding: utf-8 -*-
-
-import re
-import math
-import requests
-import datetime
-import gzip
-import six
-import unidecode
-from decimal import Decimal
-
-from io import StringIO, BytesIO
-
-from six.moves import zip, reduce
-
-from functools import partial
-from pyramid.threadlocal import get_current_registry
-from pyramid.i18n import get_locale_name
-from pyramid.url import route_url
-from pyramid.httpexceptions import HTTPBadRequest, HTTPRequestTimeout
-import unicodedata
-
-from urllib.parse import urlparse, urlunparse, urljoin
-
-from urllib.parse import quote
-
-import xml.etree.ElementTree as etree
-from pyproj import Proj, transform as proj_transform
-from requests.exceptions import ConnectionError
-from shapely.ops import transform as shape_transform
-from shapely.wkt import dumps as shape_dumps, loads as shape_loads
-from shapely.geometry.base import BaseGeometry
+# TODO: maybe merge this into utils.py
 import logging
+import math
+import unicodedata
+from decimal import Decimal
+from functools import partial
+from functools import reduce
 
-if six.PY3:
-    unicode = str
-    long = int
+from pyproj import Proj
+from pyproj import transform as proj_transform
+from shapely.geometry.base import BaseGeometry
+from shapely.ops import transform as shape_transform
+from shapely.wkt import dumps as shape_dumps
+from shapely.wkt import loads as shape_loads
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
+
+# pylint: disable=invalid-name
 
 PROJECTIONS = {}
 
@@ -44,130 +23,11 @@ PROJECTIONS = {}
 COORDINATES_DECIMALS_FOR_METRIC_PROJ = 1
 COORDINATES_DECIMALS_FOR_DEGREE_PROJ = 6
 
-
-def to_utf8(data):
-    try:
-        data = data.decode('utf8')
-    except (UnicodeDecodeError, AttributeError):
-        pass
-    return data
-
-
 # Number of element in an iterator
 
 
 def ilen(iterable):
     return reduce(lambda sum, element: sum + 1, iterable, 0)
-
-
-def versioned(path):
-    version = get_current_registry().settings['app_version']
-    entry_path = get_current_registry().settings['entry_path'] + '/'
-    if version is not None:
-        agnosticPath = make_agnostic(path)
-        parsedURL = urlparse(agnosticPath)
-        # we don't do version when behind pserve (at localhost)
-        if 'localhost:' not in parsedURL.netloc:
-            parts = parsedURL.path.split(entry_path, 1)
-            if len(parts) > 1:
-                parsedURL = parsedURL._replace(
-                    path=parts[0] + entry_path + version + '/' + parts[1]
-                )
-                agnosticPath = urlunparse(parsedURL)
-        return agnosticPath
-    else:
-        return path
-
-
-def make_agnostic(path):
-    handle_path = lambda x: x.split('://')[1] if len(x.split('://')) == 2 else path
-    if path.startswith('http'):
-        path = handle_path(path)
-        return '//' + path
-    else:
-        return path
-
-
-def make_api_url(request, agnostic=False):
-    base_path = request.registry.settings['apache_base_path']
-    base_path = '' if base_path == 'main' else '/' + base_path
-    host = request.host + base_path if 'localhost' not in request.host else request.host
-    if agnostic:
-        return ''.join(('//', host))
-    return ''.join((request.scheme, '://', host))
-
-
-def make_geoadmin_url(request, agnostic=False):
-    protocol = request.scheme
-    base_url = ''.join((protocol, '://', request.registry.settings['geoadminhost']))
-    if agnostic:
-        return make_agnostic(base_url)
-    return base_url
-
-
-def resource_exists(path, headers={'User-Agent': 'mf-geoadmin/python'}, verify=False):
-    try:
-        r = requests.head(path, headers=headers, verify=verify)
-    except ConnectionError:
-        return False
-    return r.status_code == requests.codes.ok
-
-
-def check_url(url, config):
-    if url is None:
-        raise HTTPBadRequest('The parameter url is missing from the request')
-    parsedUrl = urlparse(url)
-    hostname = parsedUrl.hostname
-    if hostname is None:
-        raise HTTPBadRequest('Could not determine the hostname')
-    domain = ".".join(hostname.split(".")[-2:])
-    allowed_hosts = config['shortener.allowed_hosts'] if 'shortener.allowed_hosts' in config else ''
-    allowed_domains = config['shortener.allowed_domains'
-                            ] if 'shortener.allowed_domains' in config else ''
-    if domain not in allowed_domains and hostname not in allowed_hosts:
-        raise HTTPBadRequest(
-            'Shortener can only be used for %s domains or %s hosts.' %
-            (allowed_domains, allowed_hosts)
-        )
-    return url
-
-
-def sanitize_url(url):
-    sanitized = url
-    try:
-        sanitized = urljoin(url, urlparse(url).path.replace('//', '/'))
-    except Exception:
-        pass
-    return sanitized
-
-
-def locale_negotiator(request):
-    try:
-        lang = request.params.get('lang')
-    except UnicodeDecodeError:  # pragma: no cover
-        raise HTTPBadRequest(
-            'Could not parse URL and parameters. Request send must be encoded in utf-8.'
-        )
-    # This might happen if a POST request is aborted before all the data could be transmitted
-    except IOError:  # pragma: no cover
-        raise HTTPRequestTimeout('Request was aborted. Didn\'t receive full request')
-
-    settings = get_current_registry().settings
-    languages = settings['available_languages'].split()
-    if lang == 'rm':
-        return 'fi'
-    elif lang is None or lang not in languages:
-        if request.accept_language:
-            return request.accept_language.best_match(languages, 'de')
-        # the default_locale_name configuration variable
-        return get_locale_name(request)
-    return lang
-
-
-def check_even(number):
-    if number % 2 == 0:
-        return True
-    return False
 
 
 def format_search_text(input_str):
@@ -187,12 +47,12 @@ def format_locations_search_text(input_str):
 def remove_accents(input_str):
     if input_str is None:
         return input_str
-    input_str = input_str.replace(u'ü', u'ue')
-    input_str = input_str.replace(u'Ü', u'ue')
-    input_str = input_str.replace(u'ä', u'ae')
-    input_str = input_str.replace(u'Ä', u'ae')
-    input_str = input_str.replace(u'ö', u'oe')
-    input_str = input_str.replace(u'Ö', u'oe')
+    input_str = input_str.replace('ü', 'ue')
+    input_str = input_str.replace('Ü', 'ue')
+    input_str = input_str.replace('ä', 'ae')
+    input_str = input_str.replace('Ä', 'ae')
+    input_str = input_str.replace('ö', 'oe')
+    input_str = input_str.replace('Ö', 'oe')
     return ''.join(
         c for c in unicodedata.normalize('NFD', input_str) if unicodedata.category(c) != 'Mn'
     )
@@ -220,80 +80,35 @@ def escape_sphinx_syntax(input_str):
     return input_str
 
 
-def format_query(model, value, lang):
-    '''
-        Supported operators on numerical or date values are "=, !=, >=, <=, > and <"
-        Supported operators for text are "ilike and not ilike"
-    '''
-    where = None
-
-    def escapeSQL(value):
-        if u'ilike' in value:
-            match = re.search(r'([\w]+\s)(ilike|not ilike)(\s\'%)([\s\S]*)(%\')', value)
-            where = u''.join(
-                (
-                    match.group(1).replace(u'\'', u'E\''),
-                    match.group(2),
-                    match.group(3),
-                    match.group(4).replace(u'\\', u'\\\\').replace(u'\'',
-                                                                   u"\''").replace(u'_', u'\\_'),
-                    match.group(5)
-                )
-            )
-            return where
-        return value
-
-
-def quoting(text):
-    return quote(text.encode('utf-8'))
-
-
-def imagesize_from_metafile(tileUrlBasePath, bvnummer):
-    width = None
-    height = None
-    headers = {'Referer': 'http://admin.ch', 'User-Agent': 'mf-geoadmin/python'}
-    metaurl = tileUrlBasePath + '/' + bvnummer + '/tilemapresource.xml'
-    s = requests.Session()
-    response = s.get(metaurl, headers=headers)
-    if response.status_code == requests.codes.ok:
-        xml = etree.fromstring(response.content)
-        bb = xml.find('BoundingBox')
-        if bb is not None:
-            width = abs(int(float(bb.get('maxy'))) - int(float(bb.get('miny'))))
-            height = abs(int(float(bb.get('maxx'))) - int(float(bb.get('minx'))))
-    return (width, height)
-
-
 def get_proj_from_srid(srid):
     if srid in PROJECTIONS:
         return PROJECTIONS[srid]
-    else:
-        proj = Proj(init='EPSG:{}'.format(srid))
-        PROJECTIONS[srid] = proj
-        return proj
+
+    proj = Proj(f'EPSG:{srid}')
+    PROJECTIONS[srid] = proj
+    return proj
 
 
 def get_precision_for_proj(srid):
     precision = COORDINATES_DECIMALS_FOR_METRIC_PROJ
     proj = get_proj_from_srid(srid)
-    if proj.is_latlong():
+    if proj.crs.is_geographic:
         precision = COORDINATES_DECIMALS_FOR_DEGREE_PROJ
     return precision
 
 
 def _round_bbox_coordinates(bbox, precision=None):
-    tpl = '%.{}f'.format(precision)
+    tpl = f'%.{precision}f'
     if precision is not None:
         return [float(Decimal(tpl % c)) for c in bbox]
-    else:
-        return bbox
+    return bbox
 
 
 def _round_shape_coordinates(shape, precision=None):
     if precision is None:
         return shape
-    else:
-        return shape_loads(shape_dumps(shape, rounding_precision=precision))
+
+    return shape_loads(shape_dumps(shape, rounding_precision=precision))
 
 
 def round_geometry_coordinates(geom, precision=None):
@@ -302,20 +117,19 @@ def round_geometry_coordinates(geom, precision=None):
         tuple,
     )):
         return _round_bbox_coordinates(geom, precision=precision)
-    elif isinstance(geom, BaseGeometry):
+    if isinstance(geom, BaseGeometry):
         return _round_shape_coordinates(geom, precision=precision)
-    else:
-        return geom
+    return geom
 
 
 def _transform_point(coords, srid_from, srid_to):
     proj_in = get_proj_from_srid(srid_from)
     proj_out = get_proj_from_srid(srid_to)
-    return proj_transform(proj_in, proj_out, coords[0], coords[1])
+    return proj_transform(proj_in, proj_out, coords[0], coords[1], always_xy=True)
 
 
 def transform_round_geometry(geom, srid_from, srid_to, rounding=True):
-    if (srid_from == srid_to):
+    if srid_from == srid_to:
         if rounding:
             precision = get_precision_for_proj(srid_to)
             return round_geometry_coordinates(geom, precision=precision)
@@ -325,10 +139,10 @@ def transform_round_geometry(geom, srid_from, srid_to, rounding=True):
         tuple,
     )):
         return _transform_coordinates(geom, srid_from, srid_to, rounding=rounding)
-    else:
-        return _transform_shape(geom, srid_from, srid_to, rounding=rounding)
+    return _transform_shape(geom, srid_from, srid_to, rounding=rounding)
 
 
+# used by transform_round_geometry used by search.py
 # Reprojecting pairs of coordinates and rounding them if necessary
 # Only a point or a line are considered
 def _transform_coordinates(coordinates, srid_from, srid_to, rounding=True):
@@ -343,18 +157,22 @@ def _transform_coordinates(coordinates, srid_from, srid_to, rounding=True):
         if rounding:
             precision = get_precision_for_proj(srid_to)
             new_coords = _round_bbox_coordinates(new_coords, precision=precision)
-    except Exception:
-        raise ValueError(
-            "Cannot transform coordinates {} from {} to {}".format(coordinates, srid_from, srid_to)
+    except Exception as e:
+        logger.error(
+            "Cannot transform coordinates %s from %s to %s, %s", coordinates, srid_from, srid_to, e
         )
+        raise ValueError(
+            f"Cannot transform coordinates {coordinates} from {srid_from} to {srid_to}"
+        ) from e
     return new_coords
 
 
+# indirectly used by search.py
 def _transform_shape(geom, srid_from, srid_to, rounding=True):
     proj_in = get_proj_from_srid(srid_from)
     proj_out = get_proj_from_srid(srid_to)
 
-    projection_func = partial(proj_transform, proj_in, proj_out)
+    projection_func = partial(proj_transform, proj_in, proj_out, always_xy=True)
 
     new_geom = shape_transform(projection_func, geom)
     if rounding:
@@ -366,6 +184,7 @@ def _transform_shape(geom, srid_from, srid_to, rounding=True):
 # float('NaN') does not raise an Exception. This function does.
 
 
+# used by validation_search.py
 def float_raise_nan(val):
     ret = float(val)
     if math.isnan(ret):
@@ -373,6 +192,7 @@ def float_raise_nan(val):
     return ret
 
 
+# used by search.py
 def parse_box2d(stringBox2D):
     extent = stringBox2D.replace('BOX(', '').replace(')', '').replace(',', ' ')
     # Python2/3
@@ -382,6 +202,7 @@ def parse_box2d(stringBox2D):
     return box
 
 
+# used by center_from_box_2d used by search.py
 def is_box2d(box2D):
     # Python2/3
     if not isinstance(box2D, list):
@@ -392,11 +213,13 @@ def is_box2d(box2D):
     return box2D
 
 
+# used by search.py
 def center_from_box2d(box2D):
     box2D = is_box2d(box2D)
     return [box2D[0] + ((box2D[2] - box2D[0]) / 2), box2D[1] + ((box2D[3] - box2D[1]) / 2)]
 
 
+# used by validation_search.py and search.py
 def shift_to(coords, srid):
     cds = []
     x_offset = 2e6
@@ -413,129 +236,12 @@ def shift_to(coords, srid):
     return cds
 
 
-def parse_date_string(dateStr, format_input='%Y-%m-%d', format_output='%d.%m.%Y'):
-    try:
-        return datetime.datetime.strptime(dateStr.strip(), format_input).strftime(format_output)
-    except Exception:
-        return '-'
-
-
-def parse_date_datenstand(dateDatenstand):
-    result = ''
-    for part in re.split('([-| ])', str(dateDatenstand).strip()):
-        if part.isdigit():
-            if len(part) == 4:
-                result += parse_date_string(part, '%Y', '%Y')
-            elif len(part) == 6:
-                result += parse_date_string(part, '%Y%m', '%m.%Y')
-            elif len(part) == 8:
-                result += parse_date_string(part, '%Y%m%d', '%d.%m.%Y')
-        elif part == '-' or part == ' ':
-            result += part
-        elif len(part) == 5 and ':' in part:
-            result += part
+# only used in test_search. TODO
+def shift_to_lv95(string_coords):
+    coords = string_coords.split(',')
+    for idx, coord in enumerate(coords):  # pylint: disable=unused-variable
+        if idx % 2:
+            coords[idx] = float(coords[idx]) + 1e6
         else:
-            return '-'
-    return result
-
-
-def int_with_apostrophe(x):
-    if type(x) not in [type(0), type(long(0))]:
-        return '-'
-    if x < 0:
-        return '-' + int_with_apostrophe(-x)
-    result = ''
-    while x >= 1000:
-        x, r = divmod(x, 1000)
-        result = "'%03d%s" % (r, result)
-    return "%d%s" % (x, result)
-
-
-def get_loaderjs_url(request, version='3.6.0'):
-    return make_agnostic(route_url('ga_api', request)) + '?version=' + version
-
-
-def gzip_string(string):
-    # Python2/3
-    if six.PY2:
-        infile = StringIO()
-        data = string
-    else:
-        infile = BytesIO()
-        try:
-            data = string.encode('utf8')
-        except (UnicodeDecodeError, AttributeError):
-            data = string
-    try:
-        gzip_file = gzip.GzipFile(fileobj=infile, mode='w', compresslevel=5)
-        gzip_file.write(data)
-        gzip_file.close()
-        infile.seek(0)
-        out = infile.getvalue()
-    except Exception as e:
-        log.error("Cannot gzip string: {}".format(e))
-        out = None
-    finally:
-        infile.close()
-    return out
-
-
-def decompress_gzipped_string(streaming_body):
-    if six.PY2:
-        string_file = StringIO(streaming_body.read())
-        gzip_file = gzip.GzipFile(fileobj=string_file, mode='r', compresslevel=5)
-        return gzip_file.read().decode('utf-8')
-    else:
-        return gzip.decompress(streaming_body.read()).decode()
-
-
-def unnacent_where_text(where_string, model):
-
-    # where_string is the arbitrary where text given by the query
-    # model is the model corresponding to the layer for the query
-    separator = None
-    for possible_separator in ('+=', '=', 'ilike', 'like'):
-        # Those are the only string separators that ask for custom inputs from the customer.
-        if separator is None:
-            # We are not looking for a valid separator if we already found one
-            separator = possible_separator if where_string.find(possible_separator) > -1 else None
-            if separator is not None:
-                # splitting the string and trimming the substrings
-                where_text_split = where_string.split(separator, 1)
-                where_text_split[0] = where_text_split[0].strip()
-                # TODO: we might have multiple statements here, with 'or' or 'and'
-                where_text_split[1] = where_text_split[1].strip()
-                if str(getattr(model, where_text_split[0]).type) == 'VARCHAR':
-                    # if we get to this place, it means we have a string type of data with a custom input from the
-                    # customer and we will need to unaccent them to make the search.
-                    return "unaccent({}) {} {}".format(
-                        where_text_split[0],
-                        separator,
-                        sanitize_user_input_accents(
-                            separate_statements(where_text_split[1], model)
-                        )
-                    )
-                else:
-                    # if we get here, it means we had a separator, but it's not a string (only possibility should be '='
-                    # and a number. So we break out of the for loop for performances purpose
-                    break
-
-    return where_string
-
-
-def separate_statements(substring, model):
-    # in layerdefs, sometimes statements are separated by 'or' or 'and' clauses. this separates them. Only downside is that I'm calling sanitize input accents multiple times.
-    splitted_substring = substring.split(" ", 2)
-    if len(splitted_substring) == 3:
-        separator = splitted_substring[1]
-        if separator == 'or' or separator == 'and':
-            splitted_substring[2] = unnacent_where_text(splitted_substring[2], model)
-            return "{} {} {}".format(
-                splitted_substring[0], separator, separate_statements(splitted_substring[2], model)
-            )
-    return substring
-
-
-def sanitize_user_input_accents(string):
-    # this transforms the umlauts in latin compliant version, then remove the accents entirely
-    return unidecode.unidecode(remove_accents(string))
+            coords[idx] = float(coords[idx]) + 2e6
+    return ','.join([str(c) for c in coords])

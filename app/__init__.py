@@ -3,6 +3,7 @@ import os
 import re
 import time
 
+import psycopg2 as psy
 from werkzeug.exceptions import HTTPException
 
 from flask import Flask
@@ -11,6 +12,7 @@ from flask import g
 from flask import request
 
 from app import settings
+from app.helpers.utils import get_topics_from_db
 from app.helpers.utils import make_error_msg
 
 logger = logging.getLogger(__name__)
@@ -21,26 +23,25 @@ route_logger = logging.getLogger('app.routes')
 app = Flask(__name__)
 app.config.from_object(settings)
 
+# TODO: This will have to be discussed in a general manner.
+# Right now the topics do not serve anything else than returning HTTP 400
+# when the topic does not exist. No filtering is being done on it at all
+# f.ex searching for lagefixpunkte in topic bafu, which is meaningless
+# https://api3.geo.admin.ch/2111231107/rest/services/bafu/SearchServer?sr=2056&searchText=CH030000123112311020&lang=en&type=featuresearch&features=ch.swisstopo.fixpunkte-lfp1&timeEnabled=false&timeStamps=
+try:
+    topics = get_topics_from_db()
+except psy.Error:
+    topics = settings.FALLBACK_TOPICS
+    logger.error("Connection to the db base could not be established." \
+            " Using fallback %s", settings.FALLBACK_TOPICS)
+
 
 # NOTE it is better to have this method registered first (before validate_origin) otherwise
 # the route might not be logged if another method reject the request.
 @app.before_request
 def log_route():
     g.setdefault('request_started', time.time())
-    route_logger.info('%s %s', request.method, request.path)
-
-
-# Reject request from non allowed origins
-@app.before_request
-def validate_origin():
-    # to get make serve running for local dev
-    if not settings.DEBUG:
-        if 'Origin' not in request.headers:
-            logger.error('Origin header is not set')
-            abort(403, 'Not allowed')
-        if not re.match(settings.ALLOWED_DOMAINS_PATTERN, request.headers['Origin']):
-            logger.error('Origin=%s is not allowed', request.headers['Origin'])
-            abort(403, 'Not allowed')
+    route_logger.debug('%s %s', request.method, request.path)
 
 
 # Add CORS Headers to all request
@@ -50,12 +51,7 @@ def add_cors_header(response):
     if request.endpoint == 'checker':
         return response
 
-    if (
-        'Origin' in request.headers and
-        re.match(settings.ALLOWED_DOMAINS_PATTERN, request.headers['Origin'])
-    ):
-        response.headers['Access-Control-Allow-Origin'] = request.headers['Origin']
-    response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, HEAD, OPTIONS'
     response.headers['Access-Control-Allow-Headers'] = '*'
     return response
 

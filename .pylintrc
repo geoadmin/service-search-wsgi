@@ -65,6 +65,7 @@ disable=missing-docstring,
     bad-continuation,   # bad-continuation doesn't comply with yapf, so lets
                         # yapf correct indentation continuation issue
     useless-object-inheritance,
+    fixme
 
 
 # Enable the message, report, category or checker with the given id(s). You can
@@ -375,7 +376,8 @@ ignore-docstrings=yes
 ignore-imports=no
 
 # Minimum lines number of a similarity.
-min-similarity-lines=4
+# TODO only keep 40 while the integration tests are in /tests
+min-similarity-lines=40
 
 
 [VARIABLES]
@@ -409,6 +411,7 @@ redefining-builtins-modules=six.moves,past.builtins,future.builtins,builtins,io
 
 
 [MISCELLANEOUS]
+
 
 # List of note tags to take in consideration, separated by a comma.
 notes=FIXME,
