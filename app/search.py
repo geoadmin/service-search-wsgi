@@ -173,7 +173,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         self.results['fuzzy'] = 'true'
         return temp
 
-    def _swiss_search(self):  # pylint: disable=too-many-branches, too-many-statements
+    def _swiss_search(self):  # pylint: disable=too-many-branches, too-many-statements, too-many-locals
         limit = self.limit if self.limit and \
             self.limit <= self.LOCATION_LIMIT else self.LOCATION_LIMIT
         # Define ranking mode
@@ -216,7 +216,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                     self.sphinx.AddQuery(searchTextFinal, index='swisssearch')
 
                 # exact search, first 10 results
-                searchText = f"@detail ^{' '.join(self.searchText)}"
+                searchText = '@detail "^{}"'.format(' '.join(self.searchText))  # pylint: disable=consider-using-f-string
                 self.sphinx.AddQuery(searchText, index='swisssearch')
 
                 # reset settings
@@ -233,15 +233,33 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                 logger.error(e)
                 raise GatewayTimeout() from e
 
-            temp_merged = temp[0].get('matches', []) + temp[1].get('matches', []) if len(
-                temp
-            ) == 2 else temp[0].get('matches', [])
-
-            # remove duplicate results,
-            # exact search results have priority over wildcard search results
+            wildcard_results = temp[0].get('matches', [])
+            merged_results = []
+            if len(temp) == 2:
+                # we have results from both queries (exact + wildcard)
+                # prepend exact search results to wildcard search result
+                exact_results = temp[1].get('matches', [])
+                # exact matches have priority over prefix matches
+                # searchText=waldhofstrasse+1
+                # waldhofstrasse 1 -> weight 100
+                # waldhofstrasse 1.1 -> weight 1
+                for result in exact_results:
+                    detail = result['attrs']['detail']
+                    search_text_joined = ' '.join(self.searchText).lower()
+                    if (
+                        detail.startswith(f"{search_text_joined} ") or
+                        detail == ' '.join(self.searchText).lower()
+                    ):
+                        result['weight'] += 99
+                merged_results = exact_results + wildcard_results
+            else:
+                # we have results from one or no query
+                merged_results = wildcard_results
+            # remove duplicate from sphinx results, exact search results have priority over
+            # wildcard search results
             temp = []
             seen = []
-            for d in temp_merged:
+            for d in merged_results:
                 if d['id'] not in seen:
                     temp.append(d)
                     seen.append(d['id'])
@@ -299,8 +317,10 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         searchText = ' '.join(
             (
                 self._query_fields('@(title,detail,layer)'),
-                f'& @topics {topicFilter}'  # Filter by to topic if string not empty, ech whitelist hack pylint: disable=line-too-long
-                f'& {staging_filter(GEODATA_STAGING)}'  # Only layers in correct staging are searched pylint: disable=line-too-long
+                # Filter by to topic if string not empty, ech whitelist hack
+                f'& @topics {topicFilter}',
+                # Only layers in correct staging are searched
+                f'& {staging_filter(GEODATA_STAGING)}'
             )
         )
         try:
@@ -412,7 +432,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             q = [
                 f'{fields} "{exactAll}"',
                 f'{fields} "^{exactAll}"',
-                f'{fields} "%{exactAll}$"',
+                f'{fields} "{exactAll}$"',
                 f'{fields} "^{exactAll}$"',
                 f'{fields} "{exactAll}"~5',
                 f'{fields} "{preNonDigit}"',
