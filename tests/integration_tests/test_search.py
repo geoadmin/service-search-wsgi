@@ -62,13 +62,13 @@ class TestSearchService(BaseSearchTest):  # pylint: disable=too-many-public-meth
 
     def test_search_locations_geojson_with_projection_two(self):
         projections = {
-            '2056': [2534437.97, 1150655.173, 2544978.008, 1161554.51],
-            '4326': [6.582954, 46.503985, 6.721811, 46.602978],
-            '3857': [732811.1, 5861484.3, 748268.6, 5877509.0],
-            '21781': [534437.969999999, 150655.173000001, 544978.008000001, 161554.509999998]
+            '2056': [2534421.17100006, 1145150.43900561, 2544978.00800004, 1161554.51000385],
+            '4326': [6.582735, 46.454468, 6.722467, 46.602978],
+            '3857': [732786.7, 5853479.5, 748341.6, 5877509],
+            '21781': [534421.171000061, 145150.439005612, 544978.008000039, 161554.510003855]
         }
 
-        for sr in list(projections.keys()):
+        for sr, projection in projections.items():
             response = self.app.get(
                 url_for(
                     'search_server',
@@ -84,7 +84,7 @@ class TestSearchService(BaseSearchTest):  # pylint: disable=too-many-public-meth
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.content_type, 'application/geo+json')
             self.assertEqual(response.json['type'], 'FeatureCollection')
-            self.assertEqual(response.json['bbox'], projections[sr])
+            self.assertEqual(response.json['bbox'], projection)
 
     def test_search_layers_with_cb(self):
 
