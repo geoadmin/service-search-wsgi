@@ -760,6 +760,8 @@ class SphinxClient:
                     req.append(pack('>f', value))
                 elif v['type'] == SPH_ATTR_BIGINT:
                     req.append(pack('>q', value))
+                elif v['type'] == SPH_ATTR_STRING:
+                    req.append(value)
                 else:
                     req.append(pack('>l', value))
 
@@ -1150,7 +1152,7 @@ class SphinxClient:
 
         response = self._GetResponse(sock, VER_COMMAND_UPDATE)
         if not response:
-            return -1
+            return None
 
         # parse response
         updated = unpack('>L', response[0:4])[0]
@@ -1305,7 +1307,7 @@ class SphinxClient:
 
 def AssertInt32(value):
     assert isinstance(value, int)
-    assert -2**32 - 1 <= value <= 2**32 - 1
+    assert -2**31 <= value <= 2**31 - 1
     return True
 
 
