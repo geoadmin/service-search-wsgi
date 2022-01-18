@@ -35,4 +35,4 @@ USER geoadmin
 EXPOSE $HTTP_PORT
 
 # Use a real WSGI server
-ENTRYPOINT ["python3", "wsgi.py"]
+ENTRYPOINT ["python3", "-O", "wsgi.py"]
