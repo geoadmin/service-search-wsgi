@@ -280,9 +280,9 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             return ret
 
         # 10 features per layer are returned at max
-        layerLimit = \
-            self.limit if self.limit and \
-            self.limit <= self.LAYER_LIMIT else self.LAYER_LIMIT
+        layerLimit = (
+            self.limit if self.limit and self.limit <= self.LAYER_LIMIT else self.LAYER_LIMIT
+        )
         self.sphinx.SetLimits(0, layerLimit)
         self.sphinx.SetRankingMode(sphinxapi.SPH_RANK_WORDCOUNT)
         self.sphinx.SetSortMode(sphinxapi.SPH_SORT_EXTENDED, '@weight DESC')
@@ -333,9 +333,9 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         if self.featureIndexes is None:
             # we need bounding box and layernames. FIXME: this should be error
             raise BadRequest('Bad request: no layername given')
-        featureLimit = \
-            self.limit if self.limit \
-            and self.limit <= self.FEATURE_LIMIT else self.FEATURE_LIMIT
+        featureLimit = (
+            self.limit if self.limit and self.limit <= self.FEATURE_LIMIT else self.FEATURE_LIMIT
+        )
         self.sphinx.SetLimits(0, featureLimit)
         self.sphinx.SetRankingMode(sphinxapi.SPH_RANK_WORDCOUNT)
         if self.bbox and self.sortbbox:
@@ -543,8 +543,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         res = res_in
         if not self.returnGeometry:
             attrs2Del = ['x', 'y', 'lon', 'lat', 'geom_st_box2d']
-            popAtrrs = lambda x: res.pop(x) if x in res else x
-            list(map(popAtrrs, attrs2Del))
+            list(map(lambda x: res.pop(x) if x in res else x, attrs2Del))
         elif int(self.srid) not in (21781, 2056):
             self._box2d_transform(res)
             if int(self.srid) == 4326:
