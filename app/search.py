@@ -117,10 +117,9 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                         'type': 'Feature',
                         'id': item['id'],
                         'bbox': bbox.bounds,
-                        'geometry':
-                            {
-                                'type': 'Point', 'coordinates': [attributes['x'], attributes['y']]
-                            },
+                        'geometry': {
+                            'type': 'Point', 'coordinates': [attributes['x'], attributes['y']]
+                        },
                         'properties': attributes
                     }
                 else:
@@ -225,7 +224,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                 # In case RunQueries doesn't return results (reason unknown)
                 # related to issue
                 if temp is None:
-                    msg = f'no results from sphinx service ({self.sphinx._error})'  # pylint: disable=line-too-long, protected-access
+                    msg = f'no results from sphinx service ({self.sphinx.GetLastError()})'
                     logger.error(msg)
                     raise ServiceUnavailable(msg)
 
@@ -314,15 +313,11 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             topicFilter = 'api'
         else:
             topicFilter = f'({topic_name} | ech)'
-        searchText = ' '.join(
-            (
-                self._query_fields('@(title,detail,layer)'),
-                # Filter by to topic if string not empty, ech whitelist hack
-                f'& @topics {topicFilter}',
-                # Only layers in correct staging are searched
-                f'& {staging_filter(GEODATA_STAGING)}'
-            )
-        )
+        searchText = ' '.join([
+            self._query_fields('@(title,detail,layer)'),
+            f'& @topics {topicFilter}',  # Filter by topic if string not empty, ech whitelist hack
+            f'& {staging_filter(GEODATA_STAGING)}'  # Only layers in correct staging are searched
+        ])
         try:
             temp = self.sphinx.Query(searchText, index=index_name)
         except IOError as e:  # pragma: no cover
@@ -448,9 +443,9 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             prefix_all = lambda x: ''.join((x, '*'))
             preDigit = ' '.join([prefix_digit(w) for w in self.searchText])
             preNonDigitAndPreDigit = ' '.join([prefix_all(w) for w in self.searchText])
-            infNonDigitAndPreDigit = ' '.join(
-                [prefix_digit(infix_non_digit(w)) for w in self.searchText]
-            )
+            infNonDigitAndPreDigit = ' '.join([
+                prefix_digit(infix_non_digit(w)) for w in self.searchText
+            ])
             q = q + [
                 f'{fields} "{preDigit}"',
                 f'{fields} "^{preDigit}"',

@@ -192,25 +192,21 @@ class QuadTree:
         return res
 
     def _single_points_all(self, bbox):
-        return self._getCommonKey(
-            [self.xy_to_morton(bbox.pointAt(i).x, bbox.pointAt(i).y) for i in range(4)]
-        )
+        return self._getCommonKey([
+            self.xy_to_morton(bbox.pointAt(i).x, bbox.pointAt(i).y) for i in range(4)
+        ])
 
     def _single_points_dia1(self, bbox):
-        return self._getCommonKey(
-            [
-                self.xy_to_morton(bbox.pointAt(0).x, bbox.pointAt(0).y),
-                self.xy_to_morton(bbox.pointAt(2).x, bbox.pointAt(2).y)
-            ]
-        )
+        return self._getCommonKey([
+            self.xy_to_morton(bbox.pointAt(0).x, bbox.pointAt(0).y),
+            self.xy_to_morton(bbox.pointAt(2).x, bbox.pointAt(2).y)
+        ])
 
     def _single_points_dia2(self, bbox):
-        return self._getCommonKey(
-            [
-                self.xy_to_morton(bbox.pointAt(1).x, bbox.pointAt(1).y),
-                self.xy_to_morton(bbox.pointAt(3).x, bbox.pointAt(3).y)
-            ]
-        )
+        return self._getCommonKey([
+            self.xy_to_morton(bbox.pointAt(1).x, bbox.pointAt(1).y),
+            self.xy_to_morton(bbox.pointAt(3).x, bbox.pointAt(3).y)
+        ])
 
     def _multi_points_all(self, bbox):
         return self.points_to_morton([bbox.pointAt(i) for i in range(4)])
