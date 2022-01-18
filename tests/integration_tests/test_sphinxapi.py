@@ -2,7 +2,7 @@
 
 import unittest
 
-from app.helpers import sphinxapi
+from app.lib import sphinxapi
 from tests.unit_tests.base_test import BaseSearchTest
 
 # pylint: disable=invalid-name

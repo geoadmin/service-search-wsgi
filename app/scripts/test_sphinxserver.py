@@ -2,7 +2,7 @@ import os
 import socket
 import sys
 
-from app.helpers import sphinxapi
+from app.lib import sphinxapi
 
 # pylint: disable=invalid-name
 

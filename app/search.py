@@ -11,7 +11,6 @@ from werkzeug.exceptions import NotFound
 from werkzeug.exceptions import ServiceUnavailable
 
 from app.helpers import mortonspacekey as msk
-from app.helpers import sphinxapi
 from app.helpers.helpers_search import _transform_point as transform_coordinate
 from app.helpers.helpers_search import center_from_box2d
 from app.helpers.helpers_search import format_locations_search_text
@@ -22,6 +21,7 @@ from app.helpers.helpers_search import shift_to
 from app.helpers.helpers_search import \
     transform_round_geometry as transform_shape
 from app.helpers.validation_search import SearchValidation
+from app.lib import sphinxapi
 from app.settings import GEODATA_STAGING
 from app.settings import SEARCH_SPHINX_HOST
 from app.settings import SEARCH_SPHINX_PORT
