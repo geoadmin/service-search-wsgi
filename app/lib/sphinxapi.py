@@ -612,6 +612,12 @@ class SphinxClient:
     def ResetOverrides(self):
         self._overrides = {}
 
+    # jeg: added function
+    def ResetFiltersOnly(self):
+        """
+        Clear filers only, not anchor as well
+        """
+        self._filters = []
 
     def ResetFilters(self):
         """
