@@ -436,14 +436,12 @@ class SphinxClient:
         assert iter(values)
         assert all(map(AssertInt32, values))
 
-        self._filters.append(
-            {
-                'type': SPH_FILTER_VALUES,
-                'attr': attribute.encode(),
-                'exclude': exclude,
-                'values': values
-            }
-        )
+        self._filters.append({
+            'type': SPH_FILTER_VALUES,
+            'attr': attribute.encode(),
+            'exclude': exclude,
+            'values': values
+        })
 
     def SetFilterString(self, attribute, value, exclude=0):
         """
@@ -454,14 +452,12 @@ class SphinxClient:
         assert isinstance(value, str)
         assert isinstance(exclude, int)
 
-        self._filters.append(
-            {
-                'type': SPH_FILTER_STRING,
-                'attr': attribute.encode(),
-                'exclude': exclude,
-                'value': value.encode()
-            }
-        )
+        self._filters.append({
+            'type': SPH_FILTER_STRING,
+            'attr': attribute.encode(),
+            'exclude': exclude,
+            'value': value.encode()
+        })
 
     def SetFilterRange(self, attribute, min_, max_, exclude=0):
         """
@@ -474,15 +470,13 @@ class SphinxClient:
         assert min_ <= max_
         assert isinstance(exclude, int)
 
-        self._filters.append(
-            {
-                'type': SPH_FILTER_RANGE,
-                'attr': attribute.encode(),
-                'exclude': exclude,
-                'min': min_,
-                'max': max_
-            }
-        )
+        self._filters.append({
+            'type': SPH_FILTER_RANGE,
+            'attr': attribute.encode(),
+            'exclude': exclude,
+            'min': min_,
+            'max': max_
+        })
 
     def SetFilterFloatRange(self, attribute, min_, max_, exclude=0):
         assert isinstance(attribute, str)
@@ -490,15 +484,13 @@ class SphinxClient:
         assert isinstance(max_, float)
         assert min_ <= max_
         assert isinstance(exclude, int)
-        self._filters.append(
-            {
-                'type': SPH_FILTER_FLOATRANGE,
-                'attr': attribute.encode(),
-                'exclude': exclude,
-                'min': min_,
-                'max': max_
-            }
-        )
+        self._filters.append({
+            'type': SPH_FILTER_FLOATRANGE,
+            'attr': attribute.encode(),
+            'exclude': exclude,
+            'min': min_,
+            'max': max_
+        })
 
     def SetGeoAnchor(self, attrlat, attrlong, latitude, longitude):
         assert isinstance(attrlat, str)

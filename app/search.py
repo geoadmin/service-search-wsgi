@@ -117,10 +117,9 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                         'type': 'Feature',
                         'id': item['id'],
                         'bbox': bbox.bounds,
-                        'geometry':
-                            {
-                                'type': 'Point', 'coordinates': [attributes['x'], attributes['y']]
-                            },
+                        'geometry': {
+                            'type': 'Point', 'coordinates': [attributes['x'], attributes['y']]
+                        },
                         'properties': attributes
                     }
                 else:
@@ -173,7 +172,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         self.results['fuzzy'] = 'true'
         return temp
 
-    def _swiss_search(self):  # pylint: disable=too-many-branches, too-many-statements
+    def _swiss_search(self):  # pylint: disable=too-many-branches, too-many-statements, too-many-locals
         limit = self.limit if self.limit and \
             self.limit <= self.LOCATION_LIMIT else self.LOCATION_LIMIT
         # Define ranking mode
@@ -216,7 +215,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                     self.sphinx.AddQuery(searchTextFinal, index='swisssearch')
 
                 # exact search, first 10 results
-                searchText = f"@detail ^{' '.join(self.searchText)}"
+                searchText = '@detail "^{}"'.format(' '.join(self.searchText))  # pylint: disable=consider-using-f-string
                 self.sphinx.AddQuery(searchText, index='swisssearch')
 
                 # reset settings
@@ -225,7 +224,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                 # In case RunQueries doesn't return results (reason unknown)
                 # related to issue
                 if temp is None:
-                    msg = f'no results from sphinx service ({self.sphinx._error})'  # pylint: disable=line-too-long, protected-access
+                    msg = f'no results from sphinx service ({self.sphinx.GetLastError()})'
                     logger.error(msg)
                     raise ServiceUnavailable(msg)
 
@@ -233,15 +232,33 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                 logger.error(e)
                 raise GatewayTimeout() from e
 
-            temp_merged = temp[0].get('matches', []) + temp[1].get('matches', []) if len(
-                temp
-            ) == 2 else temp[0].get('matches', [])
-
-            # remove duplicate results,
-            # exact search results have priority over wildcard search results
+            wildcard_results = temp[0].get('matches', [])
+            merged_results = []
+            if len(temp) == 2:
+                # we have results from both queries (exact + wildcard)
+                # prepend exact search results to wildcard search result
+                exact_results = temp[1].get('matches', [])
+                # exact matches have priority over prefix matches
+                # searchText=waldhofstrasse+1
+                # waldhofstrasse 1 -> weight 100
+                # waldhofstrasse 1.1 -> weight 1
+                for result in exact_results:
+                    detail = result['attrs']['detail']
+                    search_text_joined = ' '.join(self.searchText).lower()
+                    if (
+                        detail.startswith(f"{search_text_joined} ") or
+                        detail == ' '.join(self.searchText).lower()
+                    ):
+                        result['weight'] += 99
+                merged_results = exact_results + wildcard_results
+            else:
+                # we have results from one or no query
+                merged_results = wildcard_results
+            # remove duplicate from sphinx results, exact search results have priority over
+            # wildcard search results
             temp = []
             seen = []
-            for d in temp_merged:
+            for d in merged_results:
                 if d['id'] not in seen:
                     temp.append(d)
                     seen.append(d['id'])
@@ -280,9 +297,9 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             return ret
 
         # 10 features per layer are returned at max
-        layerLimit = \
-            self.limit if self.limit and \
-            self.limit <= self.LAYER_LIMIT else self.LAYER_LIMIT
+        layerLimit = (
+            self.limit if self.limit and self.limit <= self.LAYER_LIMIT else self.LAYER_LIMIT
+        )
         self.sphinx.SetLimits(0, layerLimit)
         self.sphinx.SetRankingMode(sphinxapi.SPH_RANK_WORDCOUNT)
         self.sphinx.SetSortMode(sphinxapi.SPH_SORT_EXTENDED, '@weight DESC')
@@ -296,13 +313,11 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             topicFilter = 'api'
         else:
             topicFilter = f'({topic_name} | ech)'
-        searchText = ' '.join(
-            (
-                self._query_fields('@(title,detail,layer)'),
-                f'& @topics {topicFilter}'  # Filter by to topic if string not empty, ech whitelist hack pylint: disable=line-too-long
-                f'& {staging_filter(GEODATA_STAGING)}'  # Only layers in correct staging are searched pylint: disable=line-too-long
-            )
-        )
+        searchText = ' '.join([
+            self._query_fields('@(title,detail,layer)'),
+            f'& @topics {topicFilter}',  # Filter by topic if string not empty, ech whitelist hack
+            f'& {staging_filter(GEODATA_STAGING)}'  # Only layers in correct staging are searched
+        ])
         try:
             temp = self.sphinx.Query(searchText, index=index_name)
         except IOError as e:  # pragma: no cover
@@ -333,9 +348,9 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         if self.featureIndexes is None:
             # we need bounding box and layernames. FIXME: this should be error
             raise BadRequest('Bad request: no layername given')
-        featureLimit = \
-            self.limit if self.limit \
-            and self.limit <= self.FEATURE_LIMIT else self.FEATURE_LIMIT
+        featureLimit = (
+            self.limit if self.limit and self.limit <= self.FEATURE_LIMIT else self.FEATURE_LIMIT
+        )
         self.sphinx.SetLimits(0, featureLimit)
         self.sphinx.SetRankingMode(sphinxapi.SPH_RANK_WORDCOUNT)
         if self.bbox and self.sortbbox:
@@ -412,7 +427,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             q = [
                 f'{fields} "{exactAll}"',
                 f'{fields} "^{exactAll}"',
-                f'{fields} "%{exactAll}$"',
+                f'{fields} "{exactAll}$"',
                 f'{fields} "^{exactAll}$"',
                 f'{fields} "{exactAll}"~5',
                 f'{fields} "{preNonDigit}"',
@@ -428,9 +443,9 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             prefix_all = lambda x: ''.join((x, '*'))
             preDigit = ' '.join([prefix_digit(w) for w in self.searchText])
             preNonDigitAndPreDigit = ' '.join([prefix_all(w) for w in self.searchText])
-            infNonDigitAndPreDigit = ' '.join(
-                [prefix_digit(infix_non_digit(w)) for w in self.searchText]
-            )
+            infNonDigitAndPreDigit = ' '.join([
+                prefix_digit(infix_non_digit(w)) for w in self.searchText
+            ])
             q = q + [
                 f'{fields} "{preDigit}"',
                 f'{fields} "^{preDigit}"',
@@ -543,8 +558,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         res = res_in
         if not self.returnGeometry:
             attrs2Del = ['x', 'y', 'lon', 'lat', 'geom_st_box2d']
-            popAtrrs = lambda x: res.pop(x) if x in res else x
-            list(map(popAtrrs, attrs2Del))
+            list(map(lambda x: res.pop(x) if x in res else x, attrs2Del))
         elif int(self.srid) not in (21781, 2056):
             self._box2d_transform(res)
             if int(self.srid) == 4326:
