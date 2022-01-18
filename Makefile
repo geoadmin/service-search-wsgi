@@ -35,7 +35,7 @@ PIP_FILE = Pipfile
 PIP_FILE_LOCK = Pipfile.lock
 
 # default configuration
-ENV_FILE ?= .env.local
+ENV_FILE ?= .env.default
 HTTP_PORT ?= 5000
 ROUTE_PREFIX ?='' # this will be set in a later iteration
 
