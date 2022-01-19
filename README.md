@@ -1,19 +1,19 @@
-# service-name
+# service-search-wsgi
 
 | Branch | Status |
 |--------|-----------|
-| develop | ![Build Status](<codebuild-badge>) |
-| master | ![Build Status](<codebuild-badge>) |
+| develop | ![Build Status](https://codebuild.eu-central-1.amazonaws.com/badges?uuid=eyJlbmNyeXB0ZWREYXRhIjoiUDZNMlVLR3d5bUhsTUF3ZEo3RTRPdDFKdS90czR4ZE5vYmNjTXhtK2tzNGlOckNXb29yaE1DNktwVXFJSVpMdExEVWYzZHA5U1drcmdsTE5BU3lJWDBJPSIsIml2UGFyYW1ldGVyU3BlYyI6IjM2YlhQR1ltcEtlTU16WC8iLCJtYXRlcmlhbFNldFNlcmlhbCI6MX0%3D&branch=develop) |
+| master | ![Build Status](https://codebuild.eu-central-1.amazonaws.com/badges?uuid=eyJlbmNyeXB0ZWREYXRhIjoiUDZNMlVLR3d5bUhsTUF3ZEo3RTRPdDFKdS90czR4ZE5vYmNjTXhtK2tzNGlOckNXb29yaE1DNktwVXFJSVpMdExEVWYzZHA5U1drcmdsTE5BU3lJWDBJPSIsIml2UGFyYW1ldGVyU3BlYyI6IjM2YlhQR1ltcEtlTU16WC8iLCJtYXRlcmlhbFNldFNlcmlhbCI6MX0%3D&branch=master) |
 
 ## Table of content
 
 - [Table of content](#table-of-content)
 - [Description](#description)
-  - [Staging Environments](#staging-environments)
 - [Versioning](#versioning)
 - [Local Development](#local-development)
   - [Make Dependencies](#make-dependencies)
   - [Setting up to work](#setting-up-to-work)
+    - [Database access](#database-access)
   - [Linting and formatting your work](#linting-and-formatting-your-work)
   - [Test your work](#test-your-work)
 - [Docker](#docker)
@@ -23,16 +23,7 @@
 ## Description
 
 This is the SearchServer service from mf-chsdi3. How the service can be queried, is currently described here:
-[api3.geo.admin.ch/search](https://api3.geo.admin.ch/services/sdiservices.html#search). But this will have to be migrated in some way to this repository.
-
-### Staging Environments
-The author is not sure, if this is going to be the staging environment.
-
-| Environments | URL                                                                                                                   |
-| ------------ | --------------------------------------------------------------------------------------------------------------------- |
-| DEV          | [https://service-search.bgdi-dev.swisstopo.cloud/rest/services/all/SearchServer](https://service-search.bgdi-dev.swisstopo.cloud/rest/services/all/SearchServer)  |
-| INT          | [https://service-search.bgdi-int.swisstopo.cloud/rest/services/all/SearchServer](https://service-search.bgdi-int.swisstopo.cloud/rest/services/all/SearchServer)  |
-| PROD         | [https://api.geo.admin.ch/rest/services/all/SearchServer](https://api.geo.admin.ch/rest/services/all/SearchServer) |
+[api3.geo.admin.ch/search](https://api3.geo.admin.ch/services/sdiservices.html#search). But this will have to be migrated in some way to this repository. This service is a simple Flask Application that query a [Sphinx Search](http://sphinxsearch.com/docs/current.html) Server. Currently supported Sphinx Search server is v2.2.11.
 
 ## Versioning
 
@@ -44,7 +35,7 @@ See also [Git Flow - Versioning](https://github.com/geoadmin/doc-guidelines/blob
 
 ### Make Dependencies
 
-The **Make** targets assume you have **python3.7**, **pipenv**, **bash**, **curl**, **tar** and **docker** installed.
+The **Make** targets assume you have **python3.9**, **pipenv**, **bash**, **curl**, **tar** and **docker** installed.
 
 ### Setting up to work
 
@@ -57,36 +48,24 @@ git clone git@github.com:geoadmin/service-search-wsgi
 Then, you can run the setup target to ensure you have everything needed to develop, test and serve locally
 
 .venv to run the service (f.ex. make serve)
+
 ```bash
 make setup
 ```
+
 .venv to develop and debug the service
+
 ```bash
 make dev
 ```
 
 To run the service you will have to *copy* **.env.default** to **.env.local**. And to set the variables.
 
-#### Database access ###
+For local development you will also need access to a running sphinx search server.
+
+#### Database access
+
 Right now the database is being accessed to validate, if the <topic> in the search path exists or not. It is not even being filtered on this. It is just a validation. To minimise the number of requests on the db, the application is only querying this during startup and writes the list of topics into a variable.
-Anyhow. The db user is www-data. The password can be found in gopass:
-```bash
-gopass show infra-gopass-bgdi/postgres/users/www-data
-```
-
-#### Access to service-search-sphinx ####
-For local development it showed, that it was easiest to access the productiv running service-search-shpinx directly. The access to the service-search-sphinx is being defined in the .env.local file as well.
-
-For local dev in .ssh/config f.ex.
-```bash
-Host vpc_sphinx_prod_n0
-HostName 10.220.5.253
-LocalForward 9312 localhost:9312
-```
-
-One possibility is to make a ssh tunnel and to access the service-search-sphinx via localhost.
-
-
 
 ### Linting and formatting your work
 
@@ -167,7 +146,6 @@ docker ps --format="table {{.ID}}\t{{.Image}}\t{{.Labels}}"
 This service is going to be deployed on a vhost, once it is merged. The configuration of the ***docker-compose.yml*** of the vhost setup is going to be here:
 [https://github.com/geoadmin/infra-vhost](https://github.com/geoadmin/infra-vhost)
 
-
 ### Deployment configuration
 
 The service is configured by Environment Variable:
@@ -176,14 +154,14 @@ The service is configured by Environment Variable:
 | ----------- | --------------------- | -------------------------- |
 | HTTP_PORT | 5000 | The port on which the service can be queried. |
 | TESTING | False | When TESTING=True, the application does not need a db connection to retrieve a list of topics. A list with the topics used in the tests is being set. |
-| BOD_DB_NAME | None | Depending on the staging level usually `bod_{dev, int or prod}`
-| BOD_DB_HOST | None | The db host. Usually `pg.bgdi.ch` or `localhost` |
+| BOD_DB_NAME | - | Depending on the staging level usually |
+| BOD_DB_HOST | - | The db host. |
 | BOD_DB_PORT | 5432 | The db port |
-| BOD_DB_USER | www-data | The read-only db user |
-| BOD_DB_PASSWD | None | The db password. `gopass show infra-gopass-bgdi/postgres/users/www-data` |
+| BOD_DB_USER | - | The read-only db user |
+| BOD_DB_PASSWD | - | The db password. |
 | GEODATA_STAGING | prod | In the database bod, a dataset itself has the attribute staging. This staging (dev, int and prod) is being filtered when querying the indexes. |
-| SEARCH_SPHINX_HOST | localhost | The host for service-search-sphinx. |
-| SEARCH_SPHINX_PORT | 9321 | The port for service-search-sphinx. |
+| SEARCH_SPHINX_HOST | localhost | The host for sphinx search server. |
+| SEARCH_SPHINX_PORT | 9321 | The port for sphinx search server. |
 | LOGGING_CFG | logging-cfg-local.yml | Logging configuration file |
 | FORWARED_ALLOW_IPS | `*` | Sets the gunicorn `forwarded_allow_ips` (see https://docs.gunicorn.org/en/stable/settings.html#forwarded-allow-ips). This is required in order to `secure_scheme_headers` to works. |
 | FORWARDED_PROTO_HEADER_NAME | `X-Forwarded-Proto` | Sets gunicorn `secure_scheme_headers` parameter to `{FORWARDED_PROTO_HEADER_NAME: 'https'}`, see https://docs.gunicorn.org/en/stable/settings.html#secure-scheme-headers. |
