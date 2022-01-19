@@ -8,6 +8,37 @@ from app import settings
 logger = logging.getLogger(__name__)
 
 
+@cache.cached(key_prefix='get_topics_from_db')
+def get_topics_from_db():
+    '''Get a list with all topics from bod
+
+    Returns:
+        A List with the topics or an empty list
+    '''
+    cursor = get_db_connection()
+
+    try:
+        # select records from DB
+        cursor.execute("""
+            SELECT topic FROM "re3".topics
+            """)
+    except psy.Error as error:
+        logger.exception('Failed to retrieve wms config from DB: %s', error)
+        raise
+
+    total_records = cursor.rowcount
+    logger.info("Found %s records", total_records)
+
+    # iterate through table
+    _topics = ['all']
+    for i, record in enumerate(cursor):
+        logger.debug('topic in topics %d: %s', i, record)
+        _topics.append(record[0])
+
+    logger.debug("get_topics_from_db: List of topics has been generated. No cache yet.")
+    return _topics
+
+
 @cache.memoize()
 def get_translation(msg_id, lang):
     '''Get translation from bod table translations

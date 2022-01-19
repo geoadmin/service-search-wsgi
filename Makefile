@@ -141,7 +141,7 @@ test:
 
 .PHONY: test-integration
 test-integration: test
-	$(NOSE) -c tests/unittest.cfg --verbose -s tests/integration_tests/
+	ENV_FILE=$(ENV_FILE) $(NOSE) -c tests/unittest.cfg --verbose -s tests/integration_tests/
 
 
 # Serve targets. Using these will run the application on your local machine. You can either serve with a wsgi front (like it would be within the container), or without.
