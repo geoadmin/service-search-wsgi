@@ -3,10 +3,10 @@ import logging
 import psycopg2 as psy
 from werkzeug.exceptions import BadRequest
 
+from app.helpers.db_caching import get_topics_from_db
 from app.helpers.helpers_search import float_raise_nan
 from app.helpers.helpers_search import ilen
 from app.helpers.helpers_search import shift_to
-from app.helpers.db_caching import get_topics_from_db
 from app.settings import FALLBACK_TOPICS
 
 SUPPORTED_OUTPUT_SRS = (21781, 2056, 3857, 4326)

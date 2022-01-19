@@ -13,7 +13,7 @@ def get_topics_from_db():
     '''Get a list with all topics from bod
 
     Returns:
-        A List with the topics or an empty list
+        A List with the topics
     '''
     cursor = get_db_connection()
 
