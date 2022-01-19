@@ -59,13 +59,14 @@ make setup
 make dev
 ```
 
-To run the service you will have to *copy* **.env.default** to **.env.local**. And to set the variables.
+To run the service you will have adapt **.env.local**, which is a copy of **.env.default** And to set the variables.
 
-For local development you will also need access to a running sphinx search server.
+For local development you will need access to a running sphinx search server and to the database.
 
 #### Database access
 
-Right now the database is being accessed to validate, if the <topic> in the search path exists or not. It is not even being filtered on this. It is just a validation. To minimise the number of requests on the db, the application is only querying this during startup and writes the list of topics into a variable.
+Right now the database is being accessed to validate, if the <topic> in the search path exists or not. It is not even being filtered on this. It is just a validation.
+And the <translations> are being accessed to translate some labels of the returned results.
 
 ### Linting and formatting your work
 
@@ -162,6 +163,7 @@ The service is configured by Environment Variable:
 | GEODATA_STAGING | prod | In the database bod, a dataset itself has the attribute staging. This staging (dev, int and prod) is being filtered when querying the indexes. |
 | SEARCH_SPHINX_HOST | localhost | The host for sphinx search server. |
 | SEARCH_SPHINX_PORT | 9321 | The port for sphinx search server. |
+| CACHE_DEFAULT_TIMEOUT | 86400 | The time in seconds in which the db queries for `topics` and `translations` will be cached. Default 24 hours, as changing rarely. |
 | LOGGING_CFG | logging-cfg-local.yml | Logging configuration file |
 | FORWARED_ALLOW_IPS | `*` | Sets the gunicorn `forwarded_allow_ips` (see https://docs.gunicorn.org/en/stable/settings.html#forwarded-allow-ips). This is required in order to `secure_scheme_headers` to works. |
 | FORWARDED_PROTO_HEADER_NAME | `X-Forwarded-Proto` | Sets gunicorn `secure_scheme_headers` parameter to `{FORWARDED_PROTO_HEADER_NAME: 'https'}`, see https://docs.gunicorn.org/en/stable/settings.html#secure-scheme-headers. |

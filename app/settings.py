@@ -72,6 +72,10 @@ SCRIPT_NAME = os.getenv('SCRIPT_NAME', '')  # This is used by unicorn for route 
 # geodata stagings can be dev, int or prod
 GEODATA_STAGING = os.getenv('GEODATA_STAGING', 'prod')
 
+# Flask-Caching
+CACHE_TYPE = os.getenv('CACHE_TYPE', 'SimpleCache')
+CACHE_DEFAULT_TIMEOUT = int(os.getenv('CACHE_DEFAULT_TIMEOUT', '86400'))  # 24 h
+
 # SQL Alchemy
 # pylint: disable=line-too-long
 SQLALCHEMY_DATABASE_URI = \

@@ -4,6 +4,7 @@ import re
 import time
 
 import psycopg2 as psy
+from flask_caching import Cache
 from werkzeug.exceptions import HTTPException
 
 from flask import Flask
@@ -22,6 +23,8 @@ route_logger = logging.getLogger('app.routes')
 
 app = Flask(__name__)
 app.config.from_object(settings)
+
+cache = Cache(app)
 
 # TODO: This will have to be discussed in a general manner.
 # Right now the topics do not serve anything else than returning HTTP 400
