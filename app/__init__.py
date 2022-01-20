@@ -76,4 +76,13 @@ def handle_exception(err):
     return make_error_msg(500, "Internal server error, please consult logs")
 
 
+@app.teardown_appcontext
+def close_db_connection(exception):
+    if exception:
+        logger.exception('Unexpected exception: %s', exception)
+    # close db connection
+    if hasattr(g, 'db_connection'):
+        g.db_connection.close()
+
+
 from app import routes  # isort:skip pylint: disable=wrong-import-position

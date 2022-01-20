@@ -1,13 +1,11 @@
 import logging
 
-import psycopg2 as psy
 from werkzeug.exceptions import BadRequest
 
-from app.helpers.db_caching import get_topics_from_db
+from app.helpers.db import get_topics
 from app.helpers.helpers_search import float_raise_nan
 from app.helpers.helpers_search import ilen
 from app.helpers.helpers_search import shift_to
-from app.settings import FALLBACK_TOPICS
 
 SUPPORTED_OUTPUT_SRS = (21781, 2056, 3857, 4326)
 
@@ -22,18 +20,7 @@ class MapNameValidation(object):  # pylint: disable=too-few-public-methods
 
     @staticmethod
     def has_topic(topic_name):
-        # TODO: This will have to be discussed in a general manner.
-        # Right now the topics do not serve anything else than returning HTTP 400
-        # when the topic does not exist. No filtering is being done on it at all
-        # f.ex searching for lagefixpunkte in topic bafu, which is meaningless
-        # https://api3.geo.admin.ch/2111231107/rest/services/bafu/SearchServer?sr=2056&searchText=CH030000123112311020&lang=en&type=featuresearch&features=ch.swisstopo.fixpunkte-lfp1&timeEnabled=false&timeStamps=
-        try:
-            topics = get_topics_from_db()
-        except psy.Error:
-            topics = FALLBACK_TOPICS
-            logger.error("Connection to the db base could not be established." \
-            " Using fallback %s", FALLBACK_TOPICS)
-
+        topics = get_topics()
         if topic_name not in topics:
             raise BadRequest(f'The map ({topic_name}) you provided does not exist')
 

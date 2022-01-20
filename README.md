@@ -65,8 +65,7 @@ For local development you will need access to a running sphinx search server and
 
 #### Database access
 
-Right now the database is being accessed to validate, if the <topic> in the search path exists or not. It is not even being filtered on this. It is just a validation.
-And the <translations> are being accessed to translate some labels of the returned results.
+Right now the database BOD is being accessed , to retrieve the <topics> and to do <translations> on labels.
 
 ### Linting and formatting your work
 

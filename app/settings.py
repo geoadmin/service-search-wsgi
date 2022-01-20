@@ -22,8 +22,7 @@ BOD_DB_HOST = os.getenv('BOD_DB_HOST', None)
 BOD_DB_PORT = int(os.getenv('BOD_DB_PORT', '5432'))
 BOD_DB_USER = os.getenv('BOD_DB_USER', 'www-data')
 BOD_DB_PASSWD = os.getenv('BOD_DB_PASSWD', None)
-BOD_DB_CONNECT_TIMEOUT = int(os.getenv('BOD_DB_CONNECT_TIMEOUT', '10'))
-BOD_DB_CONNECT_RETRIES = int(os.getenv('BOD_DB_CONNECT_RETRIES', '3'))
+BOD_DB_CONNECT_TIMEOUT = int(os.getenv('BOD_DB_CONNECT_TIMEOUT', '1'))
 
 FALLBACK_TOPICS = [
     'all',
@@ -73,7 +72,7 @@ SCRIPT_NAME = os.getenv('SCRIPT_NAME', '')  # This is used by unicorn for route 
 GEODATA_STAGING = os.getenv('GEODATA_STAGING', 'prod')
 
 # Flask-Caching
-CACHE_TYPE = os.getenv('CACHE_TYPE', 'SimpleCache')
+CACHE_TYPE = 'SimpleCache'
 CACHE_DEFAULT_TIMEOUT = int(os.getenv('CACHE_DEFAULT_TIMEOUT', '86400'))  # 24 h
 
 # SQL Alchemy

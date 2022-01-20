@@ -11,7 +11,7 @@ from werkzeug.exceptions import NotFound
 from werkzeug.exceptions import ServiceUnavailable
 
 from app.helpers import mortonspacekey as msk
-from app.helpers.db_caching import get_translation
+from app.helpers.db import get_translation
 from app.helpers.helpers_search import _transform_point as transform_coordinate
 from app.helpers.helpers_search import center_from_box2d
 from app.helpers.helpers_search import format_locations_search_text
