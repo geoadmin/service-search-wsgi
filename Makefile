@@ -35,7 +35,7 @@ PIP_FILE = Pipfile
 PIP_FILE_LOCK = Pipfile.lock
 
 # default configuration
-ENV_FILE ?= .env.default
+ENV_FILE ?= .env.local
 HTTP_PORT ?= 5000
 ROUTE_PREFIX ?='' # this will be set in a later iteration
 
@@ -96,6 +96,8 @@ dev: $(REQUIREMENTS)
 setup: $(REQUIREMENTS)
 	pipenv install
 	pipenv shell
+	cp -n .env.default .env.local
+
 
 
 .PHONY: ci
@@ -139,7 +141,7 @@ test:
 
 .PHONY: test-integration
 test-integration: test
-	ENV_FILE=.env.test $(NOSE) -c tests/unittest.cfg --verbose -s tests/integration_tests/
+	ENV_FILE=$(ENV_FILE) $(NOSE) -c tests/unittest.cfg --verbose -s tests/integration_tests/
 
 
 # Serve targets. Using these will run the application on your local machine. You can either serve with a wsgi front (like it would be within the container), or without.

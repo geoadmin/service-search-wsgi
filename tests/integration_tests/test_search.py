@@ -164,6 +164,37 @@ class TestSearchService(BaseSearchTest):  # pylint: disable=too-many-public-meth
             self.assertGreater(len(response.json['results']), 0)
             self.assertAttrs('locations', response.json['results'][0]['attrs'], int(sr))
 
+    def test_search_locations_labels(self):
+        # default sr 21781
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='inspire',
+                type='locations',
+                searchText='bern bern',
+                limit='1'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertIn('Ort', response.json['results'][0]['attrs']['label'])
+
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='inspire',
+                type='locations',
+                searchText='bern bern',
+                limit='1',
+                lang='fr'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'application/json')
+        self.assertIn('Lieu', response.json['results'][0]['attrs']['label'])
+
     def test_search_loactions_with_cb(self):
         response = self.app.get(
             url_for(

@@ -11,6 +11,7 @@ from werkzeug.exceptions import NotFound
 from werkzeug.exceptions import ServiceUnavailable
 
 from app.helpers import mortonspacekey as msk
+from app.helpers.db import get_translation
 from app.helpers.helpers_search import _transform_point as transform_coordinate
 from app.helpers.helpers_search import center_from_box2d
 from app.helpers.helpers_search import format_locations_search_text
@@ -662,12 +663,9 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
 
     def _translate_label(self, label):
         translation = re.search(r'.*(<i>[\s\S]*?<\/i>).*', label) or False
-        # TODO ugly hack - find a way to translate
-        translation = False
         if translation:
-            translated = self.request.translate(translation.group(1))
+            translated = get_translation(translation.group(1), self.lang)
             label = label.replace(translation.group(1), f'<i>{translated}</i>')
-
         return label
 
     def _get_quad_index(self):

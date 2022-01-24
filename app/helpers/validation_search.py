@@ -2,7 +2,7 @@ import logging
 
 from werkzeug.exceptions import BadRequest
 
-from app import topics
+from app.helpers.db import get_topics
 from app.helpers.helpers_search import float_raise_nan
 from app.helpers.helpers_search import ilen
 from app.helpers.helpers_search import shift_to
@@ -20,6 +20,7 @@ class MapNameValidation(object):  # pylint: disable=too-few-public-methods
 
     @staticmethod
     def has_topic(topic_name):
+        topics = get_topics()
         if topic_name not in topics:
             raise BadRequest(f'The map ({topic_name}) you provided does not exist')
 

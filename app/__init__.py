@@ -3,7 +3,7 @@ import os
 import re
 import time
 
-import psycopg2 as psy
+from flask_caching import Cache
 from werkzeug.exceptions import HTTPException
 
 from flask import Flask
@@ -12,7 +12,6 @@ from flask import g
 from flask import request
 
 from app import settings
-from app.helpers.utils import get_topics_from_db
 from app.helpers.utils import make_error_msg
 
 logger = logging.getLogger(__name__)
@@ -23,17 +22,7 @@ route_logger = logging.getLogger('app.routes')
 app = Flask(__name__)
 app.config.from_object(settings)
 
-# TODO: This will have to be discussed in a general manner.
-# Right now the topics do not serve anything else than returning HTTP 400
-# when the topic does not exist. No filtering is being done on it at all
-# f.ex searching for lagefixpunkte in topic bafu, which is meaningless
-# https://api3.geo.admin.ch/2111231107/rest/services/bafu/SearchServer?sr=2056&searchText=CH030000123112311020&lang=en&type=featuresearch&features=ch.swisstopo.fixpunkte-lfp1&timeEnabled=false&timeStamps=
-try:
-    topics = get_topics_from_db()
-except psy.Error:
-    topics = settings.FALLBACK_TOPICS
-    logger.error("Connection to the db base could not be established." \
-            " Using fallback %s", settings.FALLBACK_TOPICS)
+cache = Cache(app)
 
 
 # NOTE it is better to have this method registered first (before validate_origin) otherwise
@@ -85,6 +74,15 @@ def handle_exception(err):
 
     logger.exception('Unexpected exception: %s', err)
     return make_error_msg(500, "Internal server error, please consult logs")
+
+
+@app.teardown_appcontext
+def close_db_connection(exception):
+    if exception:
+        logger.exception('Unexpected exception: %s', exception)
+    # close db connection
+    if hasattr(g, 'db_connection'):
+        g.db_connection.close()
 
 
 from app import routes  # isort:skip pylint: disable=wrong-import-position
