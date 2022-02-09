@@ -396,7 +396,7 @@ class TestSearchService(BaseSearchTest):  # pylint: disable=too-many-public-meth
         self.assertGreater(len(list(response.json['results'])), 0)
         self.assertTrue('geom_st_box2d' not in response.json['results'][0]['attrs'].keys())
         self.assertAttrs(
-            'locations', response.json['results'][0]['attrs'], 21781, returnGeometry=False
+            'locations', response.json['results'][0]['attrs'], 21781, return_geometry=False
         )
 
     def test_search_locations_geojson(self):
@@ -415,7 +415,7 @@ class TestSearchService(BaseSearchTest):  # pylint: disable=too-many-public-meth
         self.assertEqual('FeatureCollection', response.json['type'])
         self.assertGreater(len(list(response.json['features'])), 0)
         self.assertGeojsonFeature(
-            response.json['features'][0], 21781, hasGeometry=True, hasLayer=False
+            response.json['features'][0], 21781, has_geometry=True, has_layer=False
         )
         self.assertAttrs('locations', response.json['features'][0]['properties'], 21781)
         self.assertIn('wabern', str(response.json['features']).lower())
@@ -434,7 +434,7 @@ class TestSearchService(BaseSearchTest):  # pylint: disable=too-many-public-meth
         self.assertEqual(response.status_code, 200)
         self.assertEqual('FeatureCollection', response.json['type'])
         self.assertGeojsonFeature(
-            response.json['features'][0], 2056, hasGeometry=True, hasLayer=False
+            response.json['features'][0], 2056, has_geometry=True, has_layer=False
         )
         self.assertIn('wabern', str(response.json['features']).lower())
         response = self.app.get(
@@ -452,7 +452,7 @@ class TestSearchService(BaseSearchTest):  # pylint: disable=too-many-public-meth
         self.assertEqual(response.status_code, 200)
         self.assertEqual('FeatureCollection', response.json['type'])
         self.assertGeojsonFeature(
-            response.json['features'][0], 3857, hasGeometry=True, hasLayer=False
+            response.json['features'][0], 3857, has_geometry=True, has_layer=False
         )
         self.assertIn('wabern', str(response.json['features']).lower())
         response = self.app.get(
@@ -470,7 +470,7 @@ class TestSearchService(BaseSearchTest):  # pylint: disable=too-many-public-meth
         self.assertEqual(response.status_code, 200)
         self.assertEqual('FeatureCollection', response.json['type'])
         self.assertGeojsonFeature(
-            response.json['features'][0], 4326, hasGeometry=True, hasLayer=False
+            response.json['features'][0], 4326, has_geometry=True, has_layer=False
         )
         self.assertIn('wabern', str(response.json['features']).lower())
 
@@ -618,7 +618,7 @@ class TestSearchService(BaseSearchTest):  # pylint: disable=too-many-public-meth
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content_type, 'application/json')
         self.assertAttrs(
-            'featuresearch', response.json['results'][0]['attrs'], 21781, spatialOrder=True
+            'featuresearch', response.json['results'][0]['attrs'], 21781, spatial_order=True
         )
         response = self.app.get(
             url_for(
@@ -635,7 +635,7 @@ class TestSearchService(BaseSearchTest):  # pylint: disable=too-many-public-meth
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content_type, 'application/json')
         self.assertAttrs(
-            'featuresearch', response.json['results'][0]['attrs'], 2056, spatialOrder=True
+            'featuresearch', response.json['results'][0]['attrs'], 2056, spatial_order=True
         )
 
     def test_search_features_searchtext(self):
@@ -807,7 +807,7 @@ class TestSearchService(BaseSearchTest):  # pylint: disable=too-many-public-meth
         )
         self.assertEqual(len(response.json['results']), 1)
         self.assertAttrs(
-            'locations', response.json['results'][0]['attrs'], 21781, spatialOrder=True
+            'locations', response.json['results'][0]['attrs'], 21781, spatial_order=True
         )
         response = self.app.get(
             url_for(
@@ -826,7 +826,9 @@ class TestSearchService(BaseSearchTest):  # pylint: disable=too-many-public-meth
             'buechli  5306 tegerfelden 4320 tegerfelden ch ag'
         )
         self.assertEqual(len(response.json['results']), 1)
-        self.assertAttrs('locations', response.json['results'][0]['attrs'], 2056, spatialOrder=True)
+        self.assertAttrs(
+            'locations', response.json['results'][0]['attrs'], 2056, spatial_order=True
+        )
 
     def test_search_locations_with_bbox_sort(self):
         response = self.app.get(
@@ -845,7 +847,7 @@ class TestSearchService(BaseSearchTest):  # pylint: disable=too-many-public-meth
             'buechli 1.1 5306 tegerfelden 4320 tegerfelden ch ag'
         )
         self.assertAttrs(
-            'locations', response.json['results'][0]['attrs'], 21781, spatialOrder=True
+            'locations', response.json['results'][0]['attrs'], 21781, spatial_order=True
         )
         response = self.app.get(
             url_for(
@@ -863,7 +865,9 @@ class TestSearchService(BaseSearchTest):  # pylint: disable=too-many-public-meth
             response.json['results'][0]['attrs']['detail'],
             'buechli 1.1 5306 tegerfelden 4320 tegerfelden ch ag'
         )
-        self.assertAttrs('locations', response.json['results'][0]['attrs'], 2056, spatialOrder=True)
+        self.assertAttrs(
+            'locations', response.json['results'][0]['attrs'], 2056, spatial_order=True
+        )
         response = self.app.get(
             url_for(
                 'search_server',
@@ -881,7 +885,7 @@ class TestSearchService(BaseSearchTest):  # pylint: disable=too-many-public-meth
             'buechli 1.1 5306 tegerfelden 4320 tegerfelden ch ag'
         )
         self.assertAttrs(
-            'locations', response.json['results'][0]['attrs'], 21781, spatialOrder=True
+            'locations', response.json['results'][0]['attrs'], 21781, spatial_order=True
         )
         response = self.app.get(
             url_for(
@@ -915,7 +919,7 @@ class TestSearchService(BaseSearchTest):  # pylint: disable=too-many-public-meth
         self.assertEqual(response.content_type, 'application/json')
         self.assertGreater(len(response.json['results']), 1)
         self.assertAttrs(
-            'locations', response.json['results'][0]['attrs'], 21781, spatialOrder=True
+            'locations', response.json['results'][0]['attrs'], 21781, spatial_order=True
         )
         response = self.app.get(
             url_for(
@@ -930,7 +934,9 @@ class TestSearchService(BaseSearchTest):  # pylint: disable=too-many-public-meth
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content_type, 'application/json')
         self.assertGreater(len(response.json['results']), 1)
-        self.assertAttrs('locations', response.json['results'][0]['attrs'], 2056, spatialOrder=True)
+        self.assertAttrs(
+            'locations', response.json['results'][0]['attrs'], 2056, spatial_order=True
+        )
 
     def test_features_timeinstant(self):
         response = self.app.get(
@@ -949,7 +955,7 @@ class TestSearchService(BaseSearchTest):  # pylint: disable=too-many-public-meth
         self.assertEqual(response.content_type, 'application/json')
         self.assertEqual(response.json['results'][0]['attrs']['origin'], 'feature')
         self.assertAttrs(
-            'featuresearch', response.json['results'][0]['attrs'], 21781, spatialOrder=True
+            'featuresearch', response.json['results'][0]['attrs'], 21781, spatial_order=True
         )
         response = self.app.get(
             url_for(
@@ -968,7 +974,7 @@ class TestSearchService(BaseSearchTest):  # pylint: disable=too-many-public-meth
         self.assertEqual(response.content_type, 'application/json')
         self.assertEqual(response.json['results'][0]['attrs']['origin'], 'feature')
         self.assertAttrs(
-            'featuresearch', response.json['results'][0]['attrs'], 2056, spatialOrder=True
+            'featuresearch', response.json['results'][0]['attrs'], 2056, spatial_order=True
         )
 
     def test_features_timestamp(self):
@@ -1005,7 +1011,7 @@ class TestSearchService(BaseSearchTest):  # pylint: disable=too-many-public-meth
         self.assertEqual(response.content_type, 'application/json')
         self.assertEqual(response.json['results'][0]['attrs']['origin'], 'feature')
         self.assertAttrs(
-            'featuresearch', response.json['results'][0]['attrs'], 21781, spatialOrder=True
+            'featuresearch', response.json['results'][0]['attrs'], 21781, spatial_order=True
         )
 
     def test_features_none_first_timestamp(self):
@@ -1042,7 +1048,7 @@ class TestSearchService(BaseSearchTest):  # pylint: disable=too-many-public-meth
         self.assertEqual(response.content_type, 'application/json')
         self.assertEqual(response.json['results'][0]['attrs']['origin'], 'feature')
         self.assertAttrs(
-            'featuresearch', response.json['results'][0]['attrs'], 21781, spatialOrder=True
+            'featuresearch', response.json['results'][0]['attrs'], 21781, spatial_order=True
         )
 
     def test_features_timeInterval(self):

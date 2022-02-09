@@ -2,10 +2,9 @@ from flask import url_for
 
 from tests.unit_tests.base_test import BaseSearchTest
 
-# pylint: disable=invalid-name,too-many-lines
 
-
-class TestSearchServiceValidation(BaseSearchTest):  # pylint: disable=line-too-long,too-many-public-methods
+class TestSearchServiceValidation(BaseSearchTest):
+    # pylint: disable=too-many-public-methods
 
     def test_no_type(self):
         response = self.app.get(
@@ -20,11 +19,11 @@ class TestSearchServiceValidation(BaseSearchTest):  # pylint: disable=line-too-l
             headers=self.origin_headers["allowed"]
         )
         self.assertEqual(response.status_code, 400)
-        acceptedTypes = ['locations', 'layers', 'featuresearch']
+        accepted_types = ['locations', 'layers', 'featuresearch']
         self.assertIn(
             response.json['error']['message'],
             "The type parameter you provided is not valid."
-            f" Possible values are {', '.join(acceptedTypes)}"
+            f" Possible values are {', '.join(accepted_types)}"
         )
 
     def test_searchtext_none_value_layers(self):
@@ -148,7 +147,7 @@ class TestSearchServiceValidation(BaseSearchTest):  # pylint: disable=line-too-l
                 topic='api',
                 type='locations',
                 searchText='Wabern',
-                returnGeometry='true',
+                return_geometry='true',
                 geometryFormat='esrijson'
             ),
             headers=self.origin_headers["allowed"]

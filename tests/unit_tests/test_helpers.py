@@ -21,10 +21,8 @@ from app.helpers.helpers_search import remove_accents
 from app.helpers.helpers_search import round_geometry_coordinates
 from app.helpers.helpers_search import transform_round_geometry
 
-# pylint: disable=invalid-name
 
-
-class Test_Helpers(TestCase):
+class TestHelpers(TestCase):
 
     def test_format_search_text(self):
         testinput_str = 'Hallo!'
@@ -53,8 +51,8 @@ class Test_Helpers(TestCase):
             float_raise_nan(float('nan'))
 
     def test_parse_box2d(self):
-        strBox2d = 'BOX(1.1 2.2,3.3 4.4)'
-        box2d = parse_box2d(strBox2d)
+        str_box_2d = 'BOX(1.1 2.2,3.3 4.4)'
+        box2d = parse_box2d(str_box_2d)
         self.assertEqual(box2d[0], 1.1)
         self.assertEqual(box2d[1], 2.2)
         self.assertEqual(box2d[2], 3.3)
