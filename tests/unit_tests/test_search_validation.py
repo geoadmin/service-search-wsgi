@@ -12,6 +12,7 @@ class TestSearchServiceValidation(BaseSearchTest):
             headers=self.origin_headers["allowed"]
         )
         self.assertEqual(response.status_code, 400)
+        self.assertCacheControl(response)
 
     def test_unaccepted_type(self):
         response = self.app.get(
@@ -25,6 +26,7 @@ class TestSearchServiceValidation(BaseSearchTest):
             "The type parameter you provided is not valid."
             f" Possible values are {', '.join(accepted_types)}"
         )
+        self.assertCacheControl(response)
 
     def test_searchtext_none_value_layers(self):
         response = self.app.get(
@@ -33,6 +35,7 @@ class TestSearchServiceValidation(BaseSearchTest):
         )
         self.assertEqual(response.status_code, 400)
         self.assertIn(response.json['error']['message'], "Please provide a search text")
+        self.assertCacheControl(response)
 
     def test_searchtext_empty_string_layers(self):
         response = self.app.get(
@@ -41,6 +44,7 @@ class TestSearchServiceValidation(BaseSearchTest):
         )
         self.assertEqual(response.status_code, 400)
         self.assertIn(response.json['error']['message'], "Please provide a search text")
+        self.assertCacheControl(response)
 
     def test_searchtext_none_locations(self):
         response = self.app.get(
@@ -49,6 +53,7 @@ class TestSearchServiceValidation(BaseSearchTest):
         )
         self.assertEqual(response.status_code, 400)
         self.assertIn(response.json['error']['message'], "Please provide a search text")
+        self.assertCacheControl(response)
 
     def test_searchtext_none_value_locations(self):
         response = self.app.get(
@@ -57,6 +62,7 @@ class TestSearchServiceValidation(BaseSearchTest):
         )
         self.assertEqual(response.status_code, 400)
         self.assertIn(response.json['error']['message'], "Please provide a search text")
+        self.assertCacheControl(response)
 
     def test_searchtext_none_featuresearch(self):
         response = self.app.get(
@@ -65,6 +71,7 @@ class TestSearchServiceValidation(BaseSearchTest):
         )
         self.assertEqual(response.status_code, 400)
         self.assertIn(response.json['error']['message'], "Please provide a search text")
+        self.assertCacheControl(response)
 
     def test_searchtext_none_value_featuresearch(self):
         response = self.app.get(
@@ -73,6 +80,7 @@ class TestSearchServiceValidation(BaseSearchTest):
         )
         self.assertEqual(response.status_code, 400)
         self.assertIn(response.json['error']['message'], "Please provide a search text")
+        self.assertCacheControl(response)
 
     def test_bbox_wrong_number_coordinates(self):
         response = self.app.get(
@@ -90,6 +98,7 @@ class TestSearchServiceValidation(BaseSearchTest):
             'Please provide 4 coordinates in a comma separated list',
             response.json['error']['message']
         )
+        self.assertCacheControl(response)
 
     def test_bbox_check_first_second_coordinates(self):
         response = self.app.get(
@@ -107,6 +116,7 @@ class TestSearchServiceValidation(BaseSearchTest):
             response.json['error']['message'],
             'The first coordinate must be higher than the second'
         )
+        self.assertCacheControl(response)
 
     def test_bbox_check_third_fourth_coordinates(self):
         response = self.app.get(
@@ -125,6 +135,7 @@ class TestSearchServiceValidation(BaseSearchTest):
             response.json['error']['message'],
             'The third coordinate must be higher than the fourth'
         )
+        self.assertCacheControl(response)
 
     def test_search_locations_wrong_topic(self):
         response = self.app.get(
@@ -139,6 +150,7 @@ class TestSearchServiceValidation(BaseSearchTest):
         )
         self.assertEqual(response.status_code, 400)
         self.assertIn('you provided does not exist', response.json['error']['message'])
+        self.assertCacheControl(response)
 
     def test_search_locations_esrijson(self):
         response = self.app.get(
@@ -156,6 +168,7 @@ class TestSearchServiceValidation(BaseSearchTest):
         self.assertIn(
             "Param 'geometryFormat=esrijson' is not supported", response.json['error']['message']
         )
+        self.assertCacheControl(response)
 
     def test_search_locations_bad_origin(self):
         response = self.app.get(
@@ -169,6 +182,7 @@ class TestSearchServiceValidation(BaseSearchTest):
             headers=self.origin_headers["allowed"]
         )
         self.assertEqual(response.status_code, 400)
+        self.assertCacheControl(response)
 
     def test_search_locations_noparams(self):
         response = self.app.get(
@@ -176,6 +190,7 @@ class TestSearchServiceValidation(BaseSearchTest):
             headers=self.origin_headers["allowed"]
         )
         self.assertEqual(response.status_code, 400)
+        self.assertCacheControl(response)
 
     def test_nodigit_timeinstant(self):
         response = self.app.get(
@@ -195,6 +210,7 @@ class TestSearchServiceValidation(BaseSearchTest):
             'Please provide an integer for the parameter timeInstant',
             response.json['error']['message']
         )
+        self.assertCacheControl(response)
 
     def test_features_wrong_time(self):
         response = self.app.get(
@@ -210,6 +226,7 @@ class TestSearchServiceValidation(BaseSearchTest):
             headers=self.origin_headers["allowed"]
         )
         self.assertEqual(response.status_code, 400)
+        self.assertCacheControl(response)
 
     def test_features_wrong_time_2(self):
         response = self.app.get(
@@ -225,6 +242,7 @@ class TestSearchServiceValidation(BaseSearchTest):
             headers=self.origin_headers["allowed"]
         )
         self.assertEqual(response.status_code, 400)
+        self.assertCacheControl(response)
 
     def test_features_mix_timeinstant_timestamps(self):
         response = self.app.get(
@@ -241,6 +259,7 @@ class TestSearchServiceValidation(BaseSearchTest):
             headers=self.origin_headers["allowed"]
         )
         self.assertEqual(response.status_code, 400)
+        self.assertCacheControl(response)
 
     def test_features_wrong_timestamps(self):
         response = self.app.get(
@@ -256,6 +275,7 @@ class TestSearchServiceValidation(BaseSearchTest):
             headers=self.origin_headers["allowed"]
         )
         self.assertEqual(response.status_code, 400)
+        self.assertCacheControl(response)
 
     def test_nondigit_timestamps(self):
         response = self.app.get(
@@ -274,6 +294,7 @@ class TestSearchServiceValidation(BaseSearchTest):
         self.assertIn(
             'Please provide integers for timeStamps parameter', response.json['error']['message']
         )
+        self.assertCacheControl(response)
 
     def test_features_wrong_timestamps_2(self):
         response = self.app.get(
@@ -289,6 +310,7 @@ class TestSearchServiceValidation(BaseSearchTest):
             headers=self.origin_headers["allowed"]
         )
         self.assertEqual(response.status_code, 400)
+        self.assertCacheControl(response)
 
     def test_locations_search_wrong_limit(self):
         response = self.app.get(
@@ -334,6 +356,7 @@ class TestSearchServiceValidation(BaseSearchTest):
             headers=self.origin_headers["allowed"]
         )
         self.assertEqual(response.status_code, 400)
+        self.assertCacheControl(response)
 
     def test_bbox_nan(self):
         response = self.app.get(
@@ -351,6 +374,7 @@ class TestSearchServiceValidation(BaseSearchTest):
             'Please provide numerical values for the parameter bbox',
             response.json['error']['message'],
         )
+        self.assertCacheControl(response)
 
     def test_search_lang_no_support(self):
         response = self.app.get(
@@ -365,3 +389,4 @@ class TestSearchServiceValidation(BaseSearchTest):
             headers=self.origin_headers["allowed"]
         )
         self.assertEqual(response.status_code, 400)
+        self.assertCacheControl(response)

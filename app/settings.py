@@ -89,3 +89,6 @@ ALLOWED_DOMAINS_PATTERN = f"({format('|'.join(ALLOWED_DOMAINS))})"
 # Proxy settings
 FORWARED_ALLOW_IPS = os.getenv('FORWARED_ALLOW_IPS', '*')
 FORWARDED_PROTO_HEADER_NAME = os.getenv('FORWARDED_PROTO_HEADER_NAME', 'X-Forwarded-Proto')
+
+# Cache-Control
+CACHE_CONTROL_HEADER = os.getenv('CACHE_CONTROL_HEADER', 'public, max-age=600')

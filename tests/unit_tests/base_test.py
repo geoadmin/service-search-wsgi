@@ -5,6 +5,7 @@ from gatilegrid import getTileGrid
 from app import app
 from app.helpers.helpers_search import parse_box2d
 from app.helpers.validation_search import SUPPORTED_OUTPUT_SRS
+from app.settings import CACHE_CONTROL_HEADER
 
 
 class BaseSearchTest(unittest.TestCase):
@@ -104,3 +105,7 @@ class BaseSearchTest(unittest.TestCase):
         self.assertNotIn('x_lv95', attrs)
         self.assertNotIn('y_lv95', attrs)
         self.assertNotIn('geom_st_box2d_lv95', attrs)
+
+    def assertCacheControl(self, response):
+        self.assertIn('Cache-Control', response.headers)
+        self.assertEqual(response.headers['Cache-Control'], CACHE_CONTROL_HEADER)
