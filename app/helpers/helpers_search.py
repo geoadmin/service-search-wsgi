@@ -147,7 +147,8 @@ def transform_round_geometry(geom, srid_from, srid_to, rounding=True):
 # Only a point or a line are considered
 def _transform_coordinates(coordinates, srid_from, srid_to, rounding=True):
     if len(coordinates) % 2 != 0:
-        raise ValueError
+        logger.error("Invalid coordinates %s, must be two numbers", coordinates)
+        raise ValueError(f"Invalid coordinates {coordinates}, must be two numbers")
     new_coords = []
     coords_iter = iter(coordinates)
     try:
@@ -157,6 +158,7 @@ def _transform_coordinates(coordinates, srid_from, srid_to, rounding=True):
         if rounding:
             precision = get_precision_for_proj(srid_to)
             new_coords = _round_bbox_coordinates(new_coords, precision=precision)
+    #TODO: Remove broad exception
     except Exception as e:
         logger.error(
             "Cannot transform coordinates %s from %s to %s, %s", coordinates, srid_from, srid_to, e
@@ -209,7 +211,7 @@ def is_box2d(box2D):
         box2D = list(box2D)
     # Bottom left to top right only
     if len(box2D) != 4 or box2D[0] > box2D[2] or box2D[1] > box2D[3]:
-        raise ValueError('Invalid box2D.')
+        raise ValueError(f'Invalid box2D {box2D}.')
     return box2D
 
 

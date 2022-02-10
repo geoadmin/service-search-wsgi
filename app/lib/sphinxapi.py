@@ -675,6 +675,7 @@ class SphinxClient:
         assert isinstance(query, str)
         req.append(pack('>L', len(query)))
         req.append(query.encode())
+        logger.debug("The added Query %s, index %s, comment %s", query, index, comment)
 
         req.append(pack('>L', len(self._weights)))
         for w in self._weights:
