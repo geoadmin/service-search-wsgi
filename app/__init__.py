@@ -45,6 +45,17 @@ def add_cors_header(response):
     return response
 
 
+# Add Cache-Control Headers to all request except for checker
+@app.after_request
+def add_cache_control_header(response):
+    # Do not add Cache-Control header to internal /checker endpoint.
+    if request.endpoint == 'checker':
+        return response
+
+    response.headers['Cache-Control'] = settings.CACHE_CONTROL_HEADER
+    return response
+
+
 # NOTE it is better to have this method registered last (after add_cors_header) otherwise
 # the response might not be correct (e.g. headers added in another after_request hook).
 @app.after_request

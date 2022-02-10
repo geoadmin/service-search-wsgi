@@ -5,8 +5,7 @@ from gatilegrid import getTileGrid
 from app import app
 from app.helpers.helpers_search import parse_box2d
 from app.helpers.validation_search import SUPPORTED_OUTPUT_SRS
-
-# pylint: disable=invalid-name,too-many-lines
+from app.settings import CACHE_CONTROL_HEADER
 
 
 class BaseSearchTest(unittest.TestCase):
@@ -25,28 +24,28 @@ class BaseSearchTest(unittest.TestCase):
             '4326': getTileGrid(4326)
         }
 
-    def assertGeojsonFeature(self, feature, srid, hasGeometry=True, hasLayer=True):
+    def assertGeojsonFeature(self, feature, srid, has_geometry=True, has_layer=True):
         self.assertIn('id', feature)
         self.assertIn('properties', feature)
         self.assertNotIn('attributes', feature)
-        if hasLayer:
+        if has_layer:
             self.assertIn('layerBodId', feature)
             self.assertIn('layerName', feature)
-        if hasGeometry:
+        if has_geometry:
             self.assertIn('geometry', feature)
             self.assertIn('type', feature)
             self.assertIn('type', feature['geometry'])
             self.assertIn('bbox', feature)
             self.assertBBoxValidity(feature['bbox'], srid)
 
-    def assertEsrijsonFeature(self, feature, srid, hasGeometry=True, hasLayer=True):
+    def assertEsrijsonFeature(self, feature, srid, has_geometry=True, has_layer=True):
         self.assertIn('id', feature)
         self.assertNotIn('properties', feature)
         self.assertIn('attributes', feature)
-        if hasLayer:
+        if has_layer:
             self.assertIn('layerBodId', feature)
             self.assertIn('layerName', feature)
-        if hasGeometry:
+        if has_geometry:
             self.assertIn('geometry', feature)
             self.assertIn('bbox', feature)
             self.assertEqual(feature['geometry']['spatialReference']['wkid'], srid)
@@ -62,13 +61,13 @@ class BaseSearchTest(unittest.TestCase):
         self.assertGreaterEqual(minx, grid.MINX)
         self.assertGreaterEqual(miny, grid.MINY)
 
-    def assertAttrs(self, type_, attrs, srid, returnGeometry=True, spatialOrder=False):  # pylint: disable=too-many-arguments,line-too-long
+    def assertAttrs(self, type_, attrs, srid, return_geometry=True, spatial_order=False):
         self.assertIn('detail', attrs)
         self.assertIn('origin', attrs)
         self.assertIn('label', attrs)
         if type_ in ('locations'):
             self.assertIn('geom_quadindex', attrs)
-            if returnGeometry:
+            if return_geometry:
                 self.assertIn('lon', attrs)
                 self.assertIn('lat', attrs)
                 if srid == 21781:
@@ -95,14 +94,18 @@ class BaseSearchTest(unittest.TestCase):
             self.assertIn('featureId', attrs)
             self.assertIn('layer', attrs)
 
-        if type_ in ('locations', 'featuresearch') and returnGeometry:
+        if type_ in ('locations', 'featuresearch') and return_geometry:
             if hasattr(attrs, 'geom_st_box2d'):
                 bbox = parse_box2d(attrs['geom_st_box2d'])
                 self.assertBBoxValidity(bbox, srid)
-            if spatialOrder:
+            if spatial_order:
                 self.assertIn('@geodist', attrs)
             else:
                 self.assertNotIn('@geodist', attrs)
         self.assertNotIn('x_lv95', attrs)
         self.assertNotIn('y_lv95', attrs)
         self.assertNotIn('geom_st_box2d_lv95', attrs)
+
+    def assertCacheControl(self, response):
+        self.assertIn('Cache-Control', response.headers)
+        self.assertEqual(response.headers['Cache-Control'], CACHE_CONTROL_HEADER)
