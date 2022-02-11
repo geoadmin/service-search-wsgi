@@ -1,5 +1,9 @@
 # -*- coding: utf-8  -*-
 
+import unittest
+
+from nose2.tools import params
+
 from app.lib import sphinxapi
 from tests.unit_tests.base_test import BaseSearchTest
 
@@ -22,54 +26,107 @@ class TestSphinxApi(BaseSearchTest):
         api.GetLastWarning()
 
     def test_sphinx_set_server(self):
+        # pylint: disable=protected-access
         api = self._get_sphinx_client()
-        host1 = 'unix://host1'
+        host1 = 'unix://path1'
         port1 = 9312
         api.SetServer(host1, port1)
+        self.assertEqual(api._host, 'localhost')
+        self.assertEqual(api._port, port1)
+        self.assertEqual(api._path, 'path1')
 
         host2 = '/totohost'
         port2 = 65535
         api.SetServer(host2, port2)
+        self.assertEqual(api._host, 'localhost')
+        self.assertEqual(api._port, port2)
+        self.assertEqual(api._path, host2)
 
-    def test_sphinx_api(self):
+        host3 = 'my.domain.com'
+        port3 = 65535
+        api.SetServer(host3, port3)
+        self.assertEqual(api._host, 'my.domain.com')
+        self.assertEqual(api._port, port3)
+        self.assertEqual(api._path, None)
+
+    def test_sphinx_api_build_excerpts(self):
         api = self._get_sphinx_client()
         docs = [
             'this is my test text to be highlighted', 'this is another test text to be highlighted'
         ]
         words = 'test text'
-        index = 'layers'
+        index = 'layers_de'
         opts = {
-            'before_match': '<b>',
-            'after_match': '</b>',
+            'before_match': '<i>',
+            'after_match': '</i>',
             'chunk_separator': ' ... ',
             'limit': 400,
             'around': 15
         }
         res = api.BuildExcerpts(docs, index, words, opts)
-        self.assertFalse(res)
+        self.assertListEqual(
+            res,
+            [
+                'this is my <i>test</i> <i>text</i> to be highlighted',
+                'this is another <i>test</i> <i>text</i> to be highlighted'
+            ]
+        )
 
-    def test_sphinx_api_searchquery(self):
+    def test_sphinx_api_search_query(self):
         api = self._get_sphinx_client()
-        query = 'weShouldNotFoundAnyResultOnThisQuery'
+        query = 'bern'
         res = api.Query(query)
         self.assertNotEqual(res['status'], sphinxapi.SEARCHD_OK)
-        self.assertEqual(res['matches'], [])
-        self.assertEqual(res['total'], 0)
-        self.assertEqual(res['total_found'], 0)
+        self.assertGreaterEqual(len(res['matches']), 10)
+        self.assertGreaterEqual(res['total'], 10)
+        self.assertGreaterEqual(res['total_found'], 10)
+        self.assertEqual(
+            res['matches'][0],
+            {
+                'attrs': {
+                    'detail':
+                        'waermeversorgung der ueberbauung weltpoststrasse bern, '
+                        'mit eisspeicher-waermepumpe system unter nutzung von '
+                        'solar- und abwasserwaerme waermeversorgung der '
+                        'ueberbauung weltpoststrasse bern, mit '
+                        'eisspeicher-waermepumpe system unter nutzung von solar- '
+                        'und abwasserwaerme waermeversorgung der ueberbauung '
+                        'weltpoststrasse bern, mit eisspeicher-waermepumpe system '
+                        'unter nutzung von solar- und abwasserwaerme '
+                        'waermeversorgung der ueberbauung weltpoststrasse bern, '
+                        'mit eisspeicher-waermepumpe system unter nutzung von '
+                        'solar- und abwasserwaerme',
+                    'label':
+                        'Wärmeversorgung der Überbauung Weltpoststrasse Bern, mit '
+                        'Eisspeicher-Wärmepumpe System unter Nutzung von Solar- '
+                        'und Abwasserwärme',
+                    'origin': 'feature'
+                },
+                'id': 3981,
+                'weight': 1884
+            }
+        )
 
-    def test_sphinx_api_no_opts(self):
+    def test_sphinx_api_build_excerpts_no_opts(self):
         api = self._get_sphinx_client()
         docs = [
             'this is my test text to be highlighted', 'this is another test text to be highlighted'
         ]
         words = 'test text'
-        index = 'layers'
+        index = 'layers_de'
         res = api.BuildExcerpts(docs, index, words)
-        self.assertFalse(res)
+        self.assertListEqual(
+            res,
+            [
+                'this is my <b>test</b> <b>text</b> to be highlighted',
+                'this is another <b>test</b> <b>text</b> to be highlighted'
+            ]
+        )
 
+    @unittest.skip('Not able to update attributes on actual server')
     def test_update_attributes(self):
         api = self._get_sphinx_client()
-        index = 'layers'
+        index = 'zipcode'
         attrs = ['toto', 'tutu']
         values1 = {2: [123, 1000000000], 4: [456, 1234567890]}
         values2 = {
@@ -77,81 +134,95 @@ class TestSphinxApi(BaseSearchTest):
         }
 
         res1 = api.UpdateAttributes(index, attrs, values1)
-        self.assertIsNone(res1)
+        self.assertIsNotNone(res1)
 
         res2 = api.UpdateAttributes(index, attrs, values2, True)
-        self.assertIsNone(res2)
+        self.assertIsNotNone(res2)
 
-    def test_sphinx_api_query(self):  # pylint: disable=too-many-locals
+    @params(
+        (('rank', [1, 2]), None, None, 1, 10),
+        (None, 'rank', None, None, None),
+        (None, None, 'rank ASC', None, None),
+    )
+    def test_sphinx_api_query(self, search_filter, group_by, sort_by, limit, query_time):
         api = self._get_sphinx_client()
-        query = 'doma'
+        query = 'bern'
         mode = sphinxapi.SPH_MATCH_EXTENDED
-
         index = 'swisssearch'
-        filtercol = 'rank'
-        filtervals = [1, 2]
-        sortby = ''
-        groupby = ''
-        groupsort = '@rank ASC'
-        limit = 1
-        maxquerytime = 10
-        testquerytime = 11
-        minid = 1
-        maxid = 2000
 
         api.ResetGroupBy()
-        api.SetFieldWeights({'toto': 100})
-        api.SetIndexWeights({'toto': 99})
-        api.SetIDRange(minid, maxid)
+        api.SetFieldWeights({'detail': 100})
+        api.SetIndexWeights({'address': 99})
+        api.SetIDRange(1, 2000)
         api.SetMatchMode(mode)
-        if filtervals:
-            api.SetFilter(filtercol, filtervals)
-        if groupby:
-            api.SetGroupBy(groupby, sphinxapi.SPH_GROUPBY_ATTR, groupsort)
-        if sortby:
-            api.SetSortMode(sphinxapi.SPH_SORT_EXTENDED, sortby)
-        if limit:
+        if search_filter is not None:
+            api.SetFilter(*search_filter)
+        if group_by is not None:
+            api.SetGroupBy(group_by, sphinxapi.SPH_GROUPBY_ATTR, '@rank ASC')
+        if sort_by is not None:
+            api.SetSortMode(sphinxapi.SPH_SORT_EXTENDED, sort_by)
+        if limit is not None:
             api.SetLimits(0, limit, max(limit, 1000))
-        if testquerytime:
-            api.SetMaxQueryTime(maxquerytime)
+        if query_time is not None:
+            api.SetMaxQueryTime(query_time)
         res = api.Query(query, index=index)
         self.assertIsInstance(res, dict)
+        self.assertEqual(res['status'], sphinxapi.SEARCHD_OK)
 
-    def test_sphinxapi_query2(self):
+    def test_sphinxapi_query_overrides(self):
         api = self._get_sphinx_client()
-        attribute = 'toto'
-        name = 'bern'
-        groupsort = '@group desc'
-        sphtype = sphinxapi.SPH_ATTR_STRING
-        count = 15
-        min_ = 0.5
-        max_ = 799.8
-        values = {100: 'bern'}
+        query = 'bern'
+        index = 'swisssearch'
+        values = {100: 'test'}
 
         api.ResetOverrides()
-        api.SetFilterFloatRange(attribute, min_, max_)
-        if groupsort:
-            api.SetGroupBy(attribute, sphinxapi.SPH_GROUPBY_ATTR, groupsort)
-        if count:
-            api.SetRetries(count)
-        if sphtype:
-            api.SetOverride(name, sphtype, values)
-        if name:
-            api.SetSelect(name)
-        api.SetGroupDistinct(attribute)
+        api.SetFilterFloatRange('x', 0.5, 799.8)
+        api.SetOverride('label', sphinxapi.SPH_ATTR_STRING, values)
+        api.SetGroupBy('label', sphinxapi.SPH_GROUPBY_ATTR, '@group DESC')
+        api.SetSelect('label')
+        api.SetRetries(3)
+
+        api.SetGroupDistinct('label')
+        res = api.Query(query, index=index)
+        self.assertIsInstance(res, dict)
+        self.assertEqual(res['status'], sphinxapi.SEARCHD_OK)
+        self.assertEqual(res['fields'], ['detail', 'geom_quadindex'])
+        self.assertEqual(
+            res['attrs'],
+            [['feature_id', 7], ['detail', 7], ['origin', 7], ['geom_quadindex', 7],
+             ['geom_st_box2d', 7], ['geom_st_box2d_lv95', 7], ['rank', 1], ['x', 5], ['y', 5],
+             ['y_lv95', 5], ['x_lv95', 5], ['lat', 5], ['lon', 5], ['num', 1], ['zoomlevel', 1],
+             ['label', 7], ['@groupby', 6], ['@count', 1], ['@distinct', 1]]
+        )
+        self.assertEqual(res['words'], [{'word': 'bern', 'docs': 63407, 'hits': 88901}])
 
     def test_query_build_keywords(self):
         api = self._get_sphinx_client()
-        query = 'toto'
-        index = 'layers'
+        query = 'Seftigenstrasse 264'
+        index = 'address'
         hits = 5
         res = api.BuildKeywords(query, index, hits)
-        self.assertFalse(res)
+        self.assertEqual(
+            res,
+            [{
+                'docs': 374,
+                'hits': 374,
+                'normalized': 'seftigenstrasse',
+                'tokenized': 'seftigenstrasse'
+            }, {
+                'docs': 215,
+                'hits': 215,
+                'normalized': '264',
+                'tokenized': '264',
+            }]
+        )
 
-        res2 = api.EscapeString(query)
-        self.assertEqual(res2, query)
+    def test_escape_string(self):
+        api = self._get_sphinx_client()
+        normal_str = 'bern'
+        res2 = api.EscapeString(normal_str)
+        self.assertEqual(res2, normal_str)
 
         esc_str = 'hi$toto'
         res3 = api.EscapeString(esc_str)
         self.assertEqual(res3, r'hi\$toto')
-        api.Close()
