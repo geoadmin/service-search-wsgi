@@ -1,4 +1,6 @@
+import json
 import logging
+import re
 from unittest.mock import patch
 
 from flask import url_for
@@ -34,6 +36,33 @@ class TestSearchService(BaseSearchTest):
         self.assertEqual(response.json['results'][0]['attrs']['lang'], 'de')
         self.assertAttrs('layers', response.json['results'][0]['attrs'], 21781)
         self.assertCacheControl(response)
+
+    def test_search_layers_with_callback(self, mock):
+        mock.return_value = patch_search_layers_run_queries.results
+        response = self.app.get(
+            url_for(
+                'search_server', topic='inspire', type='layers', searchText='wand', callback='test'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content_type, 'text/javascript')
+        self.assertCacheControl(response)
+        # parse the answer
+        pattern = r'^/\*\*/test\((?P<json_data>.*)\);'
+        match = re.match(pattern, response.get_data(as_text=True), re.DOTALL)
+        self.assertIsNotNone(
+            match,
+            msg=f'The answer does not match the regex {pattern}; '
+            f'{response.get_data(as_text=True)[:32]}..'
+        )
+        # parse the json data from the answer
+        json_data = match.group('json_data')
+        self.assertGreater(len(json_data), 0, msg='json_data is empty')
+        try:
+            json.loads(match.group('json_data'))
+        except json.decoder.JSONDecodeError as error:
+            self.fail(f'Invalid JSON data in callback answer; json_data={json_data[:32]}\n{error}')
 
     def test_search_layers_geojson(self, mock):
         mock.return_value = patch_search_layers_run_queries.results
