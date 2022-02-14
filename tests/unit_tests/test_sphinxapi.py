@@ -1,33 +1,35 @@
-# -*- coding: utf-8  -*-
-
 import unittest
+from unittest.mock import patch
 
 from nose2.tools import params
 
 from app.lib import sphinxapi
-from tests.unit_tests.base_test import BaseSearchTest
+from tests.unit_tests.sphinxapi_patch import patch_sphinx_server
 
 
-class TestSphinxApi(BaseSearchTest):
+class SpinxApiBaseTest(unittest.TestCase):
 
     @staticmethod
-    def _get_sphinx_client():
+    def get_sphinx_client():
         api = sphinxapi.SphinxClient()
         api.SetServer('localhost', 9312)
         api.SetMatchMode(sphinxapi.SPH_MATCH_EXTENDED)
         return api
 
-    def test_sphinx_error(self):
-        api = self._get_sphinx_client()
-        api.GetLastError()
 
-    def test_sphinx_warning(self):
-        api = self._get_sphinx_client()
-        api.GetLastWarning()
+class TestSphinxApi(SpinxApiBaseTest):
 
-    def test_sphinx_set_server(self):
+    def test_sphinx_api_error(self):
+        api = self.get_sphinx_client()
+        self.assertEqual(api.GetLastError(), '')
+
+    def test_sphinx_api_warning(self):
+        api = self.get_sphinx_client()
+        self.assertEqual(api.GetLastWarning(), '')
+
+    def test_sphinx_api_set_server(self):
         # pylint: disable=protected-access
-        api = self._get_sphinx_client()
+        api = self.get_sphinx_client()
         host1 = 'unix://path1'
         port1 = 9312
         api.SetServer(host1, port1)
@@ -49,8 +51,23 @@ class TestSphinxApi(BaseSearchTest):
         self.assertEqual(api._port, port3)
         self.assertEqual(api._path, None)
 
-    def test_sphinx_api_build_excerpts(self):
-        api = self._get_sphinx_client()
+    def test_sphinx_api_escape_string(self):
+        api = self.get_sphinx_client()
+        normal_str = 'bern'
+        res2 = api.EscapeString(normal_str)
+        self.assertEqual(res2, normal_str)
+
+        esc_str = 'hi$toto'
+        res3 = api.EscapeString(esc_str)
+        self.assertEqual(res3, r'hi\$toto')
+
+
+@patch('app.lib.sphinxapi.SphinxClient._Connect')
+class TestSphinxApiCommunication(SpinxApiBaseTest):
+
+    def test_sphinx_api_build_excerpts(self, mock_socket):
+        mock_socket.return_value = patch_sphinx_server.MOCK_BUILD_EXCERPTS_SOCK
+        api = self.get_sphinx_client()
         docs = [
             'this is my test text to be highlighted', 'this is another test text to be highlighted'
         ]
@@ -72,8 +89,26 @@ class TestSphinxApi(BaseSearchTest):
             ]
         )
 
-    def test_sphinx_api_search_query(self):
-        api = self._get_sphinx_client()
+    def test_sphinx_api_build_excerpts_no_opts(self, mock_socket):
+        mock_socket.return_value = patch_sphinx_server.MOCK_BUILD_EXCERPTS_NO_OPTS_SOCK
+        api = self.get_sphinx_client()
+        docs = [
+            'this is my test text to be highlighted', 'this is another test text to be highlighted'
+        ]
+        words = 'test text'
+        index = 'layers_de'
+        res = api.BuildExcerpts(docs, index, words)
+        self.assertListEqual(
+            res,
+            [
+                'this is my <b>test</b> <b>text</b> to be highlighted',
+                'this is another <b>test</b> <b>text</b> to be highlighted'
+            ]
+        )
+
+    def test_sphinx_api_search_query(self, mock_socket):
+        mock_socket.return_value = patch_sphinx_server.MOCK_SEARCH_QUERY_SOCK
+        api = self.get_sphinx_client()
         query = 'bern'
         res = api.Query(query)
         self.assertNotEqual(res['status'], sphinxapi.SEARCHD_OK)
@@ -107,45 +142,28 @@ class TestSphinxApi(BaseSearchTest):
             }
         )
 
-    def test_sphinx_api_build_excerpts_no_opts(self):
-        api = self._get_sphinx_client()
-        docs = [
-            'this is my test text to be highlighted', 'this is another test text to be highlighted'
-        ]
-        words = 'test text'
+    def test_update_attributes(self, mock_socket):
+        mock_socket.return_value = patch_sphinx_server.MOCK_UPDATE_ATTRIBUTES_SOCK
+        api = self.get_sphinx_client()
         index = 'layers_de'
-        res = api.BuildExcerpts(docs, index, words)
-        self.assertListEqual(
-            res,
-            [
-                'this is my <b>test</b> <b>text</b> to be highlighted',
-                'this is another <b>test</b> <b>text</b> to be highlighted'
-            ]
-        )
-
-    @unittest.skip('Not able to update attributes on actual server')
-    def test_update_attributes(self):
-        api = self._get_sphinx_client()
-        index = 'zipcode'
         attrs = ['toto', 'tutu']
-        values1 = {2: [123, 1000000000], 4: [456, 1234567890]}
-        values2 = {
+        values1 = {
             2: [[123, 1000000000], [256, 1789789687]], 4: [[456, 1234567890], [789, 2034578990]]
         }
 
-        res1 = api.UpdateAttributes(index, attrs, values1)
-        self.assertIsNotNone(res1)
-
-        res2 = api.UpdateAttributes(index, attrs, values2, True)
-        self.assertIsNotNone(res2)
+        res2 = api.UpdateAttributes(index, attrs, values1, True)
+        self.assertEqual(res2, 1)
 
     @params(
-        (('rank', [1, 2]), None, None, 1, 10),
-        (None, 'rank', None, None, None),
-        (None, None, 'rank ASC', None, None),
+        (patch_sphinx_server.MOCK_QUERY_SOCK_1, ('rank', [1, 2]), None, None, 1, 10),
+        (patch_sphinx_server.MOCK_QUERY_SOCK_2, None, 'rank', None, None, None),
+        (patch_sphinx_server.MOCK_QUERY_SOCK_3, None, None, 'rank ASC', None, None),
     )
-    def test_sphinx_api_query(self, search_filter, group_by, sort_by, limit, query_time):
-        api = self._get_sphinx_client()
+    def test_sphinx_api_query(
+        self, mocker, search_filter, group_by, sort_by, limit, query_time, mock_socket
+    ):
+        mock_socket.return_value = mocker
+        api = self.get_sphinx_client()
         query = 'bern'
         mode = sphinxapi.SPH_MATCH_EXTENDED
         index = 'swisssearch'
@@ -169,8 +187,9 @@ class TestSphinxApi(BaseSearchTest):
         self.assertIsInstance(res, dict)
         self.assertEqual(res['status'], sphinxapi.SEARCHD_OK)
 
-    def test_sphinxapi_query_overrides(self):
-        api = self._get_sphinx_client()
+    def test_sphinxapi_query_overrides(self, mock_socket):
+        mock_socket.return_value = patch_sphinx_server.MOCK_QUERY_OVERRIDES_SOCK
+        api = self.get_sphinx_client()
         query = 'bern'
         index = 'swisssearch'
         values = {100: 'test'}
@@ -196,8 +215,9 @@ class TestSphinxApi(BaseSearchTest):
         )
         self.assertEqual(res['words'], [{'word': 'bern', 'docs': 63407, 'hits': 88901}])
 
-    def test_query_build_keywords(self):
-        api = self._get_sphinx_client()
+    def test_query_build_keywords(self, mock_socket):
+        mock_socket.return_value = patch_sphinx_server.MOCK_QUERY_BUILD_KEYWORDS_SOCK
+        api = self.get_sphinx_client()
         query = 'Seftigenstrasse 264'
         index = 'address'
         hits = 5
@@ -216,13 +236,3 @@ class TestSphinxApi(BaseSearchTest):
                 'tokenized': '264',
             }]
         )
-
-    def test_escape_string(self):
-        api = self._get_sphinx_client()
-        normal_str = 'bern'
-        res2 = api.EscapeString(normal_str)
-        self.assertEqual(res2, normal_str)
-
-        esc_str = 'hi$toto'
-        res3 = api.EscapeString(esc_str)
-        self.assertEqual(res3, r'hi\$toto')

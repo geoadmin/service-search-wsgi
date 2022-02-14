@@ -140,7 +140,7 @@ test:
 	ENV_FILE=.env.test $(NOSE) -c tests/unittest.cfg --verbose -s tests/unit_tests/
 
 .PHONY: test-integration
-test-integration: test
+test-integration:
 	ENV_FILE=$(ENV_FILE) $(NOSE) -c tests/unittest.cfg --verbose -s tests/integration_tests/
 
 

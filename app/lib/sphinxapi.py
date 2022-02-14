@@ -202,17 +202,18 @@ class SphinxClient:
         Set searchd server host and port.
         """
         assert isinstance(host, str)
+        self._host = host
+        self._path = None
         if host.startswith('/'):
             self._path = host
-            return
-        if host.startswith('unix://'):
+            self._host = 'localhost'
+        elif host.startswith('unix://'):
             self._path = host[7:]
-            return
-        self._host = host
-        if isinstance(port, int):
+            self._host = 'localhost'
+        if port is not None:
+            assert isinstance(port, int)
             assert 0 < port < 65536
             self._port = port
-        self._path = None
 
     def SetConnectTimeout(self, timeout):
         """
@@ -360,7 +361,7 @@ class SphinxClient:
         Set matching mode.
         """
         logger.warning(
-            'DEPRECATED: Do not call this method or, even better, use SphinxQL instead of an API'
+            'DEPRECATED: Do not call SetMatchMode() or, even better, use SphinxQL instead of an API'
         )
         assert mode in [
             SPH_MATCH_ALL,
@@ -533,7 +534,7 @@ class SphinxClient:
 
     def SetOverride(self, name, _type, values):
         logger.warning(
-            'DEPRECATED: Do not call this method. Use SphinxQL REMAP() function instead.'
+            'DEPRECATED: Do not call SetOverride(). Use SphinxQL REMAP() function instead.'
         )
         assert isinstance(name, str)
         assert _type in SPH_ATTR_TYPES
@@ -542,7 +543,7 @@ class SphinxClient:
 
         if _type == SPH_ATTR_STRING:
             assert all(map(lambda value: isinstance(value, str), values.values()))
-            values = map(lambda value: value.encode(), values)
+            values = {key: value.encode() for key, value in values.items()}
 
         self._overrides[name] = {'name': name.encode(), 'type': _type, 'values': values}
 
