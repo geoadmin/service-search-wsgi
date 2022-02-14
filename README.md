@@ -22,7 +22,7 @@
 
 ## Description
 
-This is the SearchServer service from mf-chsdi3. How the service can be queried, is currently described here:
+This is the `SearchServer` service from mf-chsdi3. How the service can be queried, is currently described here:
 [api3.geo.admin.ch/search](https://api3.geo.admin.ch/services/sdiservices.html#search). But this will have to be migrated in some way to this repository. This service is a simple Flask Application that query a [Sphinx Search](http://sphinxsearch.com/docs/current.html) Server. Currently supported Sphinx Search server is v2.2.11.
 
 ## Versioning
@@ -35,7 +35,7 @@ See also [Git Flow - Versioning](https://github.com/geoadmin/doc-guidelines/blob
 
 ### Make Dependencies
 
-The **Make** targets assume you have **python3.9**, **pipenv**, **bash**, **curl**, **tar** and **docker** installed.
+The **Make** targets assume you have **python3.9**, **pipenv**, **bash**, **curl** and **docker** installed.
 
 ### Setting up to work
 
@@ -47,19 +47,19 @@ git clone git@github.com:geoadmin/service-search-wsgi
 
 Then, you can run the setup target to ensure you have everything needed to develop, test and serve locally
 
-.venv to run the service (f.ex. make serve)
+Virtual environment to run the service (f.ex. make serve)
 
 ```bash
 make setup
 ```
 
-.venv to develop and debug the service
+Virtual environment to develop and debug the service
 
 ```bash
 make dev
 ```
 
-To run the service you will have adapt **.env.local**, which is a copy of **.env.default** And to set the variables.
+To run the service you will have to adapt **.env.local**, which is a copy of **.env.default** And to set the variables.
 
 For local development you will need access to a running sphinx search server and to the database.
 
@@ -132,7 +132,7 @@ These metadata can be seen directly on the dockerhub registry in the image layer
 ```bash
 # NOTE: jq is only used for pretty printing the json output,
 # you can install it with `apt install jq` or simply enter the command without it
-docker image inspect --format='{{json .Config.Labels}}' 974517877189.dkr.ecr.eu-central-1.amazonaws.com/service-name:develop.latest | jq
+docker image inspect --format='{{json .Config.Labels}}' 974517877189.dkr.ecr.eu-central-1.amazonaws.com/service-search-wsgi:develop.latest | jq
 ```
 
 You can also check these metadata on a running container as follows
@@ -143,7 +143,7 @@ docker ps --format="table {{.ID}}\t{{.Image}}\t{{.Labels}}"
 
 ## Deployment
 
-This service is going to be deployed on a vhost, once it is merged. The configuration of the ***docker-compose.yml*** of the vhost setup is going to be here:
+This service is going to be deployed on a vhost. The configuration of the ***docker-compose.yml*** of the vhost setup is going to be here:
 [https://github.com/geoadmin/infra-vhost](https://github.com/geoadmin/infra-vhost)
 
 ### Deployment configuration
