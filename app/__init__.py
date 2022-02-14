@@ -1,13 +1,11 @@
+import gzip
 import logging
-import os
-import re
 import time
 
 from flask_caching import Cache
 from werkzeug.exceptions import HTTPException
 
 from flask import Flask
-from flask import abort
 from flask import g
 from flask import request
 
@@ -54,6 +52,23 @@ def add_cache_control_header(response):
         return response
 
     response.headers['Cache-Control'] = settings.CACHE_CONTROL_HEADER
+    return response
+
+
+@app.after_request
+def compress(response):
+    accept_encoding = request.headers.get('accept-encoding', '').lower()
+
+    if (
+        response.status_code < 200 or response.status_code >= 300 or response.direct_passthrough or
+        'gzip' not in accept_encoding or 'Content-Encoding' in response.headers
+    ):
+        return response
+
+    content = gzip.compress(response.get_data(), compresslevel=settings.GZIP_COMPRESSION_LEVEL)
+    response.set_data(content)
+    response.headers['content-length'] = len(content)
+    response.headers['content-encoding'] = 'gzip'
     return response
 
 

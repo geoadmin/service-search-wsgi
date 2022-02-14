@@ -168,3 +168,4 @@ The service is configured by Environment Variable:
 | FORWARDED_PROTO_HEADER_NAME | `X-Forwarded-Proto` | Sets gunicorn `secure_scheme_headers` parameter to `{FORWARDED_PROTO_HEADER_NAME: 'https'}`, see https://docs.gunicorn.org/en/stable/settings.html#secure-scheme-headers. |
 | SCRIPT_NAME | '' | The script name. This will be used once, when we have an idea about how to query search-wsgi later on. F.ex. `/api/search/` f.ex. used by gunicorn (wsgi-server). |
 | CACHE_CONTROL_HEADER | `'public, max-age=600'` | Cache-Control header value for the search endpoint |
+| GZIP_COMPRESSION_LEVEL | `9` | GZIP compression level |
