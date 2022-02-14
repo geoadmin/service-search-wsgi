@@ -694,10 +694,16 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             arr = parse_box2d(result)
             resbox = box(arr[0], arr[1], arr[2],
                          arr[3]) if not _is_point(arr) else Point(arr[0], arr[1])
-        except Exception:  # pragma: no cover # pylint: disable=broad-except
+        except ValueError as error:
             # We bail with True to be conservative and
             # not exclude this geometry from the result
-            # set. Only happens if result does not
-            # have a bbox
+            # set. should only happens if result does not have a bbox
+            logger.error(
+                'Failed to find the bbox intersection with ref=%s and result=%s, '
+                'bail with True to be conservative: %s',
+                ref,
+                result,
+                error
+            )
             return True
         return refbox.intersects(resbox)
