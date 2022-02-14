@@ -42,6 +42,7 @@ def add_cors_header(response):
 
     response.headers['Access-Control-Allow-Methods'] = 'GET, HEAD, OPTIONS'
     response.headers['Access-Control-Allow-Headers'] = '*'
+    response.headers['Access-Control-Allow-Origin'] = "*"
     return response
 
 
