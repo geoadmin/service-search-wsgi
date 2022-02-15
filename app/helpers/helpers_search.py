@@ -234,14 +234,3 @@ def shift_to(coords, srid):
         elif srid == 21781:
             cds.append(c - x_offset if len(coords_copy) % 2 else c - y_offset)
     return cds
-
-
-# only used in test_search. TODO
-def shift_to_lv95(string_coords):
-    coords = string_coords.split(',')
-    for idx, coord in enumerate(coords):  # pylint: disable=unused-variable
-        if idx % 2:
-            coords[idx] = float(coords[idx]) + 1e6
-        else:
-            coords[idx] = float(coords[idx]) + 2e6
-    return ','.join([str(c) for c in coords])
