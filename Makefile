@@ -69,7 +69,6 @@ help:
 	@echo "- lint               Lint the python source code"
 	@echo "- format-lint        Format and lint the python source code"
 	@echo "- test               Run the unit-tests"
-	@echo "- test-integration   Run the integration tests (data related tests, only possible with access to service search sphinx)"
 	@echo -e " \033[1mLOCAL SERVER TARGETS\033[0m "
 	@echo "- serve              Run the project using the flask debug server. Port can be set by Env variable HTTP_PORT (default: 5000)"
 	@echo "- gunicornserve      Run the project using the gunicorn WSGI server. Port can be set by Env variable DEBUG_HTTP_PORT (default: 5000)"
@@ -138,10 +137,6 @@ format-lint: format lint
 .PHONY: test
 test:
 	ENV_FILE=.env.test $(NOSE) -c tests/unittest.cfg --verbose -s tests/unit_tests/
-
-.PHONY: test-integration
-test-integration:
-	ENV_FILE=$(ENV_FILE) $(NOSE) -c tests/unittest.cfg --verbose -s tests/integration_tests/
 
 
 # Serve targets. Using these will run the application on your local machine. You can either serve with a wsgi front (like it would be within the container), or without.

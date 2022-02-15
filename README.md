@@ -88,7 +88,7 @@ Testing if what you developed work is made simple. You have four targets at your
 make test
 ```
 
-This command run the integration and unit tests.
+This command run the unit tests.
 
 ```bash
 make serve

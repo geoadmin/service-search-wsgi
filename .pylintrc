@@ -382,8 +382,7 @@ ignore-docstrings=yes
 ignore-imports=no
 
 # Minimum lines number of a similarity.
-# TODO only keep 40 while the integration tests are in /tests
-min-similarity-lines=40
+min-similarity-lines=10
 
 
 [VARIABLES]
