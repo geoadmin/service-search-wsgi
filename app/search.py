@@ -40,10 +40,10 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
     DEFAULT_SRID = 21781
     BBOX_SEARCH_LIMIT = 150
 
-    def __init__(self, request):
+    def __init__(self, request, topic):
         super().__init__(request)
 
-        self.topic_name = request.matchdict.get('topic')
+        self.topic_name = topic
         self.has_topic(self.topic_name)
 
         # treat lang, de as default

@@ -18,22 +18,25 @@ def checker():
 
 @app.route('/rest/services/<topic>/SearchServer', methods=['GET'])
 def search_server(topic='all'):
-    request.matchdict = {}
-    request.matchdict['topic'] = topic
-    search = Search(request)
-    if request.args.get('geometryFormat') == 'geojson':
-        response = make_response(search.view_find_geojson())
-        response.headers["Content-Type"] = "application/geo+json"
-    elif request.args.get('geometryFormat') == 'esrijson':
-        response = make_response(search.view_find_esrijson())
-    else:
-        response = make_response(search.search())
+    search = Search(request, topic)
+    content_type_override = None
 
-    # TODO: better - callback f.ex with a renderer
-    if request.args.get('callback'):
-        callback = request.args.get('callback')
-        data = response.json
-        response.headers["Content-Type"] = "application/javascript"
-        response.data = f"/**/{callback}({data}));"
+    if request.args.get('geometryFormat') == 'geojson':
+        results = search.view_find_geojson()
+        content_type_override = "application/geo+json"
+    elif request.args.get('geometryFormat') == 'esrijson':
+        results = search.view_find_esrijson()
+    else:
+        results = search.search()
+
+    response = make_response(jsonify(results))
+
+    callback = request.args.get('callback', None)
+    if callback is not None:
+        response.set_data(f"/**/{callback}({response.get_data(as_text=True)});")
+        content_type_override = "text/javascript"
+
+    if content_type_override:
+        response.headers['Content-Type'] = content_type_override
 
     return response

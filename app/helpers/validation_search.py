@@ -25,20 +25,6 @@ class MapNameValidation(object):  # pylint: disable=too-few-public-methods
             raise BadRequest(f'The map ({topic_name}) you provided does not exist')
 
 
-class BaseValidation(MapNameValidation):  # pylint: disable=too-few-public-methods
-
-    def __init__(self, request):
-        super().__init__()
-
-        self.topic_name = request.matchdict.get('topic')
-        self.has_topic(self.topic_name)
-        self.geodataStaging = request.registry.settings['geodata_staging']
-        self.cbName = request.params.get('callback')
-        self.request = request
-        self.lang = request.lang
-        self.translate = request.translate
-
-
 class SearchValidation(MapNameValidation):  # pylint: disable=too-many-instance-attributes
 
     def __init__(self, request):

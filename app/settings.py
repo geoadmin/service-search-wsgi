@@ -76,7 +76,6 @@ CACHE_TYPE = 'SimpleCache'
 CACHE_DEFAULT_TIMEOUT = int(os.getenv('CACHE_DEFAULT_TIMEOUT', '86400'))  # 24 h
 
 # SQL Alchemy
-# pylint: disable=line-too-long
 SQLALCHEMY_DATABASE_URI = \
     f"postgresql://{BOD_DB_USER}:{BOD_DB_PASSWD}@{BOD_DB_HOST}:{BOD_DB_PORT}/{BOD_DB_NAME}"
 
@@ -92,3 +91,5 @@ FORWARDED_PROTO_HEADER_NAME = os.getenv('FORWARDED_PROTO_HEADER_NAME', 'X-Forwar
 
 # Cache-Control
 CACHE_CONTROL_HEADER = os.getenv('CACHE_CONTROL_HEADER', 'public, max-age=600')
+
+GZIP_COMPRESSION_LEVEL = int(os.getenv('GZIP_COMPRESSION_LEVEL', '9'))
