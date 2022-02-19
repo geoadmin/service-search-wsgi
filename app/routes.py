@@ -34,7 +34,10 @@ def search_server(topic='all'):
     callback = request.args.get('callback', None)
     if callback is not None:
         response.set_data(f"/**/{callback}({response.get_data(as_text=True)});")
-        content_type_override = "text/javascript"
+        content_type_override = request.accept_mimetypes.best_match(
+            ["text/javascript", "application/javascript"],
+            default="text/javascript",
+        )
 
     if content_type_override:
         response.headers['Content-Type'] = content_type_override
