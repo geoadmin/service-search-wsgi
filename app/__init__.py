@@ -76,18 +76,16 @@ def compress(response):
 # the response might not be correct (e.g. headers added in another after_request hook).
 @app.after_request
 def log_response(response):
-    route_logger.info(
-        "%s %s - %s",
-        request.method,
-        request.path,
-        response.status,
-        extra={
-            'response': {
-                "status_code": response.status_code, "headers": dict(response.headers.items())
-            },
-            "duration": time.time() - g.get('request_started', time.time())
-        }
-    )
+    log_extra = {
+        'response': {
+            "status_code": response.status_code,
+            "headers": dict(response.headers.items()),
+        },
+        "duration": time.time() - g.get('request_started', time.time())
+    }
+    if route_logger.isEnabledFor(logging.DEBUG):
+        log_extra['response']['data'] = response.json if response.is_json else response.data
+    route_logger.info("%s %s - %s", request.method, request.path, response.status, extra=log_extra)
     return response
 
 
