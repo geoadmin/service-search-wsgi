@@ -158,6 +158,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         return self.results
 
     def _fuzzy_search(self, searchTextFinal):
+        logger.debug("Search fuzzy; searchText=%s", searchTextFinal)
         # We use different ranking for fuzzy search
         # For ranking modes, see http://sphinxsearch.com/docs/current.html#weighting
         self.sphinx.SetRankingMode(sphinxapi.SPH_RANK_SPH04)
@@ -174,6 +175,8 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         return temp
 
     def _swiss_search(self):  # pylint: disable=too-many-branches, too-many-statements, too-many-locals
+        logger.debug("Search locations (swiss search); searchText=%s", self.searchText)
+
         limit = self.limit if self.limit and \
             self.limit <= self.LOCATION_LIMIT else self.LOCATION_LIMIT
         # Define ranking mode
@@ -279,6 +282,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             self._parse_location_results(temp, limit)
 
     def _layer_search(self):
+        logger.debug("Search layer; searchText=%s", self.searchText)
 
         def staging_filter(staging):
             '''
@@ -321,12 +325,8 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             f'& @topics {topicFilter}',  # Filter by topic if string not empty, ech whitelist hack
             f'& {staging_filter(GEODATA_STAGING)}'  # Only layers in correct staging are searched
         ])
-        logger.debug("Search layer = %s", self.searchText)
         try:
             temp = self.sphinx.Query(searchText, index=index_name)
-            logger.debug(
-                "Sphinx query with %s %s", searchText, index_name, extra={'response': temp}
-            )
         except IOError as e:  # pragma: no cover
             logger.error(e)
             raise GatewayTimeout() from e
@@ -350,10 +350,11 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         return ''
 
     def _feature_search(self):
+        logger.debug("Search feature; searchText=%s", self.searchText)
 
         # all features in given bounding box
         if self.featureIndexes is None:
-            logger.error("No layername is given. Needed is bounding boy and layer name")
+            logger.error("No layername is given. Needed is bounding box and layer name")
             raise BadRequest('Bad request: no layername given')
         featureLimit = (
             self.limit if self.limit and self.limit <= self.FEATURE_LIMIT else self.FEATURE_LIMIT
