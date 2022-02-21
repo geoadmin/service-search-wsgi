@@ -660,6 +660,8 @@ class SphinxClient:
         """
         Add query to batch.
         """
+        logger.debug("Add Query; query='%s', index='%s', comment='%s'", query, index, comment)
+
         # build request
         req = []
         req.append(
@@ -784,11 +786,15 @@ class SphinxClient:
         """
         if len(self._reqs) == 0:
             self._error = 'no queries defined, issue AddQuery() first'
+            logger.error('Run queries: %s', self._error)
             return None
 
         sock = self._Connect()
         if not sock:
+            logger.error('Run queries, connect failed: %s', self._error)
             return None
+
+        logger.debug('Run %d queries', len(self._reqs))
 
         req = b''.join(self._reqs)
         length = len(req) + 8
@@ -799,6 +805,7 @@ class SphinxClient:
 
         response = self._GetResponse(sock, VER_COMMAND_SEARCH)
         if not response:
+            logger.error('Run queries, no response: %s', self._error)
             return None
 
         nreqs = len(self._reqs)
@@ -938,6 +945,8 @@ class SphinxClient:
                 p += 8
 
                 result['words'].append({'word': word, 'docs': docs, 'hits': hits})
+
+        logger.debug('Run %d queries result', nreqs, extra={'query_results': results})
 
         self._reqs = []
         return results

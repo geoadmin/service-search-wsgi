@@ -158,6 +158,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         return self.results
 
     def _fuzzy_search(self, searchTextFinal):
+        logger.debug("Search fuzzy; searchText=%s", searchTextFinal)
         # We use different ranking for fuzzy search
         # For ranking modes, see http://sphinxsearch.com/docs/current.html#weighting
         self.sphinx.SetRankingMode(sphinxapi.SPH_RANK_SPH04)
@@ -174,6 +175,8 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         return temp
 
     def _swiss_search(self):  # pylint: disable=too-many-branches, too-many-statements, too-many-locals
+        logger.debug("Search locations (swiss search); searchText=%s", self.searchText)
+
         limit = self.limit if self.limit and \
             self.limit <= self.LOCATION_LIMIT else self.LOCATION_LIMIT
         # Define ranking mode
@@ -182,9 +185,11 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             self.sphinx.SetGeoAnchor('lat', 'lon', coords[1], coords[0])
             self.sphinx.SetSortMode(sphinxapi.SPH_SORT_EXTENDED, '@geodist ASC')
             limit = self.BBOX_SEARCH_LIMIT
+            logger.debug("SetGeoAnchor lat = %s, lon = %s", coords[1], coords[0])
         else:
             self.sphinx.SetRankingMode(sphinxapi.SPH_RANK_WORDCOUNT)
             self.sphinx.SetSortMode(sphinxapi.SPH_SORT_EXTENDED, 'rank ASC, @weight DESC, num ASC')
+            logger.debug("SetRankingMode to wordcount")
 
         self.sphinx.SetLimits(0, limit)
 
@@ -277,6 +282,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             self._parse_location_results(temp, limit)
 
     def _layer_search(self):
+        logger.debug("Search layer; searchText=%s", self.searchText)
 
         def staging_filter(staging):
             '''
@@ -344,10 +350,11 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         return ''
 
     def _feature_search(self):
+        logger.debug("Search feature; searchText=%s", self.searchText)
 
         # all features in given bounding box
         if self.featureIndexes is None:
-            # we need bounding box and layernames. FIXME: this should be error
+            logger.error("No layername is given. Needed is bounding box and layer name")
             raise BadRequest('Bad request: no layername given')
         featureLimit = (
             self.limit if self.limit and self.limit <= self.FEATURE_LIMIT else self.FEATURE_LIMIT
@@ -358,8 +365,10 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             coords = self._get_geoanchor_from_bbox()
             self.sphinx.SetGeoAnchor('lat', 'lon', coords[1], coords[0])
             self.sphinx.SetSortMode(sphinxapi.SPH_SORT_EXTENDED, '@weight DESC, @geodist ASC')
+            logger.debug("SetGeoAnchor lat = %s, lon = %s", coords[1], coords[0])
         else:
             self.sphinx.SetSortMode(sphinxapi.SPH_SORT_EXTENDED, '@weight DESC')
+            logger.debug("SetSortMode to sort extended with weight DESC")
 
         timeFilter = self._get_time_filter()
         if self.searchText:
@@ -504,9 +513,11 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                 # As one cannot apply filters on string attributes, we use the rank information
                 self.sphinx.SetFilter('rank', self._origins_to_ranks(['parcel']))
                 del self.searchText[0]
+                logger.debug("SetFilter rank to parcel")
             elif firstWord in ADDRESS_KEYWORDS:
                 self.sphinx.SetFilter('rank', self._origins_to_ranks(['address']))
                 del self.searchText[0]
+                logger.debug("SetFilter rank to address")
 
     def _filter_locations_by_origins(self):
         ranks = self._origins_to_ranks(self.origins)
@@ -525,11 +536,14 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                     self.sphinx.SetFilterRange(
                         'year', int(min(timeFilter['years'])), int(max(timeFilter['years']))
                     )
+                logger.debug("SetFilter to year")
             if index.startswith(translated_layer):
                 if self.searchLang:
                     self.sphinx.SetFilter('lang', self._search_lang_to_filter())
+                    logger.debug("SetFilter to lang")
                 else:
                     self.sphinx.SetFilter('agnostic', [1])
+                    logger.debug("SetFilter to agnostic")
                 self.sphinx.AddQuery(queryText, index=translated_layer)
             else:
                 if self.searchLang:
@@ -548,6 +562,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             shape = box(*b)
             bbox = transform_shape(shape, self.DEFAULT_SRID, self.srid).bounds
             res['geom_st_box2d'] = f"BOX({bbox[0]} {bbox[1]},{bbox[2]} {bbox[3]})"
+        #TODO: Remove broad exception
         except Exception as e:
             msg = f'Error while converting BOX2D ({res_in}) to EPSG:{self.srid}'
             logger.error(msg, e)
@@ -566,20 +581,23 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                 try:
                     res['x'] = res['lon']
                     res['y'] = res['lat']
-                except KeyError as e:
+                except KeyError as error:
+                    logger.error("Sphinx location has no lat/long defined %s", res_in)
                     raise InternalServerError(
                         f'Sphinx location has no lat/long defined {res_in}'
-                    ) from e
+                    ) from error
             else:
                 try:
                     pnt = (res['y'], res['x'])
                     x, y = transform_coordinate(pnt, self.DEFAULT_SRID, self.srid)
                     res['x'] = x
                     res['y'] = y
-                except Exception as e:
+                #TODO: Remove broad exception
+                except Exception as error:
+                    logger.error("Error while converting point %s to %s", res_in, self.srid)
                     raise InternalServerError(
                         f'Error while converting point({res_in}), to EPSG:{self.srid}'
-                    ) from e
+                    ) from error
         return res
 
     def _parse_location_results(self, results, limit):

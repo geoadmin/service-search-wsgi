@@ -38,7 +38,7 @@ filters:
       - method
       - headers
       - remote_addr
-      - form
+      - query_string
 
 formatters:
   standard:
@@ -56,8 +56,8 @@ formatters:
       - flask_request_path
       - flask_request_method
       - flask_request_headers
-      - flask_request_json
       - flask_request_remote_addr
+      - flask_request_query_string
     remove_empty: True
     fmt:
       time: utc_isotime
@@ -71,8 +71,8 @@ formatters:
         path: flask_request_path
         method: flask_request_method
         headers: flask_request_headers
-        data: flask_request_json
         remote: flask_request_remote_addr
+        query_string: flask_request_query_string
       exc_info: exc_info
       message: message
 
