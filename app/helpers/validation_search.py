@@ -116,7 +116,7 @@ class SearchValidation(MapNameValidation):  # pylint: disable=too-many-instance-
             self.bbox is not None and bool(set(self.locationTypes) & set([self.typeInfo]))
         )
         if (value is None or value.strip() == '') and isSearchTextRequired:
-            logger.warning("Please provide a search text")
+            logger.error("Please provide a search text")
             raise BadRequest("Please provide a search text")
         searchTextList = value.split(' ')
         # Remove empty strings
@@ -124,7 +124,7 @@ class SearchValidation(MapNameValidation):  # pylint: disable=too-many-instance-
         searchTextList = list(filter(None, searchTextList))
         if ilen(searchTextList) > MAX_SEARCH_TERMS:
             msg = "The searchText parameter can not contain more than 10 words"
-            logger.warning(msg)
+            logger.error(msg)
             raise BadRequest(msg)
         self._searchText = searchTextList
 
@@ -134,7 +134,7 @@ class SearchValidation(MapNameValidation):  # pylint: disable=too-many-instance-
             values = value.split(',')
             if len(values) != 4:
                 msg = f"Please provide 4 coordinates in a comma separated list and not {value}"
-                logger.warning(msg)
+                logger.error(msg)
                 raise BadRequest(msg)
             try:
                 # Python 2/3
@@ -149,12 +149,12 @@ class SearchValidation(MapNameValidation):  # pylint: disable=too-many-instance-
             if values[0] >= 420000 and values[1] >= 30000:
                 if values[0] < values[1]:
                     msg = "The first coordinate must be higher than the second"
-                    logger.warning(msg)
+                    logger.error(msg)
                     raise BadRequest(msg)
             if values[2] >= 420000 and values[3] >= 30000:
                 if values[2] < values[3]:
                     msg = "The third coordinate must be higher than the fourth"
-                    logger.warning(msg)
+                    logger.error(msg)
                     raise BadRequest(msg)
             self._bbox = values
 
@@ -162,9 +162,7 @@ class SearchValidation(MapNameValidation):  # pylint: disable=too-many-instance-
     def timeInstant(self, value):
         if value is not None:
             if len(value) != 4:
-                logger.warning(
-                    "Only years are supported as timeInstant paramtere and not %s", value
-                )
+                logger.error("Only years are supported as timeInstant paramtere and not %s", value)
                 raise BadRequest(
                     "Only years are supported as timeInstant parameter"
                     f" and not {value}"
@@ -172,7 +170,7 @@ class SearchValidation(MapNameValidation):  # pylint: disable=too-many-instance-
             if value.isdigit():
                 self._timeInstant = int(value)
             else:
-                logger.warning(
+                logger.error(
                     "Please provide an integer for the parameter timeInstant and not %s", value
                 )
                 raise BadRequest(
@@ -189,7 +187,7 @@ class SearchValidation(MapNameValidation):  # pylint: disable=too-many-instance-
             result = []
             for val in values:
                 if len(val) != 4 and len(val) != 0:
-                    logger.warning(
+                    logger.error(
                         "Only years (4 digits) or empty strings are supported in " \
                             "timeStamps parameter"
                     )
@@ -203,7 +201,7 @@ class SearchValidation(MapNameValidation):  # pylint: disable=too-many-instance-
                     if val.isdigit():
                         result.append(int(val))
                     else:
-                        logger.warning(
+                        logger.error(
                             "Please provide integers for timeStamp parameter and not %s", value
                         )
                         raise BadRequest(
@@ -217,7 +215,7 @@ class SearchValidation(MapNameValidation):  # pylint: disable=too-many-instance-
         if value in map(str, SUPPORTED_OUTPUT_SRS):
             self._srid = int(value)
         elif value is not None:
-            logger.warning("Unsupported spatial reference %s", value)
+            logger.error("Unsupported spatial reference %s", value)
             raise BadRequest(f"Unsupported spatial reference {value}")
 
     @returnGeometry.setter
@@ -252,7 +250,7 @@ class SearchValidation(MapNameValidation):  # pylint: disable=too-many-instance-
             if value.isdigit():
                 self._limit = int(value)
             else:
-                logger.warning("The limit parameter should be an integer")
+                logger.error("The limit parameter should be an integer")
                 raise BadRequest('The limit parameter should be an integer')
 
     @searchLang.setter
@@ -260,6 +258,6 @@ class SearchValidation(MapNameValidation):  # pylint: disable=too-many-instance-
         if value == 'en':
             value = 'de'
         if value is not None and value not in self.availableLangs:
-            logger.warning("Unsupported lang filter %s", value)
+            logger.error("Unsupported lang filter %s", value)
             raise BadRequest(f"Unsupported lang filter {value}")
         self._searchLang = value
