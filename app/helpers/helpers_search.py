@@ -1,4 +1,3 @@
-# TODO: maybe merge this into utils.py
 import logging
 import math
 import unicodedata
@@ -6,6 +5,7 @@ from decimal import Decimal
 from functools import partial
 from functools import reduce
 
+import pyproj.exceptions
 from pyproj import Proj
 from pyproj import transform as proj_transform
 from shapely.geometry.base import BaseGeometry
@@ -158,8 +158,7 @@ def _transform_coordinates(coordinates, srid_from, srid_to, rounding=True):
         if rounding:
             precision = get_precision_for_proj(srid_to)
             new_coords = _round_bbox_coordinates(new_coords, precision=precision)
-    #TODO: Remove broad exception
-    except Exception as e:
+    except (pyproj.exceptions.CRSError) as e:
         logger.error(
             "Cannot transform coordinates %s from %s to %s, %s", coordinates, srid_from, srid_to, e
         )

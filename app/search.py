@@ -1,6 +1,7 @@
 import logging
 import re
 
+import pyproj.exceptions
 from shapely.geometry import Point
 from shapely.geometry import box
 from shapely.geometry import mapping
@@ -100,7 +101,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                     bounds = parse_box2d(attributes['geom_st_box2d'])
                 else:
                     try:
-                        # TODO: This is the requested QuadTree,
+                        # This is the requested QuadTree,
                         # because sphinx layer indices do not have extent
                         bounds = self.quadtree.bbox.bounds
                         bounds = transform_shape(bounds, self.DEFAULT_SRID, self.srid)
@@ -562,7 +563,6 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             shape = box(*b)
             bbox = transform_shape(shape, self.DEFAULT_SRID, self.srid).bounds
             res['geom_st_box2d'] = f"BOX({bbox[0]} {bbox[1]},{bbox[2]} {bbox[3]})"
-        #TODO: Remove broad exception
         except Exception as e:
             msg = f'Error while converting BOX2D ({res_in}) to EPSG:{self.srid}'
             logger.error(msg, e)
@@ -592,8 +592,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                     x, y = transform_coordinate(pnt, self.DEFAULT_SRID, self.srid)
                     res['x'] = x
                     res['y'] = y
-                #TODO: Remove broad exception
-                except Exception as error:
+                except (pyproj.exceptions.CRSError) as error:
                     logger.error("Error while converting point %s to %s", res_in, self.srid)
                     raise InternalServerError(
                         f'Error while converting point({res_in}), to EPSG:{self.srid}'
