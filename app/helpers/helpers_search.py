@@ -13,6 +13,8 @@ from shapely.ops import transform as shape_transform
 from shapely.wkt import dumps as shape_dumps
 from shapely.wkt import loads as shape_loads
 
+from app import cache
+
 logger = logging.getLogger(__name__)
 
 # pylint: disable=invalid-name
@@ -128,6 +130,7 @@ def _transform_point(coords, srid_from, srid_to):
     return proj_transform(proj_in, proj_out, coords[0], coords[1], always_xy=True)
 
 
+@cache.memoize(timeout=60)
 def transform_round_geometry(geom, srid_from, srid_to, rounding=True):
     if srid_from == srid_to:
         if rounding:
