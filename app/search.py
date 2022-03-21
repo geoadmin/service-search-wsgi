@@ -183,10 +183,10 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         # Define ranking mode
         if self.bbox is not None and self.sortbbox:
             coords = self._get_geoanchor_from_bbox()
-            self.sphinx.SetGeoAnchor('lat', 'lon', coords[1], coords[0])
+            self.sphinx.SetGeoAnchor('lat', 'lon', coords[1], coords[0])  # pylint: disable=unsubscriptable-object
             self.sphinx.SetSortMode(sphinxapi.SPH_SORT_EXTENDED, '@geodist ASC')
             limit = self.BBOX_SEARCH_LIMIT
-            logger.debug("SetGeoAnchor lat = %s, lon = %s", coords[1], coords[0])
+            logger.debug("SetGeoAnchor lat = %s, lon = %s", coords[1], coords[0])  # pylint: disable=unsubscriptable-object
         else:
             self.sphinx.SetRankingMode(sphinxapi.SPH_RANK_WORDCOUNT)
             self.sphinx.SetSortMode(sphinxapi.SPH_SORT_EXTENDED, 'rank ASC, @weight DESC, num ASC')
@@ -364,9 +364,9 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         self.sphinx.SetRankingMode(sphinxapi.SPH_RANK_WORDCOUNT)
         if self.bbox and self.sortbbox:
             coords = self._get_geoanchor_from_bbox()
-            self.sphinx.SetGeoAnchor('lat', 'lon', coords[1], coords[0])
+            self.sphinx.SetGeoAnchor('lat', 'lon', coords[1], coords[0])  # pylint: disable=unsubscriptable-object
             self.sphinx.SetSortMode(sphinxapi.SPH_SORT_EXTENDED, '@weight DESC, @geodist ASC')
-            logger.debug("SetGeoAnchor lat = %s, lon = %s", coords[1], coords[0])
+            logger.debug("SetGeoAnchor lat = %s, lon = %s", coords[1], coords[0])  # pylint: disable=unsubscriptable-object
         else:
             self.sphinx.SetSortMode(sphinxapi.SPH_SORT_EXTENDED, '@weight DESC')
             logger.debug("SetSortMode to sort extended with weight DESC")
@@ -589,7 +589,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             else:
                 try:
                     pnt = (res['y'], res['x'])
-                    x, y = transform_coordinate(pnt, self.DEFAULT_SRID, self.srid)
+                    x, y, _ = transform_coordinate(pnt, self.DEFAULT_SRID, self.srid)  # pylint: disable=unpacking-non-sequence
                     res['x'] = x
                     res['y'] = y
                 except (pyproj.exceptions.CRSError) as error:

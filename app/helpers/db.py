@@ -86,7 +86,7 @@ def get_db_connection():
     if 'db_connection' not in g:
         logger.debug('Connecting to %s db on host %s', settings.BOD_DB_NAME, settings.BOD_DB_HOST)
         try:
-            g.db_connection = psy.connect(
+            g.db_connection = psy.connect( # pylint: disable=assigning-non-slot
                 dbname=settings.BOD_DB_NAME,
                 user=settings.BOD_DB_USER,
                 password=settings.BOD_DB_PASSWD,
