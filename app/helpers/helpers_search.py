@@ -138,9 +138,16 @@ def transform_round_geometry(geom, srid_from, srid_to, rounding=True):
     return _transform_shape(geom, srid_from, srid_to, rounding=rounding)
 
 
-@cache.memoize(timeout=60)
+TRANSFORMER = {}
+
+
 def get_transformer(srid_from, srid_to):
-    return Transformer.from_crs(srid_from, srid_to, always_xy=True)
+    transformer_id = f'{srid_from}-to-{srid_to}'
+    if transformer_id in TRANSFORMER:
+        return TRANSFORMER[transformer_id]
+
+    TRANSFORMER[transformer_id] = Transformer.from_crs(srid_from, srid_to, always_xy=True)
+    return TRANSFORMER[transformer_id]
 
 
 # used by transform_round_geometry used by search.py
