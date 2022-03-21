@@ -85,8 +85,8 @@ class TestHelpers(TestCase):
         srid_from = 4326
         srid_to = 21781
         coords = _transform_point([7.37840, 45.91616], srid_from, srid_to)
-        self.assertEqual(int(coords[0]), 595324)
-        self.assertEqual(int(coords[1]), 84952)
+        self.assertEqual(int(coords[0]), 595324)  # pylint: disable=unsubscriptable-object
+        self.assertEqual(int(coords[1]), 84952)  # pylint: disable=unsubscriptable-object
 
     def get_precision_for_proj(self):
         # rounding all coordinates for to about 0.1 meter
