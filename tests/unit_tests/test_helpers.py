@@ -8,7 +8,6 @@ from shapely.geometry import mapping
 from app.helpers.helpers_search import _round_bbox_coordinates
 from app.helpers.helpers_search import _round_shape_coordinates
 from app.helpers.helpers_search import _transform_coordinates
-from app.helpers.helpers_search import _transform_point
 from app.helpers.helpers_search import _transform_shape
 from app.helpers.helpers_search import center_from_box2d
 from app.helpers.helpers_search import escape_sphinx_syntax
@@ -80,13 +79,6 @@ class TestHelpers(TestCase):
         str_proj_lv03 = '+proj=somerc +lat_0=46.9524055555556 +lon_0=7.43958333333333 ' \
         '+k_0=1 +x_0=600000 +y_0=200000 +ellps=bessel +units=m +no_defs'
         self.assertEqual(proj.srs, str_proj_lv03)
-
-    def test__transform_point(self):
-        srid_from = 4326
-        srid_to = 21781
-        coords = _transform_point([7.37840, 45.91616], srid_from, srid_to)
-        self.assertEqual(int(coords[0]), 595324)  # pylint: disable=unsubscriptable-object
-        self.assertEqual(int(coords[1]), 84952)  # pylint: disable=unsubscriptable-object
 
     def get_precision_for_proj(self):
         # rounding all coordinates for to about 0.1 meter
