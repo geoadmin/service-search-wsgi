@@ -2,16 +2,17 @@ import logging
 import math
 import unicodedata
 from decimal import Decimal
-from functools import partial
 from functools import reduce
 
 import pyproj.exceptions
 from pyproj import Proj
-from pyproj import transform as proj_transform
+from pyproj import Transformer
 from shapely.geometry.base import BaseGeometry
 from shapely.ops import transform as shape_transform
 from shapely.wkt import dumps as shape_dumps
 from shapely.wkt import loads as shape_loads
+
+from app import cache
 
 logger = logging.getLogger(__name__)
 
@@ -122,12 +123,7 @@ def round_geometry_coordinates(geom, precision=None):
     return geom
 
 
-def _transform_point(coords, srid_from, srid_to):
-    proj_in = get_proj_from_srid(srid_from)
-    proj_out = get_proj_from_srid(srid_to)
-    return proj_transform(proj_in, proj_out, coords[0], coords[1], always_xy=True)
-
-
+@cache.memoize(timeout=60)
 def transform_round_geometry(geom, srid_from, srid_to, rounding=True):
     if srid_from == srid_to:
         if rounding:
@@ -142,6 +138,18 @@ def transform_round_geometry(geom, srid_from, srid_to, rounding=True):
     return _transform_shape(geom, srid_from, srid_to, rounding=rounding)
 
 
+TRANSFORMER = {}
+
+
+def get_transformer(srid_from, srid_to):
+    transformer_id = f'{srid_from}-to-{srid_to}'
+    if transformer_id in TRANSFORMER:
+        return TRANSFORMER[transformer_id]
+
+    TRANSFORMER[transformer_id] = Transformer.from_crs(srid_from, srid_to, always_xy=True)
+    return TRANSFORMER[transformer_id]
+
+
 # used by transform_round_geometry used by search.py
 # Reprojecting pairs of coordinates and rounding them if necessary
 # Only a point or a line are considered
@@ -150,10 +158,11 @@ def _transform_coordinates(coordinates, srid_from, srid_to, rounding=True):
         logger.error("Invalid coordinates %s, must be two numbers", coordinates)
         raise ValueError(f"Invalid coordinates {coordinates}, must be two numbers")
     new_coords = []
+    transformer = get_transformer(srid_from, srid_to)
     coords_iter = iter(coordinates)
     try:
         for pnt in zip(coords_iter, coords_iter):
-            new_pnt = _transform_point(pnt, srid_from, srid_to)
+            new_pnt = transformer.transform(pnt[0], pnt[1])
             new_coords += new_pnt
         if rounding:
             precision = get_precision_for_proj(srid_to)
@@ -170,12 +179,9 @@ def _transform_coordinates(coordinates, srid_from, srid_to, rounding=True):
 
 # indirectly used by search.py
 def _transform_shape(geom, srid_from, srid_to, rounding=True):
-    proj_in = get_proj_from_srid(srid_from)
-    proj_out = get_proj_from_srid(srid_to)
+    transformer = get_transformer(srid_from, srid_to)
 
-    projection_func = partial(proj_transform, proj_in, proj_out, always_xy=True)
-
-    new_geom = shape_transform(projection_func, geom)
+    new_geom = shape_transform(transformer.transform, geom)
     if rounding:
         precision = get_precision_for_proj(srid_to)
         return _round_shape_coordinates(new_geom, precision=precision)

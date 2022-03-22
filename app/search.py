@@ -13,10 +13,10 @@ from werkzeug.exceptions import ServiceUnavailable
 
 from app.helpers import mortonspacekey as msk
 from app.helpers.db import get_translation
-from app.helpers.helpers_search import _transform_point as transform_coordinate
 from app.helpers.helpers_search import center_from_box2d
 from app.helpers.helpers_search import format_locations_search_text
 from app.helpers.helpers_search import format_search_text
+from app.helpers.helpers_search import get_transformer
 from app.helpers.helpers_search import ilen
 from app.helpers.helpers_search import parse_box2d
 from app.helpers.helpers_search import shift_to
@@ -418,8 +418,9 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             raise BadRequest(msg)
 
     def _get_geoanchor_from_bbox(self):
+        transformer = get_transformer(self.DEFAULT_SRID, 4326)
         center = center_from_box2d(self.bbox)
-        return transform_coordinate(center, self.DEFAULT_SRID, 4326)
+        return transformer.transform(center[0], center[1])
 
     def _query_fields(self, fields):  # pylint: disable=too-many-locals
         # 10a, 10b needs to be interpreted as digit
@@ -569,7 +570,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             raise InternalServerError(msg) from e
         return res
 
-    def _parse_locations(self, res_in):
+    def _parse_locations(self, transformer, res_in):
 
         res = res_in
         if not self.returnGeometry:
@@ -589,7 +590,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             else:
                 try:
                     pnt = (res['y'], res['x'])
-                    x, y, _ = transform_coordinate(pnt, self.DEFAULT_SRID, self.srid)  # pylint: disable=unpacking-non-sequence
+                    x, y, _ = transformer.transform(pnt[0], pnt[1])
                     res['x'] = x
                     res['y'] = y
                 except (pyproj.exceptions.CRSError) as error:
@@ -601,6 +602,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
 
     def _parse_location_results(self, results, limit):
         nb_address = 0
+        transformer = get_transformer(self.DEFAULT_SRID, self.srid)
         for result in self._yield_matches(results):
             origin = result['attrs']['origin']
             layer_bod_id = self._origin_to_layerbodid(origin)
@@ -617,14 +619,14 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                     self._bbox_intersection(self.bbox, result['attrs']['geom_st_box2d'])
                 )
             ):
-                result['attrs'] = self._parse_locations(result['attrs'])
+                result['attrs'] = self._parse_locations(transformer, result['attrs'])
                 self.results['results'].append(result)
                 nb_address += 1
             else:
                 if not self.bbox or self._bbox_intersection(
                     self.bbox, result['attrs']['geom_st_box2d']
                 ):
-                    self._parse_locations(result['attrs'])
+                    self._parse_locations(transformer, result['attrs'])
                     self.results['results'].append(result)
         if len(self.results['results']) > 0:
             self.results['results'] = self.results['results'][:limit]
