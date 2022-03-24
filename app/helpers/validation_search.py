@@ -1,52 +1,39 @@
-# -*- coding: utf-8 -*-
+import logging
 
-from pyramid.httpexceptions import HTTPBadRequest
+from werkzeug.exceptions import BadRequest
 
-from app.helpers.helpers_search import float_raise_nan, shift_to, ilen
+from app.helpers.db import get_topics
+from app.helpers.helpers_search import float_raise_nan
+from app.helpers.helpers_search import ilen
+from app.helpers.helpers_search import shift_to
 
 SUPPORTED_OUTPUT_SRS = (21781, 2056, 3857, 4326)
 
 MAX_SPHINX_INDEX_LENGTH = 63
 MAX_SEARCH_TERMS = 10
 
-
-class MapNameValidation(object):
-
-    def hasMap(self, db, mapName):
-        # DOTO - db connection and Topics Model here
-        # availableMaps = [q[0] for q in db.query(Topics.id)]
-        # availableMaps.append(u'all')
-
-        # if mapName not in availableMaps:
-        #    raise HTTPBadRequest('The map you provided does not exist')
-        if db or mapName:
-            pass
+logger = logging.getLogger(__name__)
 
 
-class BaseValidation(MapNameValidation):
+# pylint: disable=invalid-name
+class MapNameValidation(object):  # pylint: disable=too-few-public-methods
+
+    @staticmethod
+    def has_topic(topic_name):
+        topics = get_topics()
+        if topic_name not in topics:
+            raise BadRequest(f'The map ({topic_name}) you provided does not exist')
+
+
+class SearchValidation(MapNameValidation):  # pylint: disable=too-many-instance-attributes
 
     def __init__(self, request):
-        super(BaseValidation, self).__init__()
-
-        self.mapName = request.matchdict.get('map')
-        self.hasMap(request.db, self.mapName)
-        self.geodataStaging = request.registry.settings['geodata_staging']
-        self.cbName = request.params.get('callback')
+        super().__init__()
         self.request = request
-        self.lang = request.lang
-        self.translate = request.translate
-
-
-class SearchValidation(MapNameValidation):
-
-    def __init__(self, request):
-        super(SearchValidation, self).__init__()
-        # DOTO remove this hack
-        #self.availableLangs = request.registry.settings['available_languages'].split(' ')
         self.availableLangs = ['de', 'fr', 'it', 'rm', 'en']
-        self.locationTypes = [u'locations']
-        self.layerTypes = [u'layers']
-        self.featureTypes = [u'featuresearch']
+        self.locationTypes = ['locations']
+        self.layerTypes = ['layers']
+        self.featureTypes = ['featuresearch']
         self.supportedTypes = self.locationTypes + self.layerTypes + self.featureTypes
 
         self._searchText = None
@@ -119,11 +106,9 @@ class SearchValidation(MapNameValidation):
     @timeEnabled.setter
     def timeEnabled(self, value):
         if value is not None and value != '':
-            values = value.split(',')
-            result = []
-            for val in values:
-                result.append(True if val.lower() in [u'true', u't', u'1'] else False)
-            self._timeEnabled = result
+            self._timeEnabled = list(
+                map(lambda val: val.lower() in ['true', 't', '1'], value.split(','))
+            )
 
     @searchText.setter
     def searchText(self, value):
@@ -131,13 +116,16 @@ class SearchValidation(MapNameValidation):
             self.bbox is not None and bool(set(self.locationTypes) & set([self.typeInfo]))
         )
         if (value is None or value.strip() == '') and isSearchTextRequired:
-            raise HTTPBadRequest("Please provide a search text")
+            logger.error("Please provide a search text")
+            raise BadRequest("Please provide a search text")
         searchTextList = value.split(' ')
         # Remove empty strings
         # Python2/3
         searchTextList = list(filter(None, searchTextList))
         if ilen(searchTextList) > MAX_SEARCH_TERMS:
-            raise HTTPBadRequest("The searchText parameter can not contain more than 10 words")
+            msg = "The searchText parameter can not contain more than 10 words"
+            logger.error(msg)
+            raise BadRequest(msg)
         self._searchText = searchTextList
 
     @bbox.setter
@@ -145,32 +133,50 @@ class SearchValidation(MapNameValidation):
         if value is not None and value != '':
             values = value.split(',')
             if len(values) != 4:
-                raise HTTPBadRequest("Please provide 4 coordinates in a comma separated list")
+                msg = f"Please provide 4 coordinates in a comma separated list and not {value}"
+                logger.error(msg)
+                raise BadRequest(msg)
             try:
                 # Python 2/3
                 values = list(map(float_raise_nan, values))
-            except ValueError:
-                raise HTTPBadRequest("Please provide numerical values for the parameter bbox")
+            except ValueError as e:
+                msg = f"Please provide numerical values for the parameter bbox and not {value}"
+                logger.error("%s, %s", msg, e)
+                raise BadRequest(msg) from e
             if self._srid == 2056:
                 values = shift_to(values, 21781)
             # Swiss extent
             if values[0] >= 420000 and values[1] >= 30000:
                 if values[0] < values[1]:
-                    raise HTTPBadRequest("The first coordinate must be higher than the second")
+                    msg = "The first coordinate must be higher than the second"
+                    logger.error(msg)
+                    raise BadRequest(msg)
             if values[2] >= 420000 and values[3] >= 30000:
                 if values[2] < values[3]:
-                    raise HTTPBadRequest("The third coordinate must be higher than the fourth")
+                    msg = "The third coordinate must be higher than the fourth"
+                    logger.error(msg)
+                    raise BadRequest(msg)
             self._bbox = values
 
     @timeInstant.setter
     def timeInstant(self, value):
         if value is not None:
             if len(value) != 4:
-                raise HTTPBadRequest('Only years are supported as timeInstant parameter')
+                logger.error("Only years are supported as timeInstant paramtere and not %s", value)
+                raise BadRequest(
+                    "Only years are supported as timeInstant parameter"
+                    f" and not {value}"
+                )
             if value.isdigit():
                 self._timeInstant = int(value)
             else:
-                raise HTTPBadRequest('Please provide an integer for the parameter timeInstant')
+                logger.error(
+                    "Please provide an integer for the parameter timeInstant and not %s", value
+                )
+                raise BadRequest(
+                    "Please provide an integer for the parameter timeInstant"
+                    f" and not {value}"
+                )
         else:
             self._timeInstant = value
 
@@ -181,8 +187,13 @@ class SearchValidation(MapNameValidation):
             result = []
             for val in values:
                 if len(val) != 4 and len(val) != 0:
-                    raise HTTPBadRequest(
-                        'Only years (4 digits) or empty strings are supported in timeStamps parameter'
+                    logger.error(
+                        "Only years (4 digits) or empty strings are supported in " \
+                            "timeStamps parameter"
+                    )
+                    raise BadRequest(
+                        'Only years (4 digits) or empty strings are'
+                        ' supported in timeStamps parameter'
                     )
                 if len(val) == 0:
                     result.append(None)
@@ -190,7 +201,13 @@ class SearchValidation(MapNameValidation):
                     if val.isdigit():
                         result.append(int(val))
                     else:
-                        raise HTTPBadRequest('Please provide integers for timeStamps parameter')
+                        logger.error(
+                            "Please provide integers for timeStamp parameter and not %s", value
+                        )
+                        raise BadRequest(
+                            "Please provide integers for timeStamps parameter"
+                            f" and not {value}"
+                        )
             self._timeStamps = result
 
     @srid.setter
@@ -198,11 +215,12 @@ class SearchValidation(MapNameValidation):
         if value in map(str, SUPPORTED_OUTPUT_SRS):
             self._srid = int(value)
         elif value is not None:
-            raise HTTPBadRequest('Unsupported spatial reference %s' % value)
+            logger.error("Unsupported spatial reference %s", value)
+            raise BadRequest(f"Unsupported spatial reference {value}")
 
     @returnGeometry.setter
     def returnGeometry(self, value):
-        if value is False or value == u'false':
+        if value is False or value == 'false':
             self._returnGeometry = False
         else:
             self._returnGeometry = True
@@ -215,14 +233,14 @@ class SearchValidation(MapNameValidation):
     @typeInfo.setter
     def typeInfo(self, value):
         if value is None:
-            raise HTTPBadRequest(
-                'Please provide a type parameter. Possible values are %s' %
-                (', '.join(self.supportedTypes))
+            raise BadRequest(
+                "Please provide a type parameter. Possible values are"
+                f" {', '.join(self.supportedTypes)}"
             )
-        elif value not in self.supportedTypes:
-            raise HTTPBadRequest(
-                'The type parameter you provided is not valid. Possible values are %s' %
-                (', '.join(self.supportedTypes))
+        if value not in self.supportedTypes:
+            raise BadRequest(
+                "The type parameter you provided is not valid. Possible values are"
+                f" {', '.join(self.supportedTypes)}"
             )
         self._typeInfo = value
 
@@ -232,12 +250,14 @@ class SearchValidation(MapNameValidation):
             if value.isdigit():
                 self._limit = int(value)
             else:
-                raise HTTPBadRequest('The limit parameter should be an integer')
+                logger.error("The limit parameter should be an integer")
+                raise BadRequest('The limit parameter should be an integer')
 
     @searchLang.setter
     def searchLang(self, value):
         if value == 'en':
             value = 'de'
         if value is not None and value not in self.availableLangs:
-            raise HTTPBadRequest('Usupported lang filter %s' % value)
+            logger.error("Unsupported lang filter %s", value)
+            raise BadRequest(f"Unsupported lang filter {value}")
         self._searchLang = value

@@ -64,7 +64,7 @@ disable=missing-docstring,
     missing-module-docstring,
     bad-continuation,   # bad-continuation doesn't comply with yapf, so lets
                         # yapf correct indentation continuation issue
-    useless-object-inheritance,
+    useless-object-inheritance
 
 
 # Enable the message, report, category or checker with the given id(s). You can
@@ -281,6 +281,12 @@ good-names=i,
            ex,
            fd,
            Run,
+           assertGeojsonFeature,
+           setUp,
+           assertEsrijsonFeature,
+           assertBBoxValidity,
+           assertAttrs,
+           assertCacheControl,
            _
 
 # Good variable names regexes, separated by a comma. If names match any regex,
@@ -375,7 +381,7 @@ ignore-docstrings=yes
 ignore-imports=no
 
 # Minimum lines number of a similarity.
-min-similarity-lines=4
+min-similarity-lines=10
 
 
 [VARIABLES]
@@ -409,6 +415,7 @@ redefining-builtins-modules=six.moves,past.builtins,future.builtins,builtins,io
 
 
 [MISCELLANEOUS]
+
 
 # List of note tags to take in consideration, separated by a comma.
 notes=FIXME,
@@ -485,7 +492,7 @@ preferred-modules=
 [DESIGN]
 
 # Maximum number of arguments for function / method.
-max-args=5
+max-args=8
 
 # Maximum number of attributes for a class (see R0902).
 max-attributes=7

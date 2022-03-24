@@ -1,19 +1,19 @@
-# service-name
+# service-search-wsgi
 
 | Branch | Status |
 |--------|-----------|
-| develop | ![Build Status](<codebuild-badge>) |
-| master | ![Build Status](<codebuild-badge>) |
+| develop | ![Build Status](https://codebuild.eu-central-1.amazonaws.com/badges?uuid=eyJlbmNyeXB0ZWREYXRhIjoiUDZNMlVLR3d5bUhsTUF3ZEo3RTRPdDFKdS90czR4ZE5vYmNjTXhtK2tzNGlOckNXb29yaE1DNktwVXFJSVpMdExEVWYzZHA5U1drcmdsTE5BU3lJWDBJPSIsIml2UGFyYW1ldGVyU3BlYyI6IjM2YlhQR1ltcEtlTU16WC8iLCJtYXRlcmlhbFNldFNlcmlhbCI6MX0%3D&branch=develop) |
+| master | ![Build Status](https://codebuild.eu-central-1.amazonaws.com/badges?uuid=eyJlbmNyeXB0ZWREYXRhIjoiUDZNMlVLR3d5bUhsTUF3ZEo3RTRPdDFKdS90czR4ZE5vYmNjTXhtK2tzNGlOckNXb29yaE1DNktwVXFJSVpMdExEVWYzZHA5U1drcmdsTE5BU3lJWDBJPSIsIml2UGFyYW1ldGVyU3BlYyI6IjM2YlhQR1ltcEtlTU16WC8iLCJtYXRlcmlhbFNldFNlcmlhbCI6MX0%3D&branch=master) |
 
 ## Table of content
 
 - [Table of content](#table-of-content)
 - [Description](#description)
-  - [Staging Environments](#staging-environments)
 - [Versioning](#versioning)
 - [Local Development](#local-development)
   - [Make Dependencies](#make-dependencies)
   - [Setting up to work](#setting-up-to-work)
+    - [Database access](#database-access)
   - [Linting and formatting your work](#linting-and-formatting-your-work)
   - [Test your work](#test-your-work)
 - [Docker](#docker)
@@ -22,16 +22,8 @@
 
 ## Description
 
-A simple description of the service should go here
-A detailed descriptions of the endpoints can be found in the [OpenAPI Spec](openapi.yaml).
-
-### Staging Environments
-
-| Environments | URL                                                                                                                   |
-| ------------ | --------------------------------------------------------------------------------------------------------------------- |
-| DEV          | [https://service-name.bgdi-dev.swisstopo.cloud/v4/name/](https://service-name.bgdi-dev.swisstopo.cloud/v4/name/)  |
-| INT          | [https://service-name.bgdi-int.swisstopo.cloud/v4/name/](https://service-name.bgdi-int.swisstopo.cloud/v4/name/)  |
-| PROD         | [https://service-name.bgdi-prod.swisstopo.cloud/v4/name/](https://service-name.bgdi-int.swisstopo.cloud/v4/name/) |
+This is the `SearchServer` service from mf-chsdi3. How the service can be queried, is currently described here:
+[api3.geo.admin.ch/search](https://api3.geo.admin.ch/services/sdiservices.html#search). But this will have to be migrated in some way to this repository. This service is a simple Flask Application that query a [Sphinx Search](http://sphinxsearch.com/docs/current.html) Server. Currently supported Sphinx Search server is v2.2.11.
 
 ## Versioning
 
@@ -43,23 +35,37 @@ See also [Git Flow - Versioning](https://github.com/geoadmin/doc-guidelines/blob
 
 ### Make Dependencies
 
-The **Make** targets assume you have **python3.7**, **pipenv**, **bash**, **curl**, **tar**, **docker** and **docker-compose** installed.
+The **Make** targets assume you have **python3.9**, **pipenv**, **bash**, **curl** and **docker** installed.
 
 ### Setting up to work
 
 First, you'll need to clone the repo
 
 ```bash
-git clone git@github.com:geoadmin/service-name
+git clone git@github.com:geoadmin/service-search-wsgi
 ```
 
 Then, you can run the setup target to ensure you have everything needed to develop, test and serve locally
+
+Virtual environment to run the service (f.ex. make serve)
 
 ```bash
 make setup
 ```
 
-That's it, you're ready to work.
+Virtual environment to develop and debug the service
+
+```bash
+make dev
+```
+
+To run the service you will have to adapt **.env.local**, which is a copy of **.env.default** And to set the variables.
+
+For local development you will need access to a running sphinx search server and to the database.
+
+#### Database access
+
+Right now the database BOD is being accessed , to retrieve the <topics> and to do <translations> on labels.
 
 ### Linting and formatting your work
 
@@ -82,7 +88,7 @@ Testing if what you developed work is made simple. You have four targets at your
 make test
 ```
 
-This command run the integration and unit tests.
+This command run the unit tests.
 
 ```bash
 make serve
@@ -126,7 +132,7 @@ These metadata can be seen directly on the dockerhub registry in the image layer
 ```bash
 # NOTE: jq is only used for pretty printing the json output,
 # you can install it with `apt install jq` or simply enter the command without it
-docker image inspect --format='{{json .Config.Labels}}' 974517877189.dkr.ecr.eu-central-1.amazonaws.com/service-name:develop.latest | jq
+docker image inspect --format='{{json .Config.Labels}}' 974517877189.dkr.ecr.eu-central-1.amazonaws.com/service-search-wsgi:develop.latest | jq
 ```
 
 You can also check these metadata on a running container as follows
@@ -137,8 +143,8 @@ docker ps --format="table {{.ID}}\t{{.Image}}\t{{.Labels}}"
 
 ## Deployment
 
-This service is to be deployed to the Kubernetes cluster once it is merged.
-TO DO: give instructions to deploy to kubernetes.
+This service is going to be deployed on a vhost. The configuration of the ***docker-compose.yml*** of the vhost setup is going to be here:
+[https://github.com/geoadmin/infra-vhost](https://github.com/geoadmin/infra-vhost)
 
 ### Deployment configuration
 
@@ -146,6 +152,20 @@ The service is configured by Environment Variable:
 
 | Env         | Default               | Description                |
 | ----------- | --------------------- | -------------------------- |
+| HTTP_PORT | 5000 | The port on which the service can be queried. |
+| TESTING | False | When TESTING=True, the application does not need a db connection to retrieve a list of topics. A list with the topics used in the tests is being set. |
+| BOD_DB_NAME | - | Depending on the staging level usually |
+| BOD_DB_HOST | - | The db host. |
+| BOD_DB_PORT | 5432 | The db port |
+| BOD_DB_USER | - | The read-only db user |
+| BOD_DB_PASSWD | - | The db password. |
+| GEODATA_STAGING | prod | In the database bod, a dataset itself has the attribute staging. This staging (dev, int and prod) is being filtered when querying the indexes. |
+| SEARCH_SPHINX_HOST | localhost | The host for sphinx search server. |
+| SEARCH_SPHINX_PORT | 9321 | The port for sphinx search server. |
+| CACHE_DEFAULT_TIMEOUT | 86400 | The time in seconds in which the db queries for `topics` and `translations` will be cached. Default 24 hours, as changing rarely. |
 | LOGGING_CFG | logging-cfg-local.yml | Logging configuration file |
 | FORWARED_ALLOW_IPS | `*` | Sets the gunicorn `forwarded_allow_ips` (see https://docs.gunicorn.org/en/stable/settings.html#forwarded-allow-ips). This is required in order to `secure_scheme_headers` to works. |
 | FORWARDED_PROTO_HEADER_NAME | `X-Forwarded-Proto` | Sets gunicorn `secure_scheme_headers` parameter to `{FORWARDED_PROTO_HEADER_NAME: 'https'}`, see https://docs.gunicorn.org/en/stable/settings.html#secure-scheme-headers. |
+| SCRIPT_NAME | '' | The script name. This will be used once, when we have an idea about how to query search-wsgi later on. F.ex. `/api/search/` f.ex. used by gunicorn (wsgi-server). |
+| CACHE_CONTROL_HEADER | `'public, max-age=600'` | Cache-Control header value for the search endpoint |
+| GZIP_COMPRESSION_LEVEL | `9` | GZIP compression level |

@@ -1,10 +1,13 @@
-# -*- coding: utf-8 -*-
-
+import logging
 import math
 from functools import reduce
 
+logger = logging.getLogger(__name__)
 
-class Point:
+# pylint: disable=invalid-name
+
+
+class Point:  # pylint: disable=too-few-public-methods
 
     def __init__(self, x, y):
         self.x = float(x)
@@ -50,7 +53,7 @@ class BBox:
         return Point(self.minx, self.maxy)
 
     def contains(self, x, y):
-        if (self.minx <= x and self.maxx >= x and self.miny <= y and self.maxy >= y):
+        if (self.minx <= x <= self.maxx and self.miny <= y <= self.maxy):
             return True
         return False
 
@@ -63,13 +66,13 @@ class BBox:
 
         retBox = other
 
-        if (other.maxx > self.maxx):
+        if other.maxx > self.maxx:
             retBox.maxx = self.maxx
-        if (other.minx < self.minx):
+        if other.minx < self.minx:
             retBox.minx = self.minx
-        if (other.maxy > self.maxy):
+        if other.maxy > self.maxy:
             retBox.maxy = self.maxy
-        if (other.miny < self.miny):
+        if other.miny < self.miny:
             retBox.miny = self.miny
 
         return retBox
@@ -100,29 +103,27 @@ class QuadTree:
         self.levels = int(levels)
 
     def __repr__(self):
-        return 'QuadTree(%s,%s)' % (self.bbox, self.levels)
-
-    '''
-    returns resolution of QuadTree.
-    Represents the extend of smallest square
-    '''
+        return f'QuadTree({self.bbox},{self.levels})'
 
     def resolution(self):
+        '''
+        returns resolution of QuadTree.
+        Represents the extend of smallest square
+        '''
         # assuming quadtree contains box which is a square
         return self.bbox.width() / math.pow(2, self.levels)
 
-    '''
-    creates the morton key space for a point
-    returns empty string if point is not inside outer limits
-    Note: returned key always has level length
-    '''
-
     def xy_to_morton(self, x, y):
+        '''
+        creates the morton key space for a point
+        returns empty string if point is not inside outer limits
+        Note: returned key always has level length
+        '''
         res = '0'
         if not self.bbox.contains(x, y):
             return ''
         curQuads = self.bbox.create_quads()
-        for i in range(self.levels):
+        for _ in range(self.levels):
             for j in range(4):
                 if curQuads[j].contains(x, y):
                     res += str(j)
@@ -130,13 +131,12 @@ class QuadTree:
                     break
         return res
 
-    '''
-    takes array of points and returns morton space key
-    which contains _all_ points
-    Note: returned key can have any length up to level
-    '''
-
     def points_to_morton(self, points):
+        '''
+        takes array of points and returns morton space key
+        which contains _all_ points
+        Note: returned key can have any length up to level
+        '''
 
         def contains_all_points(bbox, points):
             return reduce(lambda res, p: (res and bbox.contains(p.x, p.y)), points, True)
@@ -146,14 +146,14 @@ class QuadTree:
             return ''
 
         curQuads = self.bbox.create_quads()
-        for i in range(self.levels):
+        for _ in range(self.levels):
             has_quad = False
             for j in range(4):
                 if contains_all_points(curQuads[j], points):
                     has_quad = True
                     res += str(j)
                     curQuads = curQuads[j].create_quads()
-                if (len(res) > self.levels):
+                if len(res) > self.levels:
                     return res
             if not has_quad:
                 return res
@@ -168,17 +168,14 @@ class QuadTree:
         intbox = self.bbox.getIntersection(bbox)
         return self._multi_points_dia1(intbox)
 
-    '''
-    next 6 functions should deliver the same result
-      -> the morton space key of the the quad that fully contains the bbox
-    functions written to
-     a) verify different strategies (3 for each base algorithm)
-     b) compare performance
-    '''
-    '''
-    get key for each corner point of bounding box
-    return key which is common to all results (from the start)
-    '''
+    # next 6 functions should deliver the same result
+    #   -> the morton space key of the the quad that fully contains the bbox
+    # functions written to
+    #  a) verify different strategies (3 for each base algorithm)
+    #  b) compare performance
+    #
+    # get key for each corner point of bounding box
+    # return key which is common to all results (from the start)
 
     def _getCommonKey(self, keys):
         res = ''
@@ -187,33 +184,29 @@ class QuadTree:
             keys = list(keys)
         for i in range(self.levels + 1):
             before = len(res)
-            if not reduce(lambda has, k: (has and len(k) > i), keys, True):
+            if not reduce(lambda has, k: (has and len(k) > i), keys, True):  # pylint: disable=line-too-long, cell-var-from-loop
                 return res
-            res += reduce(lambda char, k: '' if char != k[i] else k[i], keys[1:], keys[0][i])
+            res += reduce(lambda char, k: '' if char != k[i] else k[i], keys[1:], keys[0][i])  # pylint: disable=line-too-long, cell-var-from-loop
             if before == len(res):
                 return res
         return res
 
     def _single_points_all(self, bbox):
-        return self._getCommonKey(
-            [self.xy_to_morton(bbox.pointAt(i).x, bbox.pointAt(i).y) for i in range(4)]
-        )
+        return self._getCommonKey([
+            self.xy_to_morton(bbox.pointAt(i).x, bbox.pointAt(i).y) for i in range(4)
+        ])
 
     def _single_points_dia1(self, bbox):
-        return self._getCommonKey(
-            [
-                self.xy_to_morton(bbox.pointAt(0).x, bbox.pointAt(0).y),
-                self.xy_to_morton(bbox.pointAt(2).x, bbox.pointAt(2).y)
-            ]
-        )
+        return self._getCommonKey([
+            self.xy_to_morton(bbox.pointAt(0).x, bbox.pointAt(0).y),
+            self.xy_to_morton(bbox.pointAt(2).x, bbox.pointAt(2).y)
+        ])
 
     def _single_points_dia2(self, bbox):
-        return self._getCommonKey(
-            [
-                self.xy_to_morton(bbox.pointAt(1).x, bbox.pointAt(1).y),
-                self.xy_to_morton(bbox.pointAt(3).x, bbox.pointAt(3).y)
-            ]
-        )
+        return self._getCommonKey([
+            self.xy_to_morton(bbox.pointAt(1).x, bbox.pointAt(1).y),
+            self.xy_to_morton(bbox.pointAt(3).x, bbox.pointAt(3).y)
+        ])
 
     def _multi_points_all(self, bbox):
         return self.points_to_morton([bbox.pointAt(i) for i in range(4)])

@@ -2,7 +2,7 @@ SHELL = /bin/bash
 
 .DEFAULT_GOAL := help
 
-SERVICE_NAME := service-search
+SERVICE_NAME := service-search-wsgi
 
 CURRENT_DIR := $(shell pwd)
 
@@ -37,7 +37,7 @@ PIP_FILE_LOCK = Pipfile.lock
 # default configuration
 ENV_FILE ?= .env.local
 HTTP_PORT ?= 5000
-ROUTE_PREFIX ?= /api/$(SERVICE_NAME)
+ROUTE_PREFIX ?='' # this will be set in a later iteration
 
 # Commands
 PIPENV_RUN := pipenv run
@@ -68,7 +68,7 @@ help:
 	@echo "- ci-check-format    Format the python source code and check if any files has changed. This is meant to be used by the CI."
 	@echo "- lint               Lint the python source code"
 	@echo "- format-lint        Format and lint the python source code"
-	@echo "- test               Run the tests"
+	@echo "- test               Run the unit-tests"
 	@echo -e " \033[1mLOCAL SERVER TARGETS\033[0m "
 	@echo "- serve              Run the project using the flask debug server. Port can be set by Env variable HTTP_PORT (default: 5000)"
 	@echo "- gunicornserve      Run the project using the gunicorn WSGI server. Port can be set by Env variable DEBUG_HTTP_PORT (default: 5000)"
@@ -95,6 +95,8 @@ dev: $(REQUIREMENTS)
 setup: $(REQUIREMENTS)
 	pipenv install
 	pipenv shell
+	cp -n .env.default .env.local
+
 
 
 .PHONY: ci
@@ -134,7 +136,7 @@ format-lint: format lint
 
 .PHONY: test
 test:
-	ENV_FILE=.env.test $(NOSE) -c tests/unittest.cfg --verbose -s tests/
+	ENV_FILE=.env.test $(NOSE) -c tests/unittest.cfg --verbose -s tests/unit_tests/
 
 
 # Serve targets. Using these will run the application on your local machine. You can either serve with a wsgi front (like it would be within the container), or without.
@@ -176,9 +178,10 @@ dockerpush: dockerbuild
 dockerrun: clean_logs dockerbuild $(LOGS_DIR)
 	docker run \
 		-it -p $(HTTP_PORT):8080 \
-		--env-file=${PWD}/${ENV_FILE} \
+		--env-file=${PWD}/$(ENV_FILE) \
 		--env LOGS_DIR=/logs \
 		--env SCRIPT_NAME=$(ROUTE_PREFIX) \
+		--net host \
 		--mount type=bind,source="${LOGS_DIR}",target=/logs \
 		$(DOCKER_IMG_LOCAL_TAG)
 

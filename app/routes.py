@@ -16,13 +16,30 @@ def checker():
     return make_response(jsonify({'success': True, 'message': 'OK', 'version': APP_VERSION}))
 
 
-@app.route('/search', methods=['GET'])
-def check_search():
-    search = Search(request)
+@app.route('/rest/services/<topic>/SearchServer', methods=['GET'])
+def search_server(topic='all'):
+    search = Search(request, topic)
+    content_type_override = None
+
     if request.args.get('geometryFormat') == 'geojson':
-        search_result = search.view_find_geojson()
+        results = search.view_find_geojson()
+        content_type_override = "application/geo+json"
     elif request.args.get('geometryFormat') == 'esrijson':
-        search_result = search.view_find_esrijson()
+        results = search.view_find_esrijson()
     else:
-        search_result = search.search()
-    return make_response(search_result)
+        results = search.search()
+
+    response = make_response(jsonify(results))
+
+    callback = request.args.get('callback', None)
+    if callback is not None:
+        response.set_data(f"/**/{callback}({response.get_data(as_text=True)});")
+        content_type_override = request.accept_mimetypes.best_match(
+            ["text/javascript", "application/javascript"],
+            default="text/javascript",
+        )
+
+    if content_type_override:
+        response.headers['Content-Type'] = content_type_override
+
+    return response
