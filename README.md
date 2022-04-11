@@ -153,6 +153,7 @@ The service is configured by Environment Variable:
 | Env         | Default               | Description                |
 | ----------- | --------------------- | -------------------------- |
 | HTTP_PORT | 5000 | The port on which the service can be queried. |
+| SEARCH_WORKERS | `0` | Number of workers. `0` or negative value means that the number of worker are computed from the number of cpu |
 | TESTING | False | When TESTING=True, the application does not need a db connection to retrieve a list of topics. A list with the topics used in the tests is being set. |
 | BOD_DB_NAME | - | Depending on the staging level usually |
 | BOD_DB_HOST | - | The db host. |
