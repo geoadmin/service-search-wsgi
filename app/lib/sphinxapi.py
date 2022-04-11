@@ -649,6 +649,8 @@ class SphinxClient:
         self._reqs = []  # we won't re-run erroneous batch
 
         if not results or len(results) == 0:
+            # len(results) == 0 is a failure we should have a least one entry in results,
+            # this entry might contain an empty result though.
             return None
         self._error = results[0]['error']
         self._warning = results[0]['warning']
