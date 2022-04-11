@@ -8,6 +8,7 @@ from app.settings import FORWARDED_PROTO_HEADER_NAME
 from app.settings import FORWARED_ALLOW_IPS
 from app.settings import HTTP_PORT
 from app.settings import SEARCH_SPHINX_TIMEOUT
+from app.settings import SEARCH_WORKERS
 from app.settings import WSGI_TIMEOUT
 
 
