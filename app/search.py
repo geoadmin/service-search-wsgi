@@ -27,6 +27,7 @@ from app.lib import sphinxapi
 from app.settings import GEODATA_STAGING
 from app.settings import SEARCH_SPHINX_HOST
 from app.settings import SEARCH_SPHINX_PORT
+from app.settings import SEARCH_SPHINX_TIMEOUT
 
 logger = logging.getLogger(__name__)
 
@@ -138,7 +139,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
 
     # is being called from routes.py directly
     def search(self):
-        self.sphinx.SetConnectTimeout(10.0)
+        self.sphinx.SetConnectTimeout(SEARCH_SPHINX_TIMEOUT)
         # create a quadindex if the bbox is defined
         if self.bbox is not None and self.typeInfo not in ('layers', 'featuresearch'):
             self._get_quad_index()

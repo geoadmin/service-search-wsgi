@@ -65,6 +65,7 @@ FALLBACK_TOPICS = [
 
 SEARCH_SPHINX_HOST = os.getenv('SEARCH_SPHINX_HOST', 'localhost')
 SEARCH_SPHINX_PORT = int(os.getenv('SEARCH_SPHINX_PORT', '9312'))
+SEARCH_SPHINX_TIMEOUT = int(os.getenv('SEARCH_SPHINX_TIMEOUT', '3'))
 
 SCRIPT_NAME = os.getenv('SCRIPT_NAME', '')  # This is used by unicorn for route prefix
 
@@ -93,3 +94,5 @@ FORWARDED_PROTO_HEADER_NAME = os.getenv('FORWARDED_PROTO_HEADER_NAME', 'X-Forwar
 CACHE_CONTROL_HEADER = os.getenv('CACHE_CONTROL_HEADER', 'public, max-age=600')
 
 GZIP_COMPRESSION_LEVEL = int(os.getenv('GZIP_COMPRESSION_LEVEL', '9'))
+
+WSGI_TIMEOUT = int(os.getenv('WSGI_TIMEOUT', '1'))
