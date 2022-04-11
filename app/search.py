@@ -215,29 +215,27 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             searchTextFinal = searchList[0]
 
         if len(searchList) != 0:
+            # wildcard search only if more than one character in searchtext
+            if len(' '.join(self.searchText)) > 1 or self.bbox:
+                # standard wildcard search
+                self.sphinx.AddQuery(searchTextFinal, index='swisssearch')
+
+            # exact search, first 10 results
+            searchText = '@detail "^{}"'.format(' '.join(self.searchText))  # pylint: disable=consider-using-f-string
+            self.sphinx.AddQuery(searchText, index='swisssearch')
+
             try:
-                # wildcard search only if more than one character in searchtext
-                if len(' '.join(self.searchText)) > 1 or self.bbox:
-                    # standard wildcard search
-                    self.sphinx.AddQuery(searchTextFinal, index='swisssearch')
-
-                # exact search, first 10 results
-                searchText = '@detail "^{}"'.format(' '.join(self.searchText))  # pylint: disable=consider-using-f-string
-                self.sphinx.AddQuery(searchText, index='swisssearch')
-
-                # reset settings
                 temp = self.sphinx.RunQueries()
-
-                # In case RunQueries doesn't return results (reason unknown)
-                # related to issue
-                if temp is None:
-                    msg = f'no results from sphinx service ({self.sphinx.GetLastError()})'
-                    logger.error(msg)
-                    raise ServiceUnavailable(msg)
-
-            except IOError as e:  # pragma: no cover
-                logger.error(e)
+            except IOError as e:
+                logger.exception('Failed to run queries: %s', e)
                 raise GatewayTimeout() from e
+
+            # In case RunQueries doesn't return results (reason unknown)
+            # related to issue
+            if temp is None:
+                msg = f'no results from sphinx service ({self.sphinx.GetLastError()})'
+                logger.exception(msg)
+                raise ServiceUnavailable(msg)
 
             wildcard_results = temp[0].get('matches', [])
             merged_results = []
