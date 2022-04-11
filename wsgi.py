@@ -5,6 +5,8 @@ from app.helpers.utils import get_logging_cfg
 from app.settings import FORWARDED_PROTO_HEADER_NAME
 from app.settings import FORWARED_ALLOW_IPS
 from app.settings import HTTP_PORT
+from app.settings import SEARCH_SPHINX_TIMEOUT
+from app.settings import WSGI_TIMEOUT
 
 
 class StandaloneApplication(BaseApplication):  # pylint: disable=abstract-method
@@ -33,7 +35,7 @@ if __name__ == '__main__':
         'bind': f"0.0.0.0:{HTTP_PORT}",
         'worker_class': 'gevent',
         'workers': 2,  # scaling horizontally is left to Kubernetes
-        'timeout': 60,
+        'timeout': WSGI_TIMEOUT + SEARCH_SPHINX_TIMEOUT,
         'logconfig_dict': get_logging_cfg(),
         'forwarded_allow_ips': FORWARED_ALLOW_IPS,
         'secure_scheme_headers': {

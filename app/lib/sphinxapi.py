@@ -219,8 +219,8 @@ class SphinxClient:
         """
         Set connection timeout ( float second )
         """
-        assert isinstance(timeout, float)
-        # set timeout to 0 make connaection non-blocking that is wrong
+        assert isinstance(timeout, (float, int))
+        # set timeout to 0 make connection non-blocking that is wrong
         # so timeout got clipped to reasonable minimum
         self._timeout = max(0.001, timeout)
 

@@ -94,7 +94,10 @@ def log_response(response):
 def handle_exception(err):
     """Return JSON instead of HTML for HTTP errors."""
     if isinstance(err, HTTPException):
-        logger.error(err)
+        if err.code >= 500:
+            logger.exception(err)
+        else:
+            logger.error(err)
         return make_error_msg(err.code, err.description)
 
     logger.exception('Unexpected exception: %s', err)
