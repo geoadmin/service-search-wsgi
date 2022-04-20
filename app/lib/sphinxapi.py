@@ -663,6 +663,15 @@ class SphinxClient:
         Add query to batch.
         """
         logger.debug("Add Query; query='%s', index='%s', comment='%s'", query, index, comment)
+        logger.debug(
+            '_query_flags=%s, _ranker=%s, _weights=%s, _rankexpr=%s, _filters=%s, _fieldweights=%s',
+            self._query_flags,
+            self._ranker,
+            self._weights,
+            self._rankexpr,
+            self._filters,
+            self._fieldweights
+        )
 
         # build request
         req = []
@@ -677,15 +686,17 @@ class SphinxClient:
         req.append(self._sortby)
 
         assert isinstance(query, str)
-        req.append(pack('>L', len(query)))
-        req.append(query.encode())
+        query_encoded = query.encode()
+        req.append(pack('>L', len(query_encoded)))
+        req.append(query_encoded)
 
         req.append(pack('>L', len(self._weights)))
         for w in self._weights:
             req.append(pack('>L', w))
         assert isinstance(index, str)
-        req.append(pack('>L', len(index)))
-        req.append(index.encode())
+        index_encoded = index.encode()
+        req.append(pack('>L', len(index_encoded)))
+        req.append(index_encoded)
         req.append(pack('>L', 1))  # id64 range marker
         req.append(pack('>Q', self._min_id))
         req.append(pack('>Q', self._max_id))
@@ -743,8 +754,8 @@ class SphinxClient:
             req.append(pack('>L', len(field)) + field + pack('>L', weight))
 
         # comment
-        comment = str(comment)
-        req.append(pack('>L', len(comment)) + comment.encode())
+        comment_encoded = str(comment).encode()
+        req.append(pack('>L', len(comment_encoded)) + comment_encoded)
 
         # attribute overrides
         req.append(pack('>L', len(self._overrides)))
@@ -1010,41 +1021,50 @@ class SphinxClient:
 
         # req index
         assert isinstance(index, str)
-        req.append(pack('>L', len(index)))
-        req.append(index.encode())
+        index_encoded = index.encode()
+        req.append(pack('>L', len(index_encoded)))
+        req.append(index_encoded)
 
         # req words
         assert isinstance(words, str)
-        req.append(pack('>L', len(words)))
-        req.append(words.encode())
+        words_encoded = words.encode()
+        req.append(pack('>L', len(words_encoded)))
+        req.append(words_encoded)
 
         # options
-        req.append(pack('>L', len(opts['before_match'])))
-        req.append(opts['before_match'].encode())
+        before_match_encoded = opts['before_match'].encode()
+        req.append(pack('>L', len(before_match_encoded)))
+        req.append(before_match_encoded)
 
-        req.append(pack('>L', len(opts['after_match'])))
-        req.append(opts['after_match'].encode())
+        after_match_encoded = opts['after_match'].encode()
+        req.append(pack('>L', len(after_match_encoded)))
+        req.append(after_match_encoded)
 
-        req.append(pack('>L', len(opts['chunk_separator'])))
-        req.append(opts['chunk_separator'].encode())
+        chunk_separator_encoded = opts['chunk_separator'].encode()
+        req.append(pack('>L', len(chunk_separator_encoded)))
+        req.append(chunk_separator_encoded)
 
         req.append(pack('>L', int(opts['limit'])))
         req.append(pack('>L', int(opts['around'])))
-
         req.append(pack('>L', int(opts['limit_passages'])))
         req.append(pack('>L', int(opts['limit_words'])))
         req.append(pack('>L', int(opts['start_passage_id'])))
-        req.append(pack('>L', len(opts['html_strip_mode'])))
-        req.append(opts['html_strip_mode'].encode())
-        req.append(pack('>L', len(opts['passage_boundary'])))
-        req.append(opts['passage_boundary'].encode())
+
+        html_strip_mode_encoded = opts['html_strip_mode'].encode()
+        req.append(pack('>L', len(html_strip_mode_encoded)))
+        req.append(html_strip_mode_encoded)
+
+        passage_boundary_encoded = opts['passage_boundary'].encode()
+        req.append(pack('>L', len(passage_boundary_encoded)))
+        req.append(passage_boundary_encoded)
 
         # documents
         req.append(pack('>L', len(docs)))
         for doc in docs:
             assert isinstance(doc, str)
-            req.append(pack('>L', len(doc)))
-            req.append(doc.encode())
+            doc_encoded = doc.encode()
+            req.append(pack('>L', len(doc_encoded)))
+            req.append(doc_encoded)
 
         req = b''.join(req)
 
@@ -1118,7 +1138,8 @@ class SphinxClient:
         assert all(map(assertEntry, values.values()))
 
         # build request
-        req = [pack('>L', len(index)), index.encode()]
+        index_encoded = index.encode()
+        req = [pack('>L', len(index_encoded)), index_encoded]
 
         req.append(pack('>L', len(attrs)))
         ignore_absent = 0
@@ -1129,7 +1150,8 @@ class SphinxClient:
         if mva:
             mva_attr = 1
         for attr in attrs:
-            req.append(pack('>L', len(attr)) + attr.encode())
+            attr_encoded = attr.encode()
+            req.append(pack('>L', len(attr_encoded)) + attr_encoded)
             req.append(pack('>L', mva_attr))
 
         req.append(pack('>L', len(values)))
@@ -1172,8 +1194,10 @@ class SphinxClient:
         assert isinstance(hits, int)
 
         # build request
-        req = [pack('>L', len(query)) + query.encode()]
-        req.append(pack('>L', len(index)) + index.encode())
+        query_encoded = query.encode()
+        req = [pack('>L', len(query_encoded)) + query_encoded]
+        index_encoded = index.encode()
+        req.append(pack('>L', len(index_encoded)) + index_encoded)
         req.append(pack('>L', hits))
 
         # connect, send query, get response
