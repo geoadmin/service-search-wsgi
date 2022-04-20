@@ -13,6 +13,7 @@ from shapely.wkt import dumps as shape_dumps
 from shapely.wkt import loads as shape_loads
 
 from app import cache
+from app.lib import sphinxapi
 
 logger = logging.getLogger(__name__)
 
@@ -62,23 +63,7 @@ def remove_accents(input_str):
 def escape_sphinx_syntax(input_str):
     if input_str is None:
         return input_str
-    input_str = input_str.replace('|', '\\|')
-    input_str = input_str.replace('!', '\\!')
-    input_str = input_str.replace('@', '\\@')
-    input_str = input_str.replace('&', '\\&')
-    input_str = input_str.replace('~', '\\~')
-    input_str = input_str.replace('^', '\\^')
-    input_str = input_str.replace('=', '\\=')
-    input_str = input_str.replace('/', '\\/')
-    input_str = input_str.replace('(', '\\(')
-    input_str = input_str.replace(')', '\\)')
-    input_str = input_str.replace(']', '\\]')
-    input_str = input_str.replace('[', '\\[')
-    input_str = input_str.replace('*', '\\*')
-    input_str = input_str.replace('<', '\\<')
-    input_str = input_str.replace('$', '\\$')
-    input_str = input_str.replace('"', '\"')
-    return input_str
+    return sphinxapi.SphinxClient.EscapeString(input_str)
 
 
 def get_proj_from_srid(srid):

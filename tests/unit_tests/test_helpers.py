@@ -28,9 +28,13 @@ class TestHelpers(TestCase):
         result = format_search_text(testinput_str)
         self.assertEqual(result, 'Hallo\\!')
 
-        testinput_str2 = 'über'
-        result2 = format_search_text(testinput_str2)
-        self.assertEqual(result2, 'ueber')
+        testinput_str = 'über'
+        result = format_search_text(testinput_str)
+        self.assertEqual(result, 'ueber')
+
+        testinput_str = "%+&/()=?!üäöéà$@i$"
+        result = format_search_text(testinput_str)
+        self.assertEqual(result, '%+\\&\\/\\(\\)\\=?\\!ueaeoeea\\$\\@i\\$')
 
     def test_remove_accents(self):
         testinput_str = None
@@ -41,6 +45,9 @@ class TestHelpers(TestCase):
         testinput_str = None
         result = escape_sphinx_syntax(testinput_str)
         self.assertEqual(result, None)
+        testinput_str = '|!@&~^=/()[]*<$"'
+        result = escape_sphinx_syntax(testinput_str)
+        self.assertEqual(result, r'\|\!\@\&\~\^\=\/\(\)[]\*\<\$\"')
 
     def test_float_raise_nan(self):
         testval = 5

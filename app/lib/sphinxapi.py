@@ -1288,7 +1288,7 @@ class SphinxClient:
 
     @staticmethod
     def EscapeString(string):
-        return re.sub(r"([=\(\)|\-!@~\"&/\\\^\$\=\<])", r"\\\1", string)
+        return re.sub(r"([=\(\)|\-!@~\"&/\\\^\$\=\<\*])", r"\\\1", string)
 
     def FlushAttributes(self):
         sock = self._Connect()
