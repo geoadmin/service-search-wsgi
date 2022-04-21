@@ -1,3 +1,5 @@
+import multiprocessing
+
 from gunicorn.app.base import BaseApplication
 
 from app import app as application
@@ -5,6 +7,9 @@ from app.helpers.utils import get_logging_cfg
 from app.settings import FORWARDED_PROTO_HEADER_NAME
 from app.settings import FORWARED_ALLOW_IPS
 from app.settings import HTTP_PORT
+from app.settings import SEARCH_SPHINX_TIMEOUT
+from app.settings import SEARCH_WORKERS
+from app.settings import WSGI_TIMEOUT
 
 
 class StandaloneApplication(BaseApplication):  # pylint: disable=abstract-method
@@ -28,12 +33,14 @@ class StandaloneApplication(BaseApplication):  # pylint: disable=abstract-method
 
 # We use the port 5000 as default, otherwise we set the HTTP_PORT env variable within the container.
 if __name__ == '__main__':
+    if SEARCH_WORKERS <= 0:
+        SEARCH_WORKERS = (multiprocessing.cpu_count() * 2) + 1
     # Bind to 0.0.0.0 to let your app listen to all network interfaces.
     options = {
         'bind': f"0.0.0.0:{HTTP_PORT}",
         'worker_class': 'gevent',
-        'workers': 2,  # scaling horizontally is left to Kubernetes
-        'timeout': 60,
+        'workers': SEARCH_WORKERS,
+        'timeout': WSGI_TIMEOUT + SEARCH_SPHINX_TIMEOUT,
         'logconfig_dict': get_logging_cfg(),
         'forwarded_allow_ips': FORWARED_ALLOW_IPS,
         'secure_scheme_headers': {

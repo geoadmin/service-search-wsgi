@@ -27,6 +27,7 @@ from app.lib import sphinxapi
 from app.settings import GEODATA_STAGING
 from app.settings import SEARCH_SPHINX_HOST
 from app.settings import SEARCH_SPHINX_PORT
+from app.settings import SEARCH_SPHINX_TIMEOUT
 
 logger = logging.getLogger(__name__)
 
@@ -138,7 +139,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
 
     # is being called from routes.py directly
     def search(self):
-        self.sphinx.SetConnectTimeout(10.0)
+        self.sphinx.SetConnectTimeout(SEARCH_SPHINX_TIMEOUT)
         # create a quadindex if the bbox is defined
         if self.bbox is not None and self.typeInfo not in ('layers', 'featuresearch'):
             self._get_quad_index()
@@ -167,13 +168,21 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         self.sphinx.SetFilterRange('@weight', 5000, 2**32 - 1)
         try:
             if self.typeInfo in ('locations'):
-                temp = self.sphinx.Query(searchTextFinal, index='swisssearch_fuzzy')
-        except IOError as e:  # pragma: no cover
-            logger.error(e)
-            raise GatewayTimeout() from e
-        temp = temp['matches'] if temp is not None else temp
+                results = self.sphinx.Query(searchTextFinal, index='swisssearch_fuzzy')
+        except IOError as error:
+            logger.exception('Failed to run query: %s', error)
+            raise GatewayTimeout() from error
+
+        if results is None:
+            error = "Failed to run sphinx query"
+            if self.sphinx.GetLastError():
+                error += f": {self.sphinx.GetLastError()}"
+            logger.error(error)
+            raise ServiceUnavailable(description=error)
+
+        results = results['matches']
         self.results['fuzzy'] = 'true'
-        return temp
+        return results
 
     def _swiss_search(self):  # pylint: disable=too-many-branches, too-many-statements, too-many-locals
         logger.debug("Search locations (swiss search); searchText=%s", self.searchText)
@@ -215,36 +224,36 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             searchTextFinal = searchList[0]
 
         if len(searchList) != 0:
+            # wildcard search only if more than one character in searchtext
+            if len(' '.join(self.searchText)) > 1 or self.bbox:
+                # standard wildcard search
+                self.sphinx.AddQuery(searchTextFinal, index='swisssearch')
+
+            # exact search, first 10 results
+            searchText = '@detail "^{}"'.format(' '.join(self.searchText))  # pylint: disable=consider-using-f-string
+            self.sphinx.AddQuery(searchText, index='swisssearch')
+
             try:
-                # wildcard search only if more than one character in searchtext
-                if len(' '.join(self.searchText)) > 1 or self.bbox:
-                    # standard wildcard search
-                    self.sphinx.AddQuery(searchTextFinal, index='swisssearch')
+                results = self.sphinx.RunQueries()
+            except IOError as error:
+                logger.exception('Failed to run queries: %s', error)
+                raise GatewayTimeout() from error
 
-                # exact search, first 10 results
-                searchText = '@detail "^{}"'.format(' '.join(self.searchText))  # pylint: disable=consider-using-f-string
-                self.sphinx.AddQuery(searchText, index='swisssearch')
+            # In case RunQueries doesn't return results (reason unknown)
+            # related to issue
+            if results is None:
+                error = "Failed to run sphinx queries"
+                if self.sphinx.GetLastError():
+                    error += f": {self.sphinx.GetLastError()}"
+                logger.error(error)
+                raise ServiceUnavailable(description=error)
 
-                # reset settings
-                temp = self.sphinx.RunQueries()
-
-                # In case RunQueries doesn't return results (reason unknown)
-                # related to issue
-                if temp is None:
-                    msg = f'no results from sphinx service ({self.sphinx.GetLastError()})'
-                    logger.error(msg)
-                    raise ServiceUnavailable(msg)
-
-            except IOError as e:  # pragma: no cover
-                logger.error(e)
-                raise GatewayTimeout() from e
-
-            wildcard_results = temp[0].get('matches', [])
+            wildcard_results = results[0].get('matches', [])
             merged_results = []
-            if len(temp) == 2:
+            if len(results) == 2:
                 # we have results from both queries (exact + wildcard)
                 # prepend exact search results to wildcard search result
-                exact_results = temp[1].get('matches', [])
+                exact_results = results[1].get('matches', [])
                 # exact matches have priority over prefix matches
                 # searchText=waldhofstrasse+1
                 # waldhofstrasse 1 -> weight 100
@@ -263,24 +272,24 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                 merged_results = wildcard_results
             # remove duplicate from sphinx results, exact search results have priority over
             # wildcard search results
-            temp = []
+            results = []
             seen = []
             for d in merged_results:
                 if d['id'] not in seen:
-                    temp.append(d)
+                    results.append(d)
                     seen.append(d['id'])
 
             # reduce number of elements in result to limit
-            temp = temp[:limit]
+            results = results[:limit]
 
             # if standard index did not find anything, use soundex/metaphon indices
             # which should be more fuzzy in its results
-            if temp is None or len(temp) <= 0:
-                temp = self._fuzzy_search(searchTextFinal)
+            if len(results) <= 0:
+                results = self._fuzzy_search(searchTextFinal)
         else:
-            temp = []
-        if temp is not None and len(temp) != 0:
-            self._parse_location_results(temp, limit)
+            results = []
+        if results is not None and len(results) != 0:
+            self._parse_location_results(results, limit)
 
     def _layer_search(self):
         logger.debug("Search layer; searchText=%s", self.searchText)
@@ -327,13 +336,21 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             f'& {staging_filter(GEODATA_STAGING)}'  # Only layers in correct staging are searched
         ])
         try:
-            temp = self.sphinx.Query(searchText, index=index_name)
-        except IOError as e:  # pragma: no cover
-            logger.error(e)
-            raise GatewayTimeout() from e
-        temp = temp['matches'] if temp is not None else temp
-        if temp is not None and len(temp) != 0:
-            self.results['results'] += temp
+            results = self.sphinx.Query(searchText, index=index_name)
+        except IOError as error:
+            logger.exception('Failed to run queries: %s', error)
+            raise GatewayTimeout() from error
+
+        if results is None:
+            error = "Failed to run sphinx query"
+            if self.sphinx.GetLastError():
+                error += f": {self.sphinx.GetLastError()}"
+            logger.error(error)
+            raise ServiceUnavailable(description=error)
+
+        results = results['matches']
+        if results is not None and len(results) != 0:
+            self.results['results'] += results
 
     def _get_quadindex_string(self):
         ''' Recursive and inclusive search through
@@ -378,12 +395,21 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             searchdText = ''
         self._add_feature_queries(searchdText, timeFilter)
         try:
-            temp = self.sphinx.RunQueries()
-        except IOError as e:  # pragma: no cover
-            logger.error(e)
-            raise GatewayTimeout() from e
-        self.sphinx.ResetFilters()
-        self._parse_feature_results(temp)
+            results = self.sphinx.RunQueries()
+        except IOError as error:  # pragma: no cover
+            logger.error('Failed to get sphinx queries: %s', error)
+            raise GatewayTimeout() from error
+        finally:
+            self.sphinx.ResetFilters()
+
+        if results:
+            self._parse_feature_results(results)
+        else:
+            error = "Failed to run sphinx queries"
+            if self.sphinx.GetLastError():
+                error += f": {self.sphinx.GetLastError()}"
+            logger.error(error)
+            raise ServiceUnavailable(description=error)
 
     def _get_time_filter(self):
         self._check_timeparameters()
