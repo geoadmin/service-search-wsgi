@@ -36,6 +36,11 @@ class TestHelpers(TestCase):
         result = format_search_text(testinput_str)
         self.assertEqual(result, '%+\\&\\/\\(\\)\\=?\\!ueaeoeea\\$\\@i\\$')
 
+    def test_minus_not_being_escaped(self):
+        testinput_str = '1940-2022'
+        result = format_search_text(testinput_str)
+        self.assertEqual(result, '1940-2022')
+
     def test_remove_accents(self):
         testinput_str = None
         result = remove_accents(testinput_str)
