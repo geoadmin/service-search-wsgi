@@ -54,7 +54,7 @@ def get_translation(msg_id, lang):
 
     '''
     # sanitize lang
-    lang = lang if lang in ['de', 'fr', 'it', 'rm', 'en'] else 'de'
+    lang = lang if lang in settings.SUPPORTED_LANGUAGES else 'de'
     query = f"SELECT {lang} FROM translations WHERE msg_id like '{msg_id}%'"
     logger.debug('function get_translation: not cached, with query %s', query)
     try:
