@@ -51,7 +51,8 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
 
         if not request.args.get('lang'):
             # if no lang is provided, the best match of the header accept-language is being used
-            self.lang = request.accept_languages.best_match(SUPPORTED_LANGUAGES)
+            best_lang_match = request.accept_languages.best_match(SUPPORTED_LANGUAGES)
+            self.lang = best_lang_match if best_lang_match else 'de'
         else:
             self.lang = request.args.get('lang')
         self.searchLang = request.args.get('searchLang')
