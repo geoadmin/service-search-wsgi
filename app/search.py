@@ -28,6 +28,7 @@ from app.settings import GEODATA_STAGING
 from app.settings import SEARCH_SPHINX_HOST
 from app.settings import SEARCH_SPHINX_PORT
 from app.settings import SEARCH_SPHINX_TIMEOUT
+from app.settings import SUPPORTED_LANGUAGES
 
 logger = logging.getLogger(__name__)
 
@@ -48,9 +49,9 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         self.topic_name = topic
         self.has_topic(self.topic_name)
 
-        # treat lang, de as default
         if not request.args.get('lang'):
-            self.lang = 'de'
+            # if no lang is provided, the best match of the header accept-language is being used
+            self.lang = request.accept_languages.best_match(SUPPORTED_LANGUAGES)
         else:
             self.lang = request.args.get('lang')
         self.searchLang = request.args.get('searchLang')

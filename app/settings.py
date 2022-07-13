@@ -65,6 +65,8 @@ FALLBACK_TOPICS = [
     'vu'
 ]
 
+SUPPORTED_LANGUAGES = ['en', 'de', 'fr', 'it', 'rm']
+
 SEARCH_SPHINX_HOST = os.getenv('SEARCH_SPHINX_HOST', 'localhost')
 SEARCH_SPHINX_PORT = int(os.getenv('SEARCH_SPHINX_PORT', '9312'))
 SEARCH_SPHINX_TIMEOUT = int(os.getenv('SEARCH_SPHINX_TIMEOUT', '3'))
