@@ -28,7 +28,6 @@ from app.settings import GEODATA_STAGING
 from app.settings import SEARCH_SPHINX_HOST
 from app.settings import SEARCH_SPHINX_PORT
 from app.settings import SEARCH_SPHINX_TIMEOUT
-from app.settings import SUPPORTED_LANGUAGES
 
 logger = logging.getLogger(__name__)
 
@@ -49,12 +48,14 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         self.topic_name = topic
         self.has_topic(self.topic_name)
 
-        if not request.args.get('lang'):
-            # if no lang is provided, the best match of the header accept-language is being used
-            best_lang_match = request.accept_languages.best_match(SUPPORTED_LANGUAGES)
-            self.lang = best_lang_match if best_lang_match else 'de'
+        self.lang = 'de'
+        if 'lang' in request.args:
+            self.lang = request.args['lang']
         else:
-            self.lang = request.args.get('lang')
+            lang = request.accept_languages.best_match(self.availableLangs)
+            if lang:
+                self.lang = lang
+
         self.searchLang = request.args.get('searchLang')
         self.cbName = request.args.get('callback')
         # Order matters define srid first
