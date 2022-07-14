@@ -6,6 +6,7 @@ from app.helpers.db import get_topics
 from app.helpers.helpers_search import float_raise_nan
 from app.helpers.helpers_search import ilen
 from app.helpers.helpers_search import shift_to
+from app.settings import SUPPORTED_LANGUAGES
 
 SUPPORTED_OUTPUT_SRS = (21781, 2056, 3857, 4326)
 
@@ -30,7 +31,7 @@ class SearchValidation(MapNameValidation):  # pylint: disable=too-many-instance-
     def __init__(self, request):
         super().__init__()
         self.request = request
-        self.availableLangs = ['de', 'fr', 'it', 'rm', 'en']
+        self.availableLangs = SUPPORTED_LANGUAGES
         self.locationTypes = ['locations']
         self.layerTypes = ['layers']
         self.featureTypes = ['featuresearch']
@@ -48,6 +49,7 @@ class SearchValidation(MapNameValidation):  # pylint: disable=too-many-instance-
         self._typeInfo = None
         self._limit = None
         self._searchLang = None
+        self._lang = None
 
     @property
     def searchText(self):
@@ -96,6 +98,10 @@ class SearchValidation(MapNameValidation):  # pylint: disable=too-many-instance-
     @property
     def searchLang(self):
         return self._searchLang
+
+    @property
+    def lang(self):
+        return self._lang
 
     @featureIndexes.setter
     def featureIndexes(self, value):
@@ -261,3 +267,12 @@ class SearchValidation(MapNameValidation):  # pylint: disable=too-many-instance-
             logger.error("Unsupported lang filter %s", value)
             raise BadRequest(f"Unsupported lang filter {value}")
         self._searchLang = value
+
+    @lang.setter
+    def lang(self, value):
+        if value not in self.availableLangs:
+            logger.error("Unsupported lang value %s (%s are supported)", value, self.availableLangs)
+            raise BadRequest(
+                f"Unsupported lang value {value} ({self.availableLangs} are supported)"
+            )
+        self._lang = value

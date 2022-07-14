@@ -48,11 +48,14 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         self.topic_name = topic
         self.has_topic(self.topic_name)
 
-        # treat lang, de as default
-        if not request.args.get('lang'):
-            self.lang = 'de'
+        self.lang = 'de'
+        if 'lang' in request.args:
+            self.lang = request.args['lang']
         else:
-            self.lang = request.args.get('lang')
+            lang = request.accept_languages.best_match(self.availableLangs)
+            if lang:
+                self.lang = lang
+
         self.searchLang = request.args.get('searchLang')
         self.cbName = request.args.get('callback')
         # Order matters define srid first
