@@ -84,7 +84,7 @@ def log_response(response):
         "duration": time.time() - g.get('request_started', time.time())
     }
     if route_logger.isEnabledFor(logging.DEBUG):
-        log_extra['response']['data'] = response.json if response.is_json else response.data
+        log_extra['response']['json'] = response.json if response.is_json else response.data
     route_logger.info("%s %s - %s", request.method, request.path, response.status, extra=log_extra)
     return response
 

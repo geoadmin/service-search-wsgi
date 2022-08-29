@@ -240,15 +240,15 @@ class SphinxClient:
             self._socket.close()
             self._socket = None
 
+        if self._path:
+            af = socket.AF_UNIX
+            addr = self._path
+            desc = self._path
+        else:
+            af = socket.AF_INET
+            addr = (self._host, self._port)
+            desc = f'{addr[0]};{addr[1]}'
         try:
-            if self._path:
-                af = socket.AF_UNIX
-                addr = self._path
-                desc = self._path
-            else:
-                af = socket.AF_INET
-                addr = (self._host, self._port)
-                desc = f'{addr[0]};{addr[1]}'
             sock = socket.socket(af, socket.SOCK_STREAM)
             sock.settimeout(self._timeout)
             sock.connect(addr)
