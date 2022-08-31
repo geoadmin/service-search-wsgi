@@ -360,7 +360,7 @@ class SphinxClient:
         """
         Set matching mode.
         """
-        logger.warning(
+        logger.info(
             'DEPRECATED: Do not call SetMatchMode() or, even better, use SphinxQL instead of an API'
         )
         assert mode in [
@@ -533,9 +533,7 @@ class SphinxClient:
         self._retrydelay = delay
 
     def SetOverride(self, name, _type, values):
-        logger.warning(
-            'DEPRECATED: Do not call SetOverride(). Use SphinxQL REMAP() function instead.'
-        )
+        logger.info('DEPRECATED: Do not call SetOverride(). Use SphinxQL REMAP() function instead.')
         assert isinstance(name, str)
         assert _type in SPH_ATTR_TYPES
         assert isinstance(values, dict)
