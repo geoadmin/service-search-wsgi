@@ -100,3 +100,7 @@ CACHE_CONTROL_HEADER = os.getenv('CACHE_CONTROL_HEADER', 'public, max-age=600')
 GZIP_COMPRESSION_LEVEL = int(os.getenv('GZIP_COMPRESSION_LEVEL', '9'))
 
 WSGI_TIMEOUT = int(os.getenv('WSGI_TIMEOUT', '1'))
+
+# readiness probe
+PROBE_MOUNTPOINT = os.getenv('PROBE_MOUNTPOINT', '/tmp')
+SPHINX_BACKEND_READY = f"{PROBE_MOUNTPOINT}/checker_ready.txt"
