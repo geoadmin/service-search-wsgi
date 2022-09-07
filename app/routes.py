@@ -24,11 +24,8 @@ def readiness():
     try:
         with open(SPHINX_BACKEND_READY, 'r', encoding='utf-8') as fd:
             content = fd.read()
-    except IOError as e:
-        logger.critical('failed to open file %s error: %s',
-            SPHINX_BACKEND_READY,
-            e
-        )
+    except IOError as err:
+        logger.critical('failed to open file %s error: %s', SPHINX_BACKEND_READY, err)
         content = ""
 
     if content != sphinx_ok_string:
