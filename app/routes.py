@@ -24,16 +24,14 @@ def readiness():
     try:
         with open(SPHINX_BACKEND_READY, 'r', encoding='utf-8') as fd:
             content = fd.read()
-    except IOError:
+    except IOError as e:
+        logger.critical('failed to open file %s error: %s',
+            SPHINX_BACKEND_READY,
+            e
+        )
         content = ""
 
     if content != sphinx_ok_string:
-        logger.error(
-            'Incomprehensible sphinx backend %s answer: %s. '
-            'sphinx search service is probably not ready yet.',
-            SPHINX_BACKEND_READY,
-            content,
-        )
         abort(503, 'Incomprehensible answer. sphinx is probably not ready yet.')
     return make_response(jsonify({'success': True, 'message': 'OK'}))
 
