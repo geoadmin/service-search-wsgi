@@ -1,0 +1,43 @@
+version: "3.8"
+services:
+  search-sphinx:
+    image: 974517877189.dkr.ecr.eu-central-1.amazonaws.com/service-search-sphinx:${SERVICE_SEARCH_SPHINX_DOCKER_IMAGE_TAG}
+    volumes:
+      - ${SPHINX_EFS}:/var/lib/sphinxsearch/data/index_efs/
+      - sphinx_index:/var/lib/sphinxsearch/data/index/
+      - container_probes:/tmp
+    env_file:
+      - ${ENV_FILE}
+    environment:
+      - PGUSER=${BOD_DB_USER}
+      - PGPASS=${BOD_DB_PASSWD}
+    healthcheck:
+      test:  ./checker.sh
+      interval: 10s
+      timeout: 1s
+      retries: 3
+      start_period: 3600s
+    restart: always
+  search-wsgi:
+    image: 974517877189.dkr.ecr.eu-central-1.amazonaws.com/service-search-wsgi-local
+    build:
+      context: .
+    ports:
+      - ${HTTP_PORT}:${HTTP_PORT}
+    depends_on:
+      - search-sphinx
+    env_file:
+      - ${ENV_FILE}
+    environment:
+      - BOD_DB_USER=${BOD_DB_USER}
+      - BOD_DB_PASSWD=${BOD_DB_PASSWD}
+    volumes:
+      - ./config-files/:/log-cfg/
+      - container_probes:/tmp:ro
+    restart: always
+
+volumes:
+  sphinx_index:
+    external: false
+  container_probes:
+    external: false

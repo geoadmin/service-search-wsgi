@@ -1,4 +1,5 @@
 import logging
+from distutils.util import strtobool
 
 from flask import abort
 from flask import jsonify
@@ -6,7 +7,10 @@ from flask import make_response
 from flask import request
 
 from app import app
+from app.lib import sphinxapi
 from app.search import Search
+from app.settings import SEARCH_SPHINX_HOST
+from app.settings import SEARCH_SPHINX_PORT
 from app.settings import SPHINX_BACKEND_READY
 from app.version import APP_VERSION
 
@@ -16,6 +20,21 @@ logger = logging.getLogger(__name__)
 @app.route('/checker', methods=['GET'])
 def checker():
     return make_response(jsonify({'success': True, 'message': 'OK', 'version': APP_VERSION}))
+
+
+@app.route('/checker/sphinx_status', methods=['GET'])
+def status():
+    sphinx = sphinxapi.SphinxClient()
+    sphinx.SetServer(SEARCH_SPHINX_HOST, SEARCH_SPHINX_PORT)
+
+    response = sphinx.Status(strtobool(request.args.get('session', '0')))
+    sphinx_status = {
+        'data': response if response is not None else 'ERROR or WARNING',
+        'error_msg': sphinx.GetLastError(),
+        'warning_msg': sphinx.GetLastWarning()
+    }
+
+    return make_response(jsonify({'success': True, 'status': sphinx_status}))
 
 
 @app.route('/checker/ready', methods=['GET'])
