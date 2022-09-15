@@ -1,13 +1,11 @@
 import logging
 
-from flask import abort
 from flask import jsonify
 from flask import make_response
 from flask import request
 
 from app import app
 from app.search import Search
-from app.settings import SPHINX_BACKEND_READY
 from app.version import APP_VERSION
 
 logger = logging.getLogger(__name__)
@@ -20,17 +18,19 @@ def checker():
 
 @app.route('/checker/ready', methods=['GET'])
 def readiness():
-    sphinx_ok_string = 'READY\n'
-    try:
-        with open(SPHINX_BACKEND_READY, 'r', encoding='utf-8') as fd:
-            content = fd.read()
-    except IOError as err:
-        logger.critical('failed to open file %s error: %s', SPHINX_BACKEND_READY, err)
-        content = ""
+    with app.test_client() as testclient:
+        resp = testclient.get(
+            '/rest/services/all/SearchServer',
+            query_string={
+                'type': 'locations', 'searchText': 'Landstrasse 78'
+            }
+        )
 
-    if content != sphinx_ok_string:
-        abort(503, 'Incomprehensible answer. sphinx is probably not ready yet.')
-    return make_response(jsonify({'success': True, 'message': 'OK'}))
+    if resp.status_code == 200:
+        return make_response(jsonify({'success': True, 'message': 'OK'}))
+
+    logger.critical('failed to access sphinxsearch error: %s', resp.data)
+    return None
 
 
 @app.route('/rest/services/<topic>/SearchServer', methods=['GET'])
