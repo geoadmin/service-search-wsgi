@@ -172,4 +172,3 @@ The service is configured by Environment Variable:
 | CACHE_CONTROL_HEADER | `'public, max-age=600'` | Cache-Control header value for the search endpoint |
 | GZIP_COMPRESSION_LEVEL | `9` | GZIP compression level |
 | WSGI_TIMEOUT | 1 | WSGI timeout, note the final timout used is `SEARCH_SPHINX_TIMEOUT + WSGI_TIMEOUT`, so `WSGI_TIMEOUT` should the maximum amount of time that the WSGI app should have to handle the data received from sphinx server. |
-| PROBE_MOUNTPOINT | `/tmp` | mountpoint of the readiness probe file `checker_ready.txt`. The full path will be stored in the setting `SPHINX_BACKEND_READY`. This file is the source of the route `/checker/ready` |
