@@ -51,7 +51,14 @@ def add_cache_control_header(response):
     if request.endpoint == 'checker':
         return response
 
-    response.headers['Cache-Control'] = settings.CACHE_CONTROL_HEADER
+    # no cache on these 5xx errors, they are supposed to be temporary
+    if response.status_code in (502, 503, 504, 507):
+        response.headers['Cache-Control'] = 'no-cache'
+    # short cache duration for other 5xx errors
+    elif response.status_code >= 500:
+        response.headers['Cache-Control'] = 'public, max-age=10'
+    else:
+        response.headers['Cache-Control'] = settings.CACHE_CONTROL_HEADER
     return response
 
 
