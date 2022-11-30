@@ -55,7 +55,7 @@ def add_cache_control_header(response):
     if response.status_code in (502, 503, 504, 507):
         response.headers['Cache-Control'] = 'no-cache'
     # short cache duration for other 5xx errors
-    elif str(response.status_code).startswith('5'):
+    elif response.status_code >= 500:
         response.headers['Cache-Control'] = 'public, max-age=10'
     else:
         response.headers['Cache-Control'] = settings.CACHE_CONTROL_HEADER
