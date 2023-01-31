@@ -5,6 +5,7 @@ from werkzeug.exceptions import BadRequest
 from app.helpers.db import get_topics
 from app.helpers.helpers_search import float_raise_nan
 from app.helpers.helpers_search import ilen
+from app.helpers.helpers_search import is_box2d
 from app.helpers.helpers_search import shift_to
 from app.settings import SUPPORTED_LANGUAGES
 
@@ -162,6 +163,14 @@ class SearchValidation(MapNameValidation):  # pylint: disable=too-many-instance-
                     msg = "The third coordinate must be higher than the fourth"
                     logger.error(msg)
                     raise BadRequest(msg)
+            try:
+                # Python 2/3
+                is_box2d(values)
+            except ValueError as e:
+                msg = f"Please provide a valid bbox and not {values}"
+                logger.error("%s, %s", msg, e)
+                raise BadRequest(msg) from e
+
             self._bbox = values
 
     @timeInstant.setter
