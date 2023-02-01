@@ -144,7 +144,6 @@ class SearchValidation(MapNameValidation):  # pylint: disable=too-many-instance-
                 logger.error(msg)
                 raise BadRequest(msg)
             try:
-                # Python 2/3
                 values = list(map(float_raise_nan, values))
             except ValueError as e:
                 msg = f"Please provide numerical values for the parameter bbox and not {value}"
@@ -164,7 +163,6 @@ class SearchValidation(MapNameValidation):  # pylint: disable=too-many-instance-
                     logger.error(msg)
                     raise BadRequest(msg)
             try:
-                # Python 2/3
                 is_box2d(values)
             except ValueError as e:
                 msg = f"Please provide a valid bbox and not {values}"
