@@ -53,7 +53,7 @@ phases:
 
   post_build:
     commands:
-      - echo "Unit testing..."
+      - echo "Unit testing... ===="
       - make test
       # Only push image to registry for merge to develop and master
       - |
