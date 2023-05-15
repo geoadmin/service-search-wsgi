@@ -519,7 +519,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             'kantone': [4],
             'gazetteer': [5, 6],  # Not used, also 7
             'address': [7],
-            'hatestellen': [8],
+            'haltestellen': [8],
             'parcel': [10]
         }
         ranks = []
