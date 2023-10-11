@@ -1,3 +1,5 @@
+import base64
+import hashlib
 import logging
 import math
 import unicodedata
@@ -108,7 +110,16 @@ def round_geometry_coordinates(geom, precision=None):
     return geom
 
 
-@cache.memoize(timeout=60)
+def transform_geom_make_cache_key(geom, srid_from, srid_to, rounding=True):
+    cache_key = f"{str(geom)}{srid_from}{srid_to}{rounding}"
+    hasher = hashlib.md5()
+    hasher.update(cache_key.encode("utf-8"))
+    cache_key = base64.b64encode(hasher.digest())
+    cache_key = cache_key.decode("utf-8")
+    return f"trg_{cache_key}"
+
+
+@cache.cached(timeout=60, make_cache_key=transform_geom_make_cache_key)
 def transform_round_geometry(geom, srid_from, srid_to, rounding=True):
     if srid_from == srid_to:
         if rounding:
