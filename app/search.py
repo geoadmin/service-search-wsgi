@@ -583,9 +583,8 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                     raise BadRequest(msg)
                 self.sphinx.AddQuery(queryText, index=str(index))
 
-    def _box2d_transform(self, res_in):
+    def _box2d_transform(self, res):
         """Reproject a ST_BOX2 from EPSG:21781 to SRID"""
-        res = res_in
         try:
             box2d = res['geom_st_box2d']
             box_str = box2d[4:-1]
@@ -594,14 +593,11 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             bbox = transform_shape(shape, self.DEFAULT_SRID, self.srid).bounds
             res['geom_st_box2d'] = f"BOX({bbox[0]} {bbox[1]},{bbox[2]} {bbox[3]})"
         except Exception as e:
-            msg = f'Error while converting BOX2D ({res_in}) to EPSG:{self.srid}'
+            msg = f'Error while converting BOX2D ({res}) to EPSG:{self.srid}'
             logger.error(msg, e)
             raise InternalServerError(msg) from e
-        return res
 
-    def _parse_locations(self, transformer, res_in):
-
-        res = res_in
+    def _parse_locations(self, transformer, res):
         if not self.returnGeometry:
             attrs2Del = ['x', 'y', 'lon', 'lat', 'geom_st_box2d']
             list(map(lambda x: res.pop(x) if x in res else x, attrs2Del))
@@ -612,9 +608,9 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                     res['x'] = res['lon']
                     res['y'] = res['lat']
                 except KeyError as error:
-                    logger.error("Sphinx location has no lat/long defined %s", res_in)
+                    logger.error("Sphinx location has no lat/long defined %s", res)
                     raise InternalServerError(
-                        f'Sphinx location has no lat/long defined {res_in}'
+                        f'Sphinx location has no lat/long defined {res}'
                     ) from error
             else:
                 try:
@@ -623,9 +619,9 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                     res['x'] = x
                     res['y'] = y
                 except (pyproj.exceptions.CRSError) as error:
-                    logger.error("Error while converting point %s to %s", res_in, self.srid)
+                    logger.error("Error while converting point %s to %s", res, self.srid)
                     raise InternalServerError(
-                        f'Error while converting point({res_in}), to EPSG:{self.srid}'
+                        f'Error while converting point({res}), to EPSG:{self.srid}'
                     ) from error
         return res
 
