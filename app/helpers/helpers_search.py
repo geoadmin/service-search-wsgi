@@ -121,6 +121,9 @@ def transform_geom_make_cache_key(geom, srid_from, srid_to, rounding=True):
 
 @cache.cached(timeout=60, make_cache_key=transform_geom_make_cache_key)
 def transform_round_geometry(geom, srid_from, srid_to, rounding=True):
+    logger.debug(
+        "Transform geometry=%s from=%s to=%s rounding=%s", geom, srid_from, srid_to, rounding
+    )
     if srid_from == srid_to:
         if rounding:
             precision = get_precision_for_proj(srid_to)
@@ -198,18 +201,12 @@ def float_raise_nan(val):
 # used by search.py
 def parse_box2d(stringBox2D):
     extent = stringBox2D.replace('BOX(', '').replace(')', '').replace(',', ' ')
-    # Python2/3
-    box = map(float, extent.split(' '))
-    if not isinstance(box, list):
-        box = list(box)
+    box = list(map(float, extent.split(' ')))
     return box
 
 
 # used by center_from_box_2d used by search.py
 def is_box2d(box2D):
-    # Python2/3
-    if not isinstance(box2D, list):
-        box2D = list(box2D)
     # Bottom left to top right only
     if len(box2D) != 4 or box2D[0] > box2D[2] or box2D[1] > box2D[3]:
         raise ValueError(f'Invalid box2D {box2D}.')
