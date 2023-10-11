@@ -60,8 +60,7 @@ help:
 	@echo
 	@echo "Possible targets:"
 	@echo -e " \033[1mSetup TARGETS\033[0m "
-	@echo "- setup              Create the python virtual environment and activate it"
-	@echo "- dev                Create the python virtual environment with developper tools and activate it"
+	@echo "- setup              Create the python virtual environment with developper tools and activate it"
 	@echo "- ci                 Create the python virtual environment and install requirements based on the Pipfile.lock"
 	@echo -e " \033[1mFORMATING, LINTING AND TESTING TOOLS TARGETS\033[0m "
 	@echo "- format             Format the python source code"
@@ -85,18 +84,11 @@ help:
 
 # Build targets. Calling setup is all that is needed for the local files to be installed as needed.
 
-.PHONY: dev
-dev: $(REQUIREMENTS)
-	pipenv install --dev
-	pipenv shell
-
-
 .PHONY: setup
 setup: $(REQUIREMENTS)
-	pipenv install
-	pipenv shell
 	cp -n .env.default .env.local
-
+	pipenv install --dev
+	pipenv shell
 
 
 .PHONY: ci
@@ -181,6 +173,8 @@ dockerrun: clean_logs dockerbuild $(LOGS_DIR)
 		--env-file=${PWD}/$(ENV_FILE) \
 		--env LOGS_DIR=/logs \
 		--env SCRIPT_NAME=$(ROUTE_PREFIX) \
+		--env PGUSER=${PGUSER} \
+		--env PGPASSWORD=${PGPASSWORD} \
 		--net host \
 		--mount type=bind,source="${LOGS_DIR}",target=/logs \
 		$(DOCKER_IMG_LOCAL_TAG)

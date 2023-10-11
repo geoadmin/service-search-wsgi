@@ -127,7 +127,6 @@ class SearchValidation(MapNameValidation):  # pylint: disable=too-many-instance-
             raise BadRequest("Please provide a search text")
         searchTextList = value.split(' ')
         # Remove empty strings
-        # Python2/3
         searchTextList = list(filter(None, searchTextList))
         if ilen(searchTextList) > MAX_SEARCH_TERMS:
             msg = "The searchText parameter can not contain more than 10 words"

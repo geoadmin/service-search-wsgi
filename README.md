@@ -5,22 +5,20 @@
 | develop | ![Build Status](https://codebuild.eu-central-1.amazonaws.com/badges?uuid=eyJlbmNyeXB0ZWREYXRhIjoiUDZNMlVLR3d5bUhsTUF3ZEo3RTRPdDFKdS90czR4ZE5vYmNjTXhtK2tzNGlOckNXb29yaE1DNktwVXFJSVpMdExEVWYzZHA5U1drcmdsTE5BU3lJWDBJPSIsIml2UGFyYW1ldGVyU3BlYyI6IjM2YlhQR1ltcEtlTU16WC8iLCJtYXRlcmlhbFNldFNlcmlhbCI6MX0%3D&branch=develop) |
 | master  | ![Build Status](https://codebuild.eu-central-1.amazonaws.com/badges?uuid=eyJlbmNyeXB0ZWREYXRhIjoiUDZNMlVLR3d5bUhsTUF3ZEo3RTRPdDFKdS90czR4ZE5vYmNjTXhtK2tzNGlOckNXb29yaE1DNktwVXFJSVpMdExEVWYzZHA5U1drcmdsTE5BU3lJWDBJPSIsIml2UGFyYW1ldGVyU3BlYyI6IjM2YlhQR1ltcEtlTU16WC8iLCJtYXRlcmlhbFNldFNlcmlhbCI6MX0%3D&branch=master)  |
 
-
 ## Table of content
 
-- [service-search-wsgi](#service-search-wsgi)
-  - [Table of content](#table-of-content)
-  - [Description](#description)
-  - [Versioning](#versioning)
-  - [Local Development](#local-development)
-    - [Make Dependencies](#make-dependencies)
-    - [Setting up to work](#setting-up-to-work)
-      - [Database access](#database-access)
-    - [Linting and formatting your work](#linting-and-formatting-your-work)
-    - [Test your work](#test-your-work)
-  - [Docker](#docker)
-  - [Deployment](#deployment)
-    - [Deployment configuration](#deployment-configuration)
+- [Table of content](#table-of-content)
+- [Description](#description)
+- [Versioning](#versioning)
+- [Local Development](#local-development)
+  - [Make Dependencies](#make-dependencies)
+  - [Setting up to work](#setting-up-to-work)
+    - [Database access](#database-access)
+  - [Linting and formatting your work](#linting-and-formatting-your-work)
+  - [Test your work](#test-your-work)
+- [Docker](#docker)
+- [Deployment](#deployment)
+  - [Deployment configuration](#deployment-configuration)
 
 ## Description
 
@@ -47,23 +45,18 @@ First, you'll need to clone the repo
 git clone git@github.com:geoadmin/service-search-wsgi
 ```
 
-Then, you can run the setup target to ensure you have everything needed to develop, test and serve locally
+Then, you can run the `setup` target to ensure you have everything needed to develop, test and serve locally
 
-Virtual environment to run the service (f.ex. make serve)
+Virtual environment to develop and debug the service
 
 ```bash
 make setup
 ```
 
-Virtual environment to develop and debug the service
-
-```bash
-make dev
-```
-
 To run the service you will have to adapt **.env.local**, which is a copy of **.env.default** And to set the variables.
 
-For local development you will need access to a running sphinx search server and to the database.
+For local development you will need access to a running sphinx search server and to the database. To do so you can use 
+ssh port forwarding to the DB and to the current sphinx deployment server.
 
 #### Database access
 
@@ -93,19 +86,19 @@ make test
 This command run the unit tests.
 
 ```bash
-make serve
+summon make serve
 ```
 
 This will serve the application through Flask without any wsgi in front.
 
 ```bash
-make gunicornserve
+summon make gunicornserve
 ```
 
 This will serve the application with the Gunicorn layer in front of the application
 
 ```bash
-make dockerrun
+summon make dockerrun
 ```
 
 This will serve the application with the wsgi server, inside a container.
