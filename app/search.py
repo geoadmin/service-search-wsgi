@@ -209,6 +209,8 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         # Filter by origins if needed
         if self.origins is None:
             self._detect_keywords()
+            # by default filter all available origins/ranks
+            self.sphinx.SetFilter('rank', [1, 2, 3, 4, 5, 6, 7, 10])
         else:
             self._filter_locations_by_origins()
 
@@ -232,7 +234,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                 # standard wildcard search
                 self.sphinx.AddQuery(searchTextFinal, index='swisssearch')
 
-            # exact search, first 10 results
+            # exact prefix search, first 10 results
             searchText = '@detail "^{}"'.format(' '.join(self.searchText))  # pylint: disable=consider-using-f-string
             self.sphinx.AddQuery(searchText, index='swisssearch')
 
