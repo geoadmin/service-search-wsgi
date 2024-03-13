@@ -285,9 +285,6 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                     results.append(d)
                     seen.append(d['id'])
 
-            # reduce number of elements in result to limit
-            results = results[:limit]
-
             # if standard index did not find anything, use soundex/metaphon indices
             # which should be more fuzzy in its results
             if len(results) <= 0:
