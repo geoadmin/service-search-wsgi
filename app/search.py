@@ -197,7 +197,8 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             coords = self._get_geoanchor_from_bbox()
             self.sphinx.SetGeoAnchor('lat', 'lon', coords[1], coords[0])  # pylint: disable=unsubscriptable-object
             self.sphinx.SetSortMode(sphinxapi.SPH_SORT_EXTENDED, '@geodist ASC')
-            limit = self.BBOX_SEARCH_LIMIT
+            limit = self.limit if self.limit and \
+                self.limit <= self.BBOX_SEARCH_LIMIT else self.BBOX_SEARCH_LIMIT
             logger.debug("SetGeoAnchor lat = %s, lon = %s", coords[1], coords[0])  # pylint: disable=unsubscriptable-object
         else:
             self.sphinx.SetRankingMode(sphinxapi.SPH_RANK_WORDCOUNT)
