@@ -211,7 +211,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         if self.origins is None:
             self._detect_keywords()
             # by default filter all available origins/ranks
-            self.sphinx.SetFilter('rank', [1, 2, 3, 4, 5, 6, 7, 10])
+            self.sphinx.SetFilter('rank', [1, 2, 3, 4, 5, 6, 7, 8, 10])
         else:
             self._filter_locations_by_origins()
 
