@@ -168,7 +168,9 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         # For ranking modes, see http://sphinxsearch.com/docs/current.html#weighting
         self.sphinx.SetRankingMode(sphinxapi.SPH_RANK_SPH04)
         # Only include results with a certain weight. This might need tweaking
-        self.sphinx.SetFilterRange('@weight', 5000, 2**32 - 1)
+        # with the quorum operator lesser weights should be added to the results for the better
+        # support of fuzziness
+        self.sphinx.SetFilterRange('@weight', 2500, 2**32 - 1)
         try:
             if self.typeInfo in ('locations'):
                 results = self.sphinx.Query(searchTextFinal, index='swisssearch_fuzzy')
@@ -285,9 +287,10 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                     results.append(d)
                     seen.append(d['id'])
 
-            # if standard index did not find anything, use soundex/metaphon indices
+            # if standard index did not find anything, use metaphone indices
             # which should be more fuzzy in its results
             if len(results) <= 0:
+                searchTextFinal = self._query_fields('@detail', True)
                 results = self._fuzzy_search(searchTextFinal)
         else:
             results = []
@@ -451,7 +454,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         center = center_from_box2d(self.bbox)
         return transformer.transform(center[0], center[1])
 
-    def _query_fields(self, fields):  # pylint: disable=too-many-locals
+    def _query_fields(self, fields, fuzzySearch=False):  # pylint: disable=too-many-locals
         # 10a, 10b needs to be interpreted as digit
         q = []
         isdigit = lambda x: bool(re.match('^[0-9]', x))
@@ -494,6 +497,23 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                 f'{fields} "{preNonDigitAndPreDigit}"~5',
                 f'{fields} "{infNonDigitAndPreDigit}"'
             ]
+
+        # to improve the fuzzyness of the search result the search text has to be changed
+        # digit/text combinations are replaced with (digit|digit/text) p.e. 4a -> (4|4a)
+        # quorum operatar is used for query text fuzzy matching
+        if fuzzySearch:
+
+            def convert_if_digit(text):
+                if isdigit(text):
+                    digit = re.findall(r'^\d+', text)[0]
+                    return f'({str(digit)}|{text})'
+                return text
+
+            # add quorum matching operator with 70% 0.7 for fuzziness, might need some tweaking
+            # together with search.py#L171
+            quorum = '"%s"/0.7' % ' '.join([convert_if_digit(w) for w in self.searchText])
+            q = [f'{fields} {quorum}']
+            #q = q + [f'{fields} {generate_prefixes(self.searchText)}']
         finalQuery = ' | '.join(q)
         return finalQuery
 
