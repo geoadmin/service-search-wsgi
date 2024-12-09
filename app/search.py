@@ -502,6 +502,9 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         # digit/text combinations are replaced with (digit|digit/text) p.e. 4a -> (4|4a)
         # quorum operatar is used for query text fuzzy matching
         if fuzzySearch:
+            # minimal length of single words that will be trimmed if only one word is in the query
+            # string
+            minLength = 5
 
             def convert_if_digit(text):
                 if isdigit(text):
@@ -509,11 +512,49 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                     return f'({str(digit)}|{text})'
                 return text
 
+            def generate_prefixes(input_list, min_length=5):
+
+                def max_text_length(input_list):
+                    """
+                    Calculates the maximum length of text elements in a given list.
+
+                    Args:
+                        input_list: A list of strings.
+
+                    Returns:
+                        The maximum length of text elements, or 0 if no text elements are found.
+                    """
+                    max_length = 0
+                    for element in input_list:
+                        if not isdigit(element):
+                            max_length = max(max_length, len(element))
+                    return max_length
+
+                result = []
+
+                if max_text_length(input_list) == 0:
+                    for text in input_list:
+                        result.append(convert_if_digit(text))
+                    return ' '.join(result)
+
+                while max_text_length(input_list) > min_length:
+                    for i, text in enumerate(input_list):
+                        if not isdigit(text) and len(text) >= min_length:
+                            input_list[i] = text[:-1]
+
+                    logger.debug('DEBUG %s %s', input_list, max_text_length(input_list))
+                    result.append(f"({' '.join([convert_if_digit(w) for w in input_list])})")
+
+                return f"({' | '.join(result)})"
+
             # add quorum matching operator with 70% 0.7 for fuzziness, might need some tweaking
             # together with search.py#L171
-            quorum = '"%s"/0.7' % ' '.join([convert_if_digit(w) for w in self.searchText])
+            quorum = f'"{" ".join(convert_if_digit(w) for w in self.searchText)}"/0.7'
             q = [f'{fields} {quorum}']
-            #q = q + [f'{fields} {generate_prefixes(self.searchText)}']
+            # if searchText consists of only one word the keyword will be trimmed step by step
+            if len(self.searchText) == 1 and len(self.searchText[0]) > minLength:
+                q = q + [f'{fields} {generate_prefixes(self.searchText, minLength)}']
+
         finalQuery = ' | '.join(q)
         return finalQuery
 
