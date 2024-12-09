@@ -507,6 +507,20 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             minLength = 5
 
             def convert_if_digit(text):
+                """
+                replaces a keyword that begins with a digit the following sphinx query:
+                (digit|digit+rest)
+                examples:
+                    4a          -> (4|4a)
+                    342         -> (342)
+                    sometext    -> sometext
+                Args:
+                    text
+
+                Returns:
+                    sphinx query for digit and digit+rest if the keywords starts with a digit
+                    otherwise the input text will be returned unchanged
+                """
                 if isdigit(text):
                     digit = re.findall(r'^\d+', text)[0]
                     if digit != text:
