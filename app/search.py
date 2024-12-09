@@ -509,7 +509,8 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             def convert_if_digit(text):
                 if isdigit(text):
                     digit = re.findall(r'^\d+', text)[0]
-                    return f'({str(digit)}|{text})'
+                    if digit != text:
+                        return f'({str(digit)}|{text})'
                 return text
 
             def generate_prefixes(input_list, min_length=5):
