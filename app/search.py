@@ -537,21 +537,20 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                         input_list: A list of strings.
 
                     Returns:
-                        The maximum length of text elements, or 0 if no text elements are found.
+                        The maximum length of text elements, or None if no text elements are found.
                     """
-                    max_length = 0
-                    for element in input_list:
-                        if not isdigit(element):
-                            max_length = max(max_length, len(element))
-                    return max_length
+                    list_length = [len(a) for a in input_list if not isdigit(a)]
+                    return max(list_length) if list_length else None
 
                 result = []
 
-                if max_text_length(input_list) == 0:
-                    for text in input_list:
-                        result.append(convert_if_digit(text))
-                    return ' '.join(result)
+                if not max_text_length(input_list):
+                    return " ".join([convert_if_digit(x) for x in input_list])
 
+                # the while loop here loops through the list of all the keywords
+                # on every iteration the text keywords are trimmed by one characater
+                # the digit keywords are ignored
+                # this will be done until the max length of all keywords has reached min_length
                 while max_text_length(input_list) > min_length:
                     for i, text in enumerate(input_list):
                         if not isdigit(text) and len(text) >= min_length:
