@@ -464,6 +464,61 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         prefix_non_digit = lambda x: x if isdigit(x) else ''.join((x, '*'))
         infix_non_digit = lambda x: x if isdigit(x) else ''.join(('*', x, '*'))
 
+        def convert_if_digit(text):
+            """
+            replaces a keyword that begins with a digit the following sphinx query:
+            (digit|digit+rest)
+            examples:
+                4a          -> (4|4a)
+                342         -> (342)
+                sometext    -> sometext
+            Args:
+                text
+
+            Returns:
+                sphinx query for digit and digit+rest if the keywords starts with a digit
+                otherwise the input text will be returned unchanged
+            """
+            if isdigit(text):
+                digit = re.findall(r'^\d+', text)[0]
+                if digit != text:
+                    return f'({str(digit)}|{text})'
+            return text
+
+        def generate_prefixes(input_list, min_length=5):
+
+            def _max_text_length(input_list):
+                """
+                Calculates the maximum length of text elements in a given list.
+
+                Args:
+                    input_list: A list of strings.
+
+                Returns:
+                    The maximum length of text elements, or None if no text elements are found.
+                """
+                list_length = [len(a) for a in input_list if not isdigit(a)]
+                return max(list_length) if list_length else None
+
+            result = []
+
+            if not _max_text_length(input_list):
+                return " ".join([convert_if_digit(x) for x in input_list])
+
+            # the while loop here loops through the list of all the keywords
+            # on every iteration the text keywords are trimmed by one characater
+            # the digit keywords are ignored
+            # this will be done until the max length of all keywords has reached min_length
+            while _max_text_length(input_list) > min_length:
+                for i, text in enumerate(input_list):
+                    if not isdigit(text) and len(text) >= min_length:
+                        input_list[i] = text[:-1]
+
+                logger.debug('DEBUG %s %s', input_list, _max_text_length(input_list))
+                result.append(f"({' '.join([convert_if_digit(w) for w in input_list])})")
+
+            return f"({' | '.join(result)})"
+
         if hasNonDigit:
             exactAll = ' '.join(self.searchText)
             preNonDigit = ' '.join([prefix_non_digit(w) for w in self.searchText])
@@ -505,61 +560,6 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             # minimal length of single words that will be trimmed if only one word is in the query
             # string
             minLength = 5
-
-            def convert_if_digit(text):
-                """
-                replaces a keyword that begins with a digit the following sphinx query:
-                (digit|digit+rest)
-                examples:
-                    4a          -> (4|4a)
-                    342         -> (342)
-                    sometext    -> sometext
-                Args:
-                    text
-
-                Returns:
-                    sphinx query for digit and digit+rest if the keywords starts with a digit
-                    otherwise the input text will be returned unchanged
-                """
-                if isdigit(text):
-                    digit = re.findall(r'^\d+', text)[0]
-                    if digit != text:
-                        return f'({str(digit)}|{text})'
-                return text
-
-            def generate_prefixes(input_list, min_length=5):
-
-                def max_text_length(input_list):
-                    """
-                    Calculates the maximum length of text elements in a given list.
-
-                    Args:
-                        input_list: A list of strings.
-
-                    Returns:
-                        The maximum length of text elements, or None if no text elements are found.
-                    """
-                    list_length = [len(a) for a in input_list if not isdigit(a)]
-                    return max(list_length) if list_length else None
-
-                result = []
-
-                if not max_text_length(input_list):
-                    return " ".join([convert_if_digit(x) for x in input_list])
-
-                # the while loop here loops through the list of all the keywords
-                # on every iteration the text keywords are trimmed by one characater
-                # the digit keywords are ignored
-                # this will be done until the max length of all keywords has reached min_length
-                while max_text_length(input_list) > min_length:
-                    for i, text in enumerate(input_list):
-                        if not isdigit(text) and len(text) >= min_length:
-                            input_list[i] = text[:-1]
-
-                    logger.debug('DEBUG %s %s', input_list, max_text_length(input_list))
-                    result.append(f"({' '.join([convert_if_digit(w) for w in input_list])})")
-
-                return f"({' | '.join(result)})"
 
             # add quorum matching operator with 70% 0.7 for fuzziness, might need some tweaking
             # together with search.py#L171
