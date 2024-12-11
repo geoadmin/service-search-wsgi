@@ -168,7 +168,9 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         # For ranking modes, see http://sphinxsearch.com/docs/current.html#weighting
         self.sphinx.SetRankingMode(sphinxapi.SPH_RANK_SPH04)
         # Only include results with a certain weight. This might need tweaking
-        self.sphinx.SetFilterRange('@weight', 5000, 2**32 - 1)
+        # with the quorum operator lesser weights should be added to the results for the better
+        # support of fuzziness
+        self.sphinx.SetFilterRange('@weight', 2500, 2**32 - 1)
         try:
             if self.typeInfo in ('locations'):
                 results = self.sphinx.Query(searchTextFinal, index='swisssearch_fuzzy')
@@ -285,9 +287,10 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                     results.append(d)
                     seen.append(d['id'])
 
-            # if standard index did not find anything, use soundex/metaphon indices
+            # if standard index did not find anything, use metaphone indices
             # which should be more fuzzy in its results
             if len(results) <= 0:
+                searchTextFinal = self._query_fields('@detail', True)
                 results = self._fuzzy_search(searchTextFinal)
         else:
             results = []
@@ -451,7 +454,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         center = center_from_box2d(self.bbox)
         return transformer.transform(center[0], center[1])
 
-    def _query_fields(self, fields):  # pylint: disable=too-many-locals
+    def _query_fields(self, fields, fuzzySearch=False):  # pylint: disable=too-many-locals
         # 10a, 10b needs to be interpreted as digit
         q = []
         isdigit = lambda x: bool(re.match('^[0-9]', x))
@@ -460,6 +463,61 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
 
         prefix_non_digit = lambda x: x if isdigit(x) else ''.join((x, '*'))
         infix_non_digit = lambda x: x if isdigit(x) else ''.join(('*', x, '*'))
+
+        def convert_if_digit(text):
+            """
+            replaces a keyword that begins with a digit the following sphinx query:
+            (digit|digit+rest)
+            examples:
+                4a          -> (4|4a)
+                342         -> (342)
+                sometext    -> sometext
+            Args:
+                text
+
+            Returns:
+                sphinx query for digit and digit+rest if the keywords starts with a digit
+                otherwise the input text will be returned unchanged
+            """
+            if isdigit(text):
+                digit = re.findall(r'^\d+', text)[0]
+                if digit != text:
+                    return f'({str(digit)}|{text})'
+            return text
+
+        def generate_prefixes(input_list, min_length=5):
+
+            def _max_text_length(input_list):
+                """
+                Calculates the maximum length of text elements in a given list.
+
+                Args:
+                    input_list: A list of strings.
+
+                Returns:
+                    The maximum length of text elements, or None if no text elements are found.
+                """
+                list_length = [len(a) for a in input_list if not isdigit(a)]
+                return max(list_length) if list_length else None
+
+            result = []
+
+            if not _max_text_length(input_list):
+                return " ".join([convert_if_digit(x) for x in input_list])
+
+            # the while loop here loops through the list of all the keywords
+            # on every iteration the text keywords are trimmed by one characater
+            # the digit keywords are ignored
+            # this will be done until the max length of all keywords has reached min_length
+            while _max_text_length(input_list) > min_length:
+                for i, text in enumerate(input_list):
+                    if not isdigit(text) and len(text) >= min_length:
+                        input_list[i] = text[:-1]
+
+                logger.debug('DEBUG %s %s', input_list, _max_text_length(input_list))
+                result.append(f"({' '.join([convert_if_digit(w) for w in input_list])})")
+
+            return f"({' | '.join(result)})"
 
         if hasNonDigit:
             exactAll = ' '.join(self.searchText)
@@ -494,6 +552,23 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                 f'{fields} "{preNonDigitAndPreDigit}"~5',
                 f'{fields} "{infNonDigitAndPreDigit}"'
             ]
+
+        # to improve the fuzzyness of the search result the search text has to be changed
+        # digit/text combinations are replaced with (digit|digit/text) p.e. 4a -> (4|4a)
+        # quorum operatar is used for query text fuzzy matching
+        if fuzzySearch:
+            # minimal length of single words that will be trimmed if only one word is in the query
+            # string
+            minLength = 5
+
+            # add quorum matching operator with 70% 0.7 for fuzziness, might need some tweaking
+            # together with search.py#L171
+            quorum = f'"{" ".join(convert_if_digit(w) for w in self.searchText)}"/0.7'
+            q = [f'{fields} {quorum}']
+            # if searchText consists of only one word the keyword will be trimmed step by step
+            if len(self.searchText) == 1 and len(self.searchText[0]) > minLength:
+                q = q + [f'{fields} {generate_prefixes(self.searchText, minLength)}']
+
         finalQuery = ' | '.join(q)
         return finalQuery
 
