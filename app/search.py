@@ -166,11 +166,11 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         logger.debug("Search fuzzy; searchText=%s", searchTextFinal)
         # We use different ranking for fuzzy search
         # For ranking modes, see http://sphinxsearch.com/docs/current.html#weighting
-        self.sphinx.SetRankingMode(sphinxapi.SPH_RANK_SPH04)
+        self.sphinx.SetRankingMode(sphinxapi.SPH_RANK_BM25)
         # Only include results with a certain weight. This might need tweaking
         # with the quorum operator lesser weights should be added to the results for the better
         # support of fuzziness
-        self.sphinx.SetFilterRange('@weight', 2500, 2**32 - 1)
+        self.sphinx.SetFilterRange('@weight', 1000, 2**32 - 1)
         try:
             if self.typeInfo in ('locations'):
                 results = self.sphinx.Query(searchTextFinal, index='swisssearch_fuzzy')
