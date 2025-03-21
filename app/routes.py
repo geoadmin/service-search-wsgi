@@ -1,4 +1,5 @@
 import logging
+import os
 
 from flask import jsonify
 from flask import make_response
@@ -70,3 +71,23 @@ def search_server(topic='all'):
         response.headers['Content-Type'] = content_type_override
 
     return response
+
+
+@app.route('/rest/services/<topic>/SearchServer/info', methods=['GET'])
+def service_info(topic='all'):  # pylint: disable=unused-argument
+    # The topic parameter is not used in this endpoint
+    sphinx_service = os.getenv('SERVICE_SPHINX_NAME', 'service-search-sphinx')
+    sphinx_file = os.getenv('SERVICE_SPHINX_FILE', '/usr/local/share/app/version.txt')
+    try:
+        with open(sphinx_file, 'r', encoding='utf-8') as version_file:
+            sphinx_version = version_file.read().strip()
+    except FileNotFoundError:
+        sphinx_version = 'unknown'
+
+    services = [{
+        'name': sphinx_service, 'version': sphinx_version
+    }, {
+        'name': 'service-search-wsgi', 'version': APP_VERSION
+    }]
+
+    return make_response(jsonify(services))
