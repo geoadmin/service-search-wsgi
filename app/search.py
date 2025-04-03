@@ -579,7 +579,8 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             'gg25': 'ch.swisstopo.swissboundaries3d-gemeinde-flaeche.fill',
             'district': 'ch.swisstopo.swissboundaries3d-bezirk-flaeche.fill',
             'kantone': 'ch.swisstopo.swissboundaries3d-kanton-flaeche.fill',
-            'address': 'ch.bfs.gebaeude_wohnungs_register'
+            'address': 'ch.bfs.gebaeude_wohnungs_register',
+            'address_preview': 'ch.swisstopo.amtliches-gebaeudeadressverzeichnis'
         }
         if origin in origins2LayerBodId:
             return origins2LayerBodId[origin]
@@ -595,7 +596,8 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             'gazetteer': [5, 6],  # Not used, also 7
             'address': [7],
             'haltestellen': [8],
-            'parcel': [10]
+            'parcel': [10],
+            'address_preview': [99]  # temporary origin PB-1577
         }
         ranks = []
         try:
