@@ -4,17 +4,17 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-gevent = "~=21.12.0"
-gunicorn = "~=20.1.0"
-Flask = "~=2.0.3"
-Flask-Caching = "~=1.10.1"
-Flask-SQLAlchemy = "~=2.5.1"
-PyYAML = "~=5.4"
-logging-utilities = "~=3.0"
-python-dotenv = "~=0.19.2"
-Shapely = "~=1.8.0"
-pyproj = "~=3.3.0"
-psycopg2-binary = "~=2.9.3"
+gevent = "~=25.5"
+gunicorn = "~=23.0"
+Flask = "~=3.1"
+Flask-Caching = "~=2.3"
+Flask-SQLAlchemy = "~=3.1"
+PyYAML = "~=6.0"
+logging-utilities = "~=5.0"
+python-dotenv = "~=1.1"
+shapely = "~=2.1"
+pyproj = "~=3.7"
+psycopg2-binary = "~=2.9"
 
 [dev-packages]
 gatilegrid = "*"
@@ -25,4 +25,4 @@ pylint-flask = "*"
 numpy = "*"
 
 [requires]
-python_version = "3.9"
+python_version = "3.13"
