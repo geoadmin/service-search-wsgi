@@ -63,8 +63,11 @@ confidence=
 disable=missing-docstring,
     missing-module-docstring,
     useless-object-inheritance,
-    unnecessary-lambda-assignment
-
+    unnecessary-lambda-assignment,
+    too-many-positional-arguments,
+    # there is currently a bug preventing disabling cyclic imports on a specific line
+    # see https://github.com/pylint-dev/pylint/issues/9490
+    cyclic-import
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
@@ -518,6 +521,5 @@ min-public-methods=2
 
 # Exceptions that will emit a warning when being caught. Defaults to
 # "BaseException, Exception".
-overgeneral-exceptions=BaseException,
-                       Exception,
-                       StandardError
+overgeneral-exceptions=builtins.BaseException,
+                       builtins.Exception
