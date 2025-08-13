@@ -5,7 +5,7 @@ from flask import jsonify
 from flask import make_response
 from flask import request
 
-from app import app
+from app.app import app
 from app.lib import sphinxapi
 from app.search import Search
 from app.settings import SEARCH_SPHINX_HOST

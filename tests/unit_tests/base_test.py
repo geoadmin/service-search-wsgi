@@ -2,7 +2,7 @@ import unittest
 
 from gatilegrid import getTileGrid
 
-from app import app
+from app.app import app
 from app.helpers.helpers_search import parse_box2d
 from app.helpers.validation_search import SUPPORTED_OUTPUT_SRS
 from app.settings import CACHE_CONTROL_HEADER
