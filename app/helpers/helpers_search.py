@@ -14,7 +14,7 @@ from shapely.ops import transform as shape_transform
 from shapely.wkt import dumps as shape_dumps
 from shapely.wkt import loads as shape_loads
 
-from app import cache
+from app.app import cache
 from app.lib import sphinxapi
 
 logger = logging.getLogger(__name__)

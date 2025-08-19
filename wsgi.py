@@ -2,7 +2,7 @@ import multiprocessing
 
 from gunicorn.app.base import BaseApplication
 
-from app import app as application
+from app.app import app as application
 from app.helpers.utils import get_logging_cfg
 from app.settings import FORWARDED_PROTO_HEADER_NAME
 from app.settings import FORWARED_ALLOW_IPS
