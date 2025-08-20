@@ -4,8 +4,8 @@ import psycopg2 as psy
 
 from flask import g
 
-from app import cache
 from app import settings
+from app.app import cache
 
 logger = logging.getLogger(__name__)
 

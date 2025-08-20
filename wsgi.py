@@ -2,7 +2,7 @@ import multiprocessing
 
 from gunicorn.app.base import BaseApplication
 
-from app import app as application
+from app.app import app as application
 from app.helpers.utils import get_logging_cfg
 from app.settings import FORWARDED_PROTO_HEADER_NAME
 from app.settings import FORWARED_ALLOW_IPS
@@ -22,8 +22,9 @@ class StandaloneApplication(BaseApplication):  # pylint: disable=abstract-method
 
     def load_config(self):
         config = {
-            key: value for key,
-            value in self.options.items() if key in self.cfg.settings and value is not None
+            key: value
+            for key, value in self.options.items()
+            if key in self.cfg.settings and value is not None
         }
         for key, value in config.items():
             self.cfg.set(key.lower(), value)

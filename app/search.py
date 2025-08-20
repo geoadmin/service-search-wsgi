@@ -172,6 +172,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         # support of fuzziness
         self.sphinx.SetFilterRange('@weight', 1000, 2**32 - 1)
         try:
+            results = None
             if self.typeInfo in ('locations'):
                 results = self.sphinx.Query(searchTextFinal, index='swisssearch_fuzzy')
         except IOError as error:
