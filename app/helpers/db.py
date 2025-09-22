@@ -1,6 +1,6 @@
 import logging
 
-import psycopg2 as psy
+import psycopg as psy
 
 from flask import g
 
@@ -19,7 +19,7 @@ def get_topics():
     '''
     try:
         db_connection = get_db_connection()
-        with db_connection.cursor() as cursor:
+        with db_connection.cursor() as cursor:  # pylint: disable=no-member
             # select records from DB
             cursor.execute("""
                 SELECT topic FROM "re3".topics
@@ -59,7 +59,7 @@ def get_translation(msg_id, lang):
     logger.debug('function get_translation: not cached, with query %s', query)
     try:
         db_connection = get_db_connection()
-        with db_connection.cursor() as cursor:
+        with db_connection.cursor() as cursor:  # pylint: disable=no-member
             cursor.execute(query)
             result = cursor.fetchone()
             # if msg_id not in table translations
@@ -96,10 +96,15 @@ def get_db_connection():
             )
         except psy.Error as error:
             logger.error("Unable to connect: %s", error)
-            if error.pgerror:
-                logger.error('pgerror: %s', error.pgerror)
-            if error.diag.message_detail:
-                logger.error('message detail: %s', error.diag.message_detail)
+
+            # Log diagnostic info if available
+            if hasattr(error, 'diag') and error.diag:
+                if error.diag.message_detail:
+                    logger.error('message detail: %s', error.diag.message_detail)
+                if error.diag.sqlstate:
+                    logger.error('SQL state: %s', error.diag.sqlstate)
+                if error.diag.message_hint:
+                    logger.error('message hint: %s', error.diag.message_hint)
             raise
 
     return g.db_connection
