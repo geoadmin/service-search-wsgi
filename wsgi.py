@@ -6,6 +6,7 @@ from app.app import app as application
 from app.helpers.utils import get_logging_cfg
 from app.settings import FORWARDED_PROTO_HEADER_NAME
 from app.settings import FORWARED_ALLOW_IPS
+from app.settings import GUNICORN_KEEPALIVE
 from app.settings import GUNICORN_WORKER_TMP_DIR
 from app.settings import HTTP_PORT
 from app.settings import SEARCH_SPHINX_TIMEOUT
@@ -44,6 +45,7 @@ if __name__ == '__main__':
         'workers': SEARCH_WORKERS,
         'worker_tmp_dir': GUNICORN_WORKER_TMP_DIR,
         'timeout': WSGI_TIMEOUT + SEARCH_SPHINX_TIMEOUT,
+        'keepalive': GUNICORN_KEEPALIVE,
         'logconfig_dict': get_logging_cfg(),
         'forwarded_allow_ips': FORWARED_ALLOW_IPS,
         'secure_scheme_headers': {
