@@ -690,7 +690,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                     ) from error
             else:
                 try:
-                    pnt = (res['y'], res['x'])
+                    pnt = (res['x'], res['y'])
                     x, y = transformer.transform(pnt[0], pnt[1])
                     res['x'] = x
                     res['y'] = y
