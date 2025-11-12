@@ -119,12 +119,17 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                 else:
                     features_bbox.union(bbox)
                 if 'x' in attributes.keys() and 'y' in attributes.keys():
+                    easting, northing = attributes['x'], attributes['y']
+                    if int(self.srid) in (21781, 2056):
+                        logger.debug("Swap attributes x/y for srid %s", self.srid)
+                        attributes['x'], attributes['y'] = attributes['y'], attributes['x']
+                        easting, northing = attributes['x'], attributes['y']
                     feature = {
                         'type': 'Feature',
                         'id': item['id'],
                         'bbox': bbox.bounds,
                         'geometry': {
-                            'type': 'Point', 'coordinates': [attributes['x'], attributes['y']]
+                            'type': 'Point', 'coordinates': [easting, northing]
                         },
                         'properties': attributes
                     }
@@ -674,6 +679,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             raise InternalServerError(msg) from e
 
     def _parse_locations(self, transformer, res):
+        logger.debug("Parse location result: %s", res)
         if not self.returnGeometry:
             attrs2Del = ['x', 'y', 'lon', 'lat', 'geom_st_box2d']
             list(map(lambda x: res.pop(x) if x in res else x, attrs2Del))
