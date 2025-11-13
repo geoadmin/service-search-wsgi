@@ -674,9 +674,14 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             raise InternalServerError(msg) from e
 
     def _parse_locations(self, transformer, res):
+        logger.debug("Parse location result: %s", res)
         if not self.returnGeometry:
             attrs2Del = ['x', 'y', 'lon', 'lat', 'geom_st_box2d']
             list(map(lambda x: res.pop(x) if x in res else x, attrs2Del))
+        elif int(self.srid) in (21781, 2056):
+            # Swap x/y coordinates for Swiss coordinate systems (LV03/LV95) for legacy reasons
+            if 'x' in res and 'y' in res:
+                res['x'], res['y'] = res['y'], res['x']
         elif int(self.srid) not in (21781, 2056):
             self._box2d_transform(res)
             if int(self.srid) == 4326:
