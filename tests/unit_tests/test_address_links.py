@@ -1,7 +1,13 @@
 import unittest
+from unittest.mock import patch
 
-from app.helpers.validation_search import SearchValidation
+from app.helpers.validation_search import MapNameValidation
 from app.search import Search
+
+# Note: This test file directly tests the _parse_location_results internal method
+# rather than using BaseSearchTest with the Flask test client. This approach allows
+# for focused unit testing of the links generation logic without requiring a full
+# Sphinx server mock setup.
 
 
 class DummyAcceptLanguages:  # pylint: disable=too-few-public-methods
@@ -17,16 +23,9 @@ class DummyRequest:  # pylint: disable=too-few-public-methods
         self.accept_languages = DummyAcceptLanguages()
 
 
+@patch.object(MapNameValidation, 'has_topic', staticmethod(lambda topic: None))
 class TestAddressLinksComprehensive(unittest.TestCase):
     """Test all scenarios for the address links feature."""
-
-    def setUp(self):
-        # Avoid Flask app context by mocking topic validation
-        self._orig_has_topic = SearchValidation.has_topic
-        SearchValidation.has_topic = staticmethod(lambda topic: None)
-
-    def tearDown(self):
-        SearchValidation.has_topic = self._orig_has_topic
 
     def _make_search(self):
         """Create a Search instance for testing."""
@@ -75,7 +74,7 @@ class TestAddressLinksComprehensive(unittest.TestCase):
         hrefs = {link['href'] for link in result['links']}
         self.assertIn(
             '/rest/services/ech/MapServer/'
-            'ch.swisstopo.amtliches-gebaeudeadressverzeichnis/EGAID_001',
+            'ch.swisstopo.amtliches-gebaeudeadressverzeichnis/EGID_EDID_001',
             hrefs,
         )
         self.assertIn(
