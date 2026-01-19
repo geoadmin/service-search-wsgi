@@ -722,6 +722,8 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
 
             # Add related links for address results (including metaphone)
             # Only add the links section if both new attributes exist
+            # TODO: PB-2168 once the featureid in mf-chsdi of ch.swisstopo.amtliches-gebaeudeadressverzeichnis
+            # has been switched back to egaid, we can do the same here in the links section
             if origin in ('address', 'address_metaphone'):
                 egaid = result['attrs'].get('egaid')
                 egid_edid = result['attrs'].get('egid_edid')
@@ -732,7 +734,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                         'rel': 'related',
                         'title': 'ch.swisstopo.amtliches-gebaeudeadressverzeichnis',
                         'href':
-                            f"/rest/services/ech/MapServer/ch.swisstopo.amtliches-gebaeudeadressverzeichnis/{egaid}"
+                            f"/rest/services/ech/MapServer/ch.swisstopo.amtliches-gebaeudeadressverzeichnis/{egid_edid}"
                     },
                          {
                              'rel': 'related',
@@ -740,6 +742,11 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                              'href':
                                  f"/rest/services/ech/MapServer/ch.bfs.gebaeude_wohnungs_register/{egid_edid}"
                          }]
+
+            # Remove egaid and egid_edid attributes from the response
+            result['attrs'].pop('egaid', None)
+            result['attrs'].pop('egid_edid', None)
+
             if (
                 origin == 'address' and nb_address < self.LOCATION_LIMIT and (
                     not self.bbox or
