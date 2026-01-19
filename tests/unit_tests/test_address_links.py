@@ -1,18 +1,16 @@
 import unittest
-from unittest.mock import MagicMock
-from unittest.mock import patch
 
 from app.helpers.validation_search import SearchValidation
 from app.search import Search
 
 
-class DummyAcceptLanguages:
+class DummyAcceptLanguages:  # pylint: disable=too-few-public-methods
 
-    def best_match(self, available):
+    def best_match(self, available):  # pylint: disable=unused-argument
         return 'de'
 
 
-class DummyRequest:
+class DummyRequest:  # pylint: disable=too-few-public-methods
 
     def __init__(self, args=None):
         self.args = args or {}
@@ -59,7 +57,7 @@ class TestAddressLinksComprehensive(unittest.TestCase):
         search = self._make_search()
         results = [self._make_result('address', egaid='EGAID_001', egid_edid='EGID_EDID_001')]
 
-        search._parse_location_results(results, limit=10)
+        search._parse_location_results(results, limit=10)  # pylint: disable=protected-access
 
         result = search.results['results'][0]['attrs']
         self.assertIn('links', result)
@@ -76,7 +74,8 @@ class TestAddressLinksComprehensive(unittest.TestCase):
 
         hrefs = {link['href'] for link in result['links']}
         self.assertIn(
-            '/rest/services/ech/MapServer/ch.swisstopo.amtliches-gebaeudeadressverzeichnis/EGAID_001',
+            '/rest/services/ech/MapServer/'
+            'ch.swisstopo.amtliches-gebaeudeadressverzeichnis/EGAID_001',
             hrefs,
         )
         self.assertIn(
@@ -89,7 +88,7 @@ class TestAddressLinksComprehensive(unittest.TestCase):
         search = self._make_search()
         results = [self._make_result('address', egaid='EGAID_001')]
 
-        search._parse_location_results(results, limit=10)
+        search._parse_location_results(results, limit=10)  # pylint: disable=protected-access
 
         result = search.results['results'][0]['attrs']
         self.assertNotIn('links', result)
@@ -99,7 +98,7 @@ class TestAddressLinksComprehensive(unittest.TestCase):
         search = self._make_search()
         results = [self._make_result('address', egid_edid='EGID_EDID_001')]
 
-        search._parse_location_results(results, limit=10)
+        search._parse_location_results(results, limit=10)  # pylint: disable=protected-access
 
         result = search.results['results'][0]['attrs']
         self.assertNotIn('links', result)
@@ -109,7 +108,7 @@ class TestAddressLinksComprehensive(unittest.TestCase):
         search = self._make_search()
         results = [self._make_result('address')]
 
-        search._parse_location_results(results, limit=10)
+        search._parse_location_results(results, limit=10)  # pylint: disable=protected-access
 
         result = search.results['results'][0]['attrs']
         self.assertNotIn('links', result)
@@ -125,7 +124,7 @@ class TestAddressLinksComprehensive(unittest.TestCase):
             )
         ]
 
-        search._parse_location_results(results, limit=10)
+        search._parse_location_results(results, limit=10)  # pylint: disable=protected-access
 
         result = search.results['results'][0]['attrs']
         self.assertIn('links', result)
@@ -136,7 +135,7 @@ class TestAddressLinksComprehensive(unittest.TestCase):
         search = self._make_search()
         results = [self._make_result('address_metaphone', egaid='EGAID_002')]
 
-        search._parse_location_results(results, limit=10)
+        search._parse_location_results(results, limit=10)  # pylint: disable=protected-access
 
         result = search.results['results'][0]['attrs']
         self.assertNotIn('links', result)
@@ -146,7 +145,7 @@ class TestAddressLinksComprehensive(unittest.TestCase):
         search = self._make_search()
         results = [self._make_result('address_metaphone')]
 
-        search._parse_location_results(results, limit=10)
+        search._parse_location_results(results, limit=10)  # pylint: disable=protected-access
 
         result = search.results['results'][0]['attrs']
         self.assertNotIn('links', result)
@@ -160,7 +159,7 @@ class TestAddressLinksComprehensive(unittest.TestCase):
             egid_edid='EGID_EDID_003',
         )]
 
-        search._parse_location_results(results, limit=10)
+        search._parse_location_results(results, limit=10)  # pylint: disable=protected-access
 
         result = search.results['results'][0]['attrs']
         self.assertNotIn('links', result)
@@ -194,7 +193,7 @@ class TestAddressLinksComprehensive(unittest.TestCase):
             ),
         ]
 
-        search._parse_location_results(results, limit=10)
+        search._parse_location_results(results, limit=10)  # pylint: disable=protected-access
 
         results_list = search.results['results']
         self.assertEqual(len(results_list), 4)
@@ -222,7 +221,7 @@ class TestAddressLinksComprehensive(unittest.TestCase):
             )
         ]
 
-        search._parse_location_results(results, limit=10)
+        search._parse_location_results(results, limit=10)  # pylint: disable=protected-access
 
         result = search.results['results'][0]['attrs']
         links = result['links']
@@ -234,14 +233,15 @@ class TestAddressLinksComprehensive(unittest.TestCase):
             self.assertIn('href', link)
             self.assertTrue(link['href'].startswith('/rest/services/ech/MapServer/'))
 
-        # Verify each link title and href
-        egaid_link = next((l for l in links if 'egaid' not in l['title']), None)
-        egid_link = next((l for l in links if 'gebaeude_wohnungs_register' in l['title']), None)
+        # Verify gebaeude_wohnungs_register link
+        egid_link = next((lnk for lnk in links if 'gebaeude_wohnungs_register' in lnk['title']),
+                         None)
 
         self.assertIsNotNone(egid_link)
         self.assertEqual(
             egid_link['href'],
-            '/rest/services/ech/MapServer/ch.bfs.gebaeude_wohnungs_register/TEST_EGID_EDID_VALUE',
+            '/rest/services/ech/MapServer/ch.bfs.gebaeude_wohnungs_register/'
+            'TEST_EGID_EDID_VALUE',
         )
 
 
