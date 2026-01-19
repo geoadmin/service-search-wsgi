@@ -726,18 +726,20 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                 egaid = result['attrs'].get('egaid')
                 egid_edid = result['attrs'].get('egid_edid')
                 if egaid and egid_edid:
-                    result['attrs']['links'] = [
-                        {
-                            'rel': 'related',
-                            'title': 'ch.swisstopo.amtliches-gebaeudeadressverzeichnis',
-                            'href': f"/rest/services/ech/MapServer/ch.swisstopo.amtliches-gebaeudeadressverzeichnis/{egaid}"
-                        },
-                        {
-                            'rel': 'related',
-                            'title': 'ch.bfs.gebaeude_wohnungs_register',
-                            'href': f"/rest/services/ech/MapServer/ch.bfs.gebaeude_wohnungs_register/{egid_edid}"
-                        }
-                    ]
+                    result['attrs'][
+                        'links'
+                    ] = [{
+                        'rel': 'related',
+                        'title': 'ch.swisstopo.amtliches-gebaeudeadressverzeichnis',
+                        'href':
+                            f"/rest/services/ech/MapServer/ch.swisstopo.amtliches-gebaeudeadressverzeichnis/{egaid}"
+                    },
+                         {
+                             'rel': 'related',
+                             'title': 'ch.bfs.gebaeude_wohnungs_register',
+                             'href':
+                                 f"/rest/services/ech/MapServer/ch.bfs.gebaeude_wohnungs_register/{egid_edid}"
+                         }]
             if (
                 origin == 'address' and nb_address < self.LOCATION_LIMIT and (
                     not self.bbox or

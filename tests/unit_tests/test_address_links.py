@@ -1,16 +1,19 @@
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
+from unittest.mock import patch
 
-from app.search import Search
 from app.helpers.validation_search import SearchValidation
+from app.search import Search
 
 
 class DummyAcceptLanguages:
+
     def best_match(self, available):
         return 'de'
 
 
 class DummyRequest:
+
     def __init__(self, args=None):
         self.args = args or {}
         self.accept_languages = DummyAcceptLanguages()
@@ -54,9 +57,7 @@ class TestAddressLinksComprehensive(unittest.TestCase):
     def test_address_with_both_egaid_and_egid_edid(self):
         """Address with both attrs: links should be added with both entries."""
         search = self._make_search()
-        results = [
-            self._make_result('address', egaid='EGAID_001', egid_edid='EGID_EDID_001')
-        ]
+        results = [self._make_result('address', egaid='EGAID_001', egid_edid='EGID_EDID_001')]
 
         search._parse_location_results(results, limit=10)
 
@@ -86,9 +87,7 @@ class TestAddressLinksComprehensive(unittest.TestCase):
     def test_address_with_only_egaid(self):
         """Address with only egaid: no links section (both attrs required)."""
         search = self._make_search()
-        results = [
-            self._make_result('address', egaid='EGAID_001')
-        ]
+        results = [self._make_result('address', egaid='EGAID_001')]
 
         search._parse_location_results(results, limit=10)
 
@@ -98,9 +97,7 @@ class TestAddressLinksComprehensive(unittest.TestCase):
     def test_address_with_only_egid_edid(self):
         """Address with only egid_edid: no links section (both attrs required)."""
         search = self._make_search()
-        results = [
-            self._make_result('address', egid_edid='EGID_EDID_001')
-        ]
+        results = [self._make_result('address', egid_edid='EGID_EDID_001')]
 
         search._parse_location_results(results, limit=10)
 
@@ -110,9 +107,7 @@ class TestAddressLinksComprehensive(unittest.TestCase):
     def test_address_with_neither_egaid_nor_egid_edid(self):
         """Address with no attrs: no links section."""
         search = self._make_search()
-        results = [
-            self._make_result('address')
-        ]
+        results = [self._make_result('address')]
 
         search._parse_location_results(results, limit=10)
 
@@ -139,9 +134,7 @@ class TestAddressLinksComprehensive(unittest.TestCase):
     def test_address_metaphone_with_only_egaid(self):
         """Address_metaphone with only egaid: no links section."""
         search = self._make_search()
-        results = [
-            self._make_result('address_metaphone', egaid='EGAID_002')
-        ]
+        results = [self._make_result('address_metaphone', egaid='EGAID_002')]
 
         search._parse_location_results(results, limit=10)
 
@@ -151,9 +144,7 @@ class TestAddressLinksComprehensive(unittest.TestCase):
     def test_address_metaphone_with_no_attrs(self):
         """Address_metaphone with no attrs: no links section."""
         search = self._make_search()
-        results = [
-            self._make_result('address_metaphone')
-        ]
+        results = [self._make_result('address_metaphone')]
 
         search._parse_location_results(results, limit=10)
 
@@ -163,13 +154,11 @@ class TestAddressLinksComprehensive(unittest.TestCase):
     def test_non_address_origin_no_links(self):
         """Non-address origin (zipcode): no links section even with attrs."""
         search = self._make_search()
-        results = [
-            self._make_result(
-                'zipcode',
-                egaid='EGAID_003',
-                egid_edid='EGID_EDID_003',
-            )
-        ]
+        results = [self._make_result(
+            'zipcode',
+            egaid='EGAID_003',
+            egid_edid='EGID_EDID_003',
+        )]
 
         search._parse_location_results(results, limit=10)
 
