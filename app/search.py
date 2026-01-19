@@ -719,6 +719,25 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                 result['attrs'].pop('layerBodId', None)
             result['attrs'].pop('feature_id', None)
             result['attrs']['label'] = self._translate_label(result['attrs']['label'])
+
+            # Add related links for address results (including metaphone)
+            # Only add the links section if both new attributes exist
+            if origin in ('address', 'address_metaphone'):
+                egaid = result['attrs'].get('egaid')
+                egid_edid = result['attrs'].get('egid_edid')
+                if egaid and egid_edid:
+                    result['attrs']['links'] = [
+                        {
+                            'rel': 'related',
+                            'title': 'ch.swisstopo.amtliches-gebaeudeadressverzeichnis',
+                            'href': f"/rest/services/ech/MapServer/ch.swisstopo.amtliches-gebaeudeadressverzeichnis/{egaid}"
+                        },
+                        {
+                            'rel': 'related',
+                            'title': 'ch.bfs.gebaeude_wohnungs_register',
+                            'href': f"/rest/services/ech/MapServer/ch.bfs.gebaeude_wohnungs_register/{egid_edid}"
+                        }
+                    ]
             if (
                 origin == 'address' and nb_address < self.LOCATION_LIMIT and (
                     not self.bbox or
