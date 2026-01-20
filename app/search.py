@@ -719,6 +719,40 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                 result['attrs'].pop('layerBodId', None)
             result['attrs'].pop('feature_id', None)
             result['attrs']['label'] = self._translate_label(result['attrs']['label'])
+
+            # Add related links for address results (including metaphone)
+            # Only add the links section if both new attributes exist
+            # TODO: PB-2168 once the featureid in mf-chsdi of  # pylint: disable=fixme
+            # ch.swisstopo.amtliches-gebaeudeadressverzeichnis has been switched
+            # back to egaid, we can do the same here in the links section
+            if origin in ('address', 'address_metaphone'):
+                egaid = result['attrs'].get('egaid')
+                egid_edid = result['attrs'].get('egid_edid')
+                if egaid and egid_edid:
+                    result['attrs']['links'] = [
+                        {
+                            'rel': 'related',
+                            'title': 'ch.swisstopo.amtliches-gebaeudeadressverzeichnis',
+                            'href': (
+                                f"/rest/services/ech/MapServer/"
+                                f"ch.swisstopo.amtliches-gebaeudeadressverzeichnis/"
+                                f"{egid_edid}"
+                            )
+                        },
+                        {
+                            'rel': 'related',
+                            'title': 'ch.bfs.gebaeude_wohnungs_register',
+                            'href': (
+                                f"/rest/services/ech/MapServer/"
+                                f"ch.bfs.gebaeude_wohnungs_register/{egid_edid}"
+                            )
+                        }
+                    ]
+
+            # Remove egaid and egid_edid attributes from the response
+            result['attrs'].pop('egaid', None)
+            result['attrs'].pop('egid_edid', None)
+
             if (
                 origin == 'address' and nb_address < self.LOCATION_LIMIT and (
                     not self.bbox or
