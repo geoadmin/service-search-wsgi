@@ -673,7 +673,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             logger.error(msg, e)
             raise InternalServerError(msg) from e
 
-    def _parse_locations(self, transformer, res):
+    def _parse_locations(self, res):
         logger.debug("Parse location result: %s", res)
         if not self.returnGeometry:
             attrs2Del = ['x', 'y', 'lon', 'lat', 'geom_st_box2d']
@@ -695,11 +695,13 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                     ) from error
             else:
                 try:
-                    pnt = (res['x'], res['y'])
-                    x, y = transformer.transform(pnt[0], pnt[1])
+                    # Transform from WGS84 lon/lat (which are always available) to target SRID
+                    # instead of from the Swiss coordinates (which may be swapped)
+                    transformer_from_wgs84 = get_transformer(4326, self.srid)
+                    x, y = transformer_from_wgs84.transform(res['lon'], res['lat'])
                     res['x'] = x
                     res['y'] = y
-                except (pyproj.exceptions.CRSError) as error:
+                except (pyproj.exceptions.CRSError, KeyError) as error:
                     logger.error("Error while converting point %s to %s", res, self.srid)
                     raise InternalServerError(
                         f'Error while converting point({res}), to EPSG:{self.srid}'
@@ -708,7 +710,6 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
 
     def _parse_location_results(self, results, limit):
         nb_address = 0
-        transformer = get_transformer(self.DEFAULT_SRID, self.srid)
         for result in self._yield_matches(results):
             origin = result['attrs']['origin']
             layer_bod_id = self._origin_to_layerbodid(origin)
@@ -725,14 +726,14 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                     self._bbox_intersection(self.bbox, result['attrs']['geom_st_box2d'])
                 )
             ):
-                result['attrs'] = self._parse_locations(transformer, result['attrs'])
+                result['attrs'] = self._parse_locations(result['attrs'])
                 self.results['results'].append(result)
                 nb_address += 1
             else:
                 if not self.bbox or self._bbox_intersection(
                     self.bbox, result['attrs']['geom_st_box2d']
                 ):
-                    self._parse_locations(transformer, result['attrs'])
+                    self._parse_locations(result['attrs'])
                     self.results['results'].append(result)
         if len(self.results['results']) > 0:
             self.results['results'] = self.results['results'][:limit]
