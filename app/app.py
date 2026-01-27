@@ -10,6 +10,7 @@ from flask import g
 from flask import request
 
 from app import settings
+from app.helpers.otel import initialize_tracing
 from app.helpers.utils import make_error_msg
 
 logger = logging.getLogger(__name__)
@@ -19,6 +20,9 @@ route_logger = logging.getLogger('app.routes')
 
 app = Flask(__name__)
 app.config.from_object(settings)
+
+initialize_tracing(app)
+
 
 cache = Cache(app)
 

@@ -16,6 +16,17 @@ shapely = "~=2.1"
 pyproj = "~=3.7"
 psycopg = {extras = ["binary"], version = "~=3.2"}
 
+opentelemetry-sdk = "~=1.39"
+opentelemetry-exporter-otlp = "~=1.39"
+opentelemetry-instrumentation = "*"
+
+# Specific OpenTelemetry instrumentation libraries used to instrument this app
+# Full list or a subset of libraries listed by 'edot-bootstrap --action=requirements'
+opentelemetry-instrumentation-flask = "*"
+opentelemetry-instrumentation-psycopg = "*"
+opentelemetry-instrumentation-sqlalchemy = "*"
+opentelemetry-instrumentation-logging = "*"
+
 [dev-packages]
 gatilegrid = "*"
 yapf = "*"
