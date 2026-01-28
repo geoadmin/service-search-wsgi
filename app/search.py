@@ -2,6 +2,7 @@ import logging
 import re
 
 import pyproj.exceptions
+from opentelemetry import trace
 from shapely.geometry import Point
 from shapely.geometry import box
 from shapely.geometry import mapping
@@ -147,19 +148,25 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         if self.bbox is not None and self.typeInfo not in ('layers', 'featuresearch'):
             self._get_quad_index()
         if self.typeInfo == 'layers':
-            # search all layers
-            self.searchText = format_search_text(self.request.args.get('searchText'))
-            self._layer_search()
+            with trace.get_tracer(__name__).start_as_current_span("Search._layer_search"):
+                # search all layers
+                self.searchText = format_search_text(self.request.args.get('searchText'))
+                self._layer_search()
+
         elif self.typeInfo == 'featuresearch':
-            # search all features using searchText
-            self.searchText = format_search_text(self.request.args.get('searchText'))
-            self._feature_search()
+            with trace.get_tracer(__name__).start_as_current_span("Search._feature_search"):
+                # search all features using searchText
+                self.searchText = format_search_text(self.request.args.get('searchText'))
+                self._feature_search()
         elif self.typeInfo in ('locations'):
-            self.searchText = format_locations_search_text(self.request.args.get('searchText', ''))
-            # swiss search
-            self._swiss_search()
-            # translate some gazetteer categories from swissnames3
-            # tagged with <i>...</i> in the label attribute of the response
+            with trace.get_tracer(__name__).start_as_current_span("Search._swiss_search"):
+                self.searchText = format_locations_search_text(
+                    self.request.args.get('searchText', '')
+                )
+                # swiss search
+                self._swiss_search()
+                # translate some gazetteer categories from swissnames3
+                # tagged with <i>...</i> in the label attribute of the response
         return self.results
 
     def _fuzzy_search(self, searchTextFinal):

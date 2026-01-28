@@ -1,4 +1,5 @@
 from os import getenv
+
 from flask import Flask
 
 # Opentelemetry tends to do a bit too much magic, we therefore only import the packages if we
@@ -29,20 +30,21 @@ def initialize_tracing(app: Flask) -> bool:
             from opentelemetry.instrumentation.flask import FlaskInstrumentor
             FlaskInstrumentor().instrument_app(app)
         if strtobool(getenv("OTEL_ENABLE_PSYCOPG", "false")):
-            from opentelemetry.instrumentation.psycopg import PsycopgInstrumentor
+            from opentelemetry.instrumentation.psycopg import \
+                PsycopgInstrumentor
             PsycopgInstrumentor().instrument()
         if strtobool(getenv("OTEL_ENABLE_LOGGING", "false")):
-            from opentelemetry.instrumentation.logging import LoggingInstrumentor
+            from opentelemetry.instrumentation.logging import \
+                LoggingInstrumentor
             LoggingInstrumentor().instrument()
-        if strtobool(getenv("OTEL_ENABLE_SQLALCHEMY", "false")):
-            from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-            SQLAlchemyInstrumentor().instrument()
     return tracing_enabled
+
 
 def _setup_trace_provider() -> None:
     tracing_enabled = not strtobool(getenv("OTEL_SDK_DISABLED", "false"))
     if tracing_enabled:
-        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import \
+            OTLPSpanExporter
         from opentelemetry.sdk.resources import Resource
         from opentelemetry.sdk.trace import TracerProvider
         from opentelemetry.sdk.trace.export import BatchSpanProcessor

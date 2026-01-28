@@ -23,7 +23,6 @@ app.config.from_object(settings)
 
 initialize_tracing(app)
 
-
 cache = Cache(app)
 
 

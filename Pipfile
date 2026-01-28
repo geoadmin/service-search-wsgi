@@ -8,7 +8,6 @@ gevent = "~=25.5"
 gunicorn = "~=23.0"
 Flask = "~=3.1"
 Flask-Caching = "~=2.3"
-Flask-SQLAlchemy = "~=3.1"
 PyYAML = "~=6.0"
 logging-utilities = "~=5.0"
 python-dotenv = "~=1.1"
@@ -24,7 +23,6 @@ opentelemetry-instrumentation = "*"
 # Full list or a subset of libraries listed by 'edot-bootstrap --action=requirements'
 opentelemetry-instrumentation-flask = "*"
 opentelemetry-instrumentation-psycopg = "*"
-opentelemetry-instrumentation-sqlalchemy = "*"
 opentelemetry-instrumentation-logging = "*"
 
 [dev-packages]
