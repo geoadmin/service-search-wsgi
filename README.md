@@ -235,6 +235,6 @@ The following env variables can be used to configure OTEL
 
 ### Make requests
 
-Make a request:
+Make a sample request:
 
 http://localhost:5000/rest/services/ech/SearchServer?sr=2056&searchText=haus&lang=en&type=locations
