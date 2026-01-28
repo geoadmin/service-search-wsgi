@@ -8,13 +8,22 @@ gevent = "~=25.5"
 gunicorn = "~=23.0"
 Flask = "~=3.1"
 Flask-Caching = "~=2.3"
-Flask-SQLAlchemy = "~=3.1"
 PyYAML = "~=6.0"
 logging-utilities = "~=5.0"
 python-dotenv = "~=1.1"
 shapely = "~=2.1"
 pyproj = "~=3.7"
 psycopg = {extras = ["binary"], version = "~=3.2"}
+
+opentelemetry-sdk = "~=1.39"
+opentelemetry-exporter-otlp = "~=1.39"
+opentelemetry-instrumentation = "*"
+
+# Specific OpenTelemetry instrumentation libraries used to instrument this app
+# Full list or a subset of libraries listed by 'edot-bootstrap --action=requirements'
+opentelemetry-instrumentation-flask = "*"
+opentelemetry-instrumentation-psycopg = "*"
+opentelemetry-instrumentation-logging = "*"
 
 [dev-packages]
 gatilegrid = "*"

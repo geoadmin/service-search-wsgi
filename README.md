@@ -20,6 +20,10 @@
 - [Docker](#docker)
 - [Deployment](#deployment)
   - [Deployment configuration](#deployment-configuration)
+- [Environment variables](#environment-variables)
+- [Testing OTEL locally](#testing-otel-locally)
+  - [Setup](#setup)
+  - [Make requests](#make-requests)
 
 ## Description
 
@@ -197,3 +201,39 @@ The service is configured by Environment Variable:
 | SERVICE_SPHINX_NAME         | `service-search-sphinx`             | Sets the service name of service-search-sphinx in the `/info` endpoint                                                                                                                                                |
 | SERVICE_SPHINX_FILE         | `/usr/local/share/app/version.txt`  | Sets the path of the file with the version metadata from service-search-sphinx, this file has to be mounted from the service-search-sphinx container and will expose the version in `/info` endpoint                  |
 | GUNICORN_KEEPALIVE | `2` | The [`keepalive`](https://docs.gunicorn.org/en/stable/settings.html#keepalive) setting passed to gunicorn. |
+
+## Environment variables
+
+The following env variables can be used to configure OTEL
+
+| Env Variable                                              | Default                    | Description                                                                                                                                          |
+| --------------------------------------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| OTEL_SDK_DISABLED                                         | false                      | If set to "true", OTEL is disabled. See: https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#general-sdk-configuration |
+| OTEL_ENABLE_FLASK                                         | false                      | If opentelemetry-instrumentation-flask should be enabled or not.                                                                                     |
+| OTEL_ENABLE_LOGGING                                       | false                      | If opentelemetry-instrumentation-logging should be enabled or not.                                                                                   |
+| OTEL_ENABLE_PSYCOPG                                       | false                      | If opentelemetry-instrumentation-psycopg should be enabled or not.                                                                                   |
+| OTEL_EXPERIMENTAL_RESOURCE_DETECTORS                      |                            | OTEL resource detectors, adding resource attributes to the OTEL output. e.g. `os,process`                                                            |
+| OTEL_EXPORTER_OTLP_ENDPOINT                               | http://localhost:4317      | The OTEL Exporter endpoint, e.g. `opentelemetry-kube-stack-gateway-collector.opentelemetry-operator-system:4317`                                     |
+| OTEL_EXPORTER_OTLP_HEADERS                                |                            | A list of key=value headers added in outgoing data. https://opentelemetry.io/docs/languages/sdk-configuration/otlp-exporter/#header-configuration    |
+| OTEL_EXPORTER_OTLP_INSECURE                               | false                      | If exporter ssl certificates should be checked or not.                                                                                               |
+| OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SERVER_REQUEST  |                            | A comma separated list of request headers added in outgoing data. Regex supported. Use '.*' for all headers                                          |
+| OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SERVER_RESPONSE |                            | A comma separated list of request headers added in outgoing data. Regex supported. Use '.*' for all headers                                          |
+| OTEL_PYTHON_FLASK_EXCLUDED_URLS                           |                            | A comma separated list of url's to exclude, e.g. `checker`                                                                                           |
+| OTEL_RESOURCE_ATTRIBUTES                                  |                            | A comma separated list of custom OTEL resource attributes, Must contain at least the service-name `service.name=service-search`                      |
+| OTEL_TRACES_SAMPLER                                       | parentbased_always_on      | Sampler to be used, see https://opentelemetry-python.readthedocs.io/en/latest/sdk/trace.sampling.html#module-opentelemetry.sdk.trace.sampling.       |
+| OTEL_TRACES_SAMPLER_ARG                                   |                            | Optional additional arguments for sampler.                                                                                                           |
+
+## Testing OTEL locally
+
+### Setup
+
+1. Start Jaeger with `docker compose up`
+2. AWS Login for `kubectl`: `aws sso login --profile swisstopo-bgdi-dev`
+3. Make a port-forward to Sphinx: `kubectl port-forward -n service-search service-search-0 9312:9312` 
+4. SSH Port Forward for Postgres: `ssh jumphost-pg-geodata-replica`
+
+### Make requests
+
+Make a sample request:
+
+http://localhost:5000/rest/services/ech/SearchServer?sr=2056&searchText=haus&lang=en&type=locations
