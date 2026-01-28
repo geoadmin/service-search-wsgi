@@ -548,12 +548,20 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         if hasDigit:
             prefix_digit = lambda x: x if not isdigit(x) else ''.join((x, '*'))
             prefix_all = lambda x: ''.join((x, '*'))
+            exactAll = ' '.join(self.searchText)
             preDigit = ' '.join([prefix_digit(w) for w in self.searchText])
             preNonDigitAndPreDigit = ' '.join([prefix_all(w) for w in self.searchText])
             infNonDigitAndPreDigit = ' '.join([
                 prefix_digit(infix_non_digit(w)) for w in self.searchText
             ])
-            q = q + [
+            q = [
+                # Exact matches first (highest priority for ranking)
+                f'{fields} "{exactAll}"',
+                f'{fields} "^{exactAll}"',
+                f'{fields} "{exactAll}$"',
+                f'{fields} "^{exactAll}$"',
+            ] + q + [
+                # Then prefix matches
                 f'{fields} "{preDigit}"',
                 f'{fields} "^{preDigit}"',
                 f'{fields} "{preNonDigitAndPreDigit}"',
@@ -794,6 +802,23 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                         del match['attrs']['lang']
                     if 'agnostic' in match['attrs']:
                         del match['attrs']['agnostic']
+
+                    # Boost exact matches in detail field
+                    # Similar to swiss search exact match boosting
+                    if self.searchText:
+                        detail = match['attrs'].get('detail', '').lower()
+                        search_text_joined = ' '.join(self.searchText).lower()
+                        # Check if detail contains exact match as a word boundary
+                        # (at start, end, or surrounded by spaces)
+                        if (
+                            detail == search_text_joined or
+                            detail.startswith(f"{search_text_joined} ") or
+                            detail.endswith(f" {search_text_joined}") or
+                            f" {search_text_joined} " in detail
+                        ):
+                            # Boost weight significantly for exact word matches
+                            match['weight'] += 10000
+
                     if not self.bbox or self._bbox_intersection(
                         self.bbox, match['attrs']['geom_st_box2d']
                     ):
