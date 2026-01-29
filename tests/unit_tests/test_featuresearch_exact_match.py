@@ -1,11 +1,8 @@
-import logging
 from unittest.mock import patch
 
 from flask import url_for
 
 from tests.unit_tests.base_test import BaseSearchTest
-
-logger = logging.getLogger(__name__)
 
 # Mock Sphinx results for featuresearch with exact match boosting tests
 MOCK_FEATURESEARCH_RESULTS_EXACT_MATCH = [{
@@ -53,8 +50,8 @@ MOCK_FEATURESEARCH_RESULTS_EXACT_MATCH = [{
 @patch('app.lib.sphinxapi.SphinxClient.RunQueries')
 class TestFeatureSearchExactMatchBoost(BaseSearchTest):
 
-    def test_exact_match_boosting_applied(self, mock):
-        """Test that exact matches get +10000 weight boost"""
+    def test_exact_match_boosting_and_ranking(self, mock):
+        """Test that exact matches get +10000 weight boost and are ranked higher"""
         mock.return_value = MOCK_FEATURESEARCH_RESULTS_EXACT_MATCH
 
         response = self.app.get(
@@ -100,31 +97,13 @@ class TestFeatureSearchExactMatchBoost(BaseSearchTest):
         self.assertIsNotNone(prefix_match, "Prefix match should be in results")
         self.assertEqual(prefix_match['weight'], 2600, "Prefix match should not be boosted")
 
-    def test_exact_matches_ranked_higher(self, mock):
-        """Test that exact matches are ranked higher than prefix matches after boosting"""
-        mock.return_value = MOCK_FEATURESEARCH_RESULTS_EXACT_MATCH
-
-        response = self.app.get(
-            url_for(
-                'search_server',
-                topic='ech',
-                type='featuresearch',
-                searchText='111001',
-                features='ch.bfs.gebaeude_wohnungs_register'
-            ),
-            headers=self.origin_headers["allowed"]
-        )
-
-        self.assertEqual(response.status_code, 200)
-        results = response.json['results']
-
         # First result should be an exact match (highest boosted weight)
         self.assertIn(
             results[0]['attrs']['feature_id'], ['111001_0', '111001_2', '111001_3'],
             "First result should be an exact match"
         )
 
-        # Prefix match should be ranked lower
+        # Prefix match should be ranked lower than exact matches
         prefix_match_index = next(
             (i for i, r in enumerate(results) if r['attrs']['feature_id'] == '11100130_0'), None
         )
