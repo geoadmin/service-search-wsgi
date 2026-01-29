@@ -9,108 +9,44 @@ logger = logging.getLogger(__name__)
 
 # Mock Sphinx results for featuresearch with exact match boosting tests
 MOCK_FEATURESEARCH_RESULTS_EXACT_MATCH = [{
-    'error': '',
-    'warning': '',
-    'status': 0,
-    'fields': ['detail', 'geom_quadindex'],
-    'attrs': {
-        'feature_id': 7,
-        'detail': 7,
-        'geom_st_box2d': 7,
-        'geom_quadindex': 7,
-        'label': 7,
-        'layer': 7,
-        'origin': 7,
-        'lat': 5,
-        'lon': 5,
-        'agnostic': 1,
-    },
     'matches': [
         # Result with exact match at end (should be boosted)
         {
-            'id': 1741256,
+            'id': 1,
             'weight': 2561,
             'attrs': {
                 'detail': 'raeterschenstrasse 10 8418 schlatt zh schlatt _zh_ _zh_ 111001',
-                'featureId': '111001_0',
                 'feature_id': '111001_0',
-                'geom_quadindex': '030010313122220212210',
-                'geom_st_box2d':
-                    'BOX(704071.1685604602 259725.79746988925,'
-                    '704071.1685604602 259725.79746988925)',
-                'label': 'Räterschenstrasse 10 Schlatt (ZH)',
-                'lat': 47.48006057739258,
-                'layer': 'ch.bfs.gebaeude_wohnungs_register',
-                'lon': 8.819401741027832,
-                'origin': 'feature',
-                'agnostic': 1,
             }
         },
         # Result with prefix match (should not be boosted)
         {
-            'id': 9367,
+            'id': 2,
             'weight': 2600,
             'attrs': {
                 'detail': 'via valle verzasca 7 6632 vogorno verzasca _ti_ 11100130',
-                'featureId': '11100130_0',
                 'feature_id': '11100130_0',
-                'geom_quadindex': '032031010211321121113',
-                'geom_st_box2d':
-                    'BOX(709621.1369603279 118878.52939728371,'
-                    '709621.1369603279 118878.52939728371)',
-                'label': 'Via Valle Verzasca 7 Verzasca',
-                'lat': 46.212425231933594,
-                'layer': 'ch.bfs.gebaeude_wohnungs_register',
-                'lon': 8.859180450439453,
-                'origin': 'feature',
-                'agnostic': 1,
             }
         },
         # Result with exact match at start (should be boosted)
         {
-            'id': 106855,
+            'id': 3,
             'weight': 2550,
             'attrs': {
                 'detail': '111001 kirchstrasse 4 8887 mels mels _sg_',
-                'featureId': '111001_2',
                 'feature_id': '111001_2',
-                'geom_quadindex': '030132220212010113133',
-                'geom_st_box2d':
-                    'BOX(750556.2385305155 212572.80229783672,'
-                    '750556.2385305155 212572.80229783672)',
-                'label': 'Kirchstrasse 4 Mels',
-                'lat': 47.04707717895508,
-                'layer': 'ch.bfs.gebaeude_wohnungs_register',
-                'lon': 9.420117378234863,
-                'origin': 'feature',
-                'agnostic': 1,
             }
         },
         # Result with exact match in middle (should be boosted)
         {
-            'id': 106856,
+            'id': 4,
             'weight': 2540,
             'attrs': {
                 'detail': 'test 111001 example _sg_',
-                'featureId': '111001_3',
                 'feature_id': '111001_3',
-                'geom_quadindex': '030132220212010113133',
-                'geom_st_box2d':
-                    'BOX(750556.2385305155 212572.80229783672,'
-                    '750556.2385305155 212572.80229783672)',
-                'label': 'Test Example',
-                'lat': 47.04707717895508,
-                'layer': 'ch.bfs.gebaeude_wohnungs_register',
-                'lon': 9.420117378234863,
-                'origin': 'feature',
-                'agnostic': 1,
             }
         },
     ],
-    'total': 4,
-    'total_found': 4,
-    'time': 0.003,
-    'words': []
 }]
 
 
@@ -198,45 +134,14 @@ class TestFeatureSearchExactMatchBoost(BaseSearchTest):
     def test_no_boosting_when_no_exact_match(self, mock):
         """Test that results without exact matches don't get boosted"""
         mock_results = [{
-            'error': '',
-            'warning': '',
-            'status': 0,
-            'fields': ['detail', 'geom_quadindex'],
-            'attrs': {
-                'feature_id': 7,
-                'detail': 7,
-                'geom_st_box2d': 7,
-                'geom_quadindex': 7,
-                'label': 7,
-                'layer': 7,
-                'origin': 7,
-                'lat': 5,
-                'lon': 5,
-                'agnostic': 1,
-            },
             'matches': [{
-                'id': 9367,
+                'id': 1,
                 'weight': 2600,
                 'attrs': {
                     'detail': 'via valle verzasca 7 6632 vogorno verzasca _ti_ 11100130',
-                    'featureId': '11100130_0',
                     'feature_id': '11100130_0',
-                    'geom_quadindex': '032031010211321121113',
-                    'geom_st_box2d':
-                        'BOX(709621.1369603279 118878.52939728371,'
-                        '709621.1369603279 118878.52939728371)',
-                    'label': 'Via Valle Verzasca 7 Verzasca',
-                    'lat': 46.212425231933594,
-                    'layer': 'ch.bfs.gebaeude_wohnungs_register',
-                    'lon': 8.859180450439453,
-                    'origin': 'feature',
-                    'agnostic': 1,
                 }
-            },],
-            'total': 1,
-            'total_found': 1,
-            'time': 0.003,
-            'words': []
+            }],
         }]
 
         mock.return_value = mock_results
@@ -261,44 +166,14 @@ class TestFeatureSearchExactMatchBoost(BaseSearchTest):
     def test_exact_match_case_insensitive(self, mock):
         """Test that exact match boosting is case-insensitive"""
         mock_results = [{
-            'error': '',
-            'warning': '',
-            'status': 0,
-            'fields': ['detail', 'geom_quadindex'],
-            'attrs': {
-                'feature_id': 7,
-                'detail': 7,
-                'geom_st_box2d': 7,
-                'geom_quadindex': 7,
-                'label': 7,
-                'layer': 7,
-                'origin': 7,
-                'lat': 5,
-                'lon': 5,
-                'agnostic': 1,
-            },
             'matches': [{
                 'id': 1,
                 'weight': 2500,
                 'attrs': {
-                    'detail': 'test ABC123 example',
+                    'detail': 'test abc123 example',
                     'feature_id': 'test_1',
-                    'geom_quadindex': '030010313122220212210',
-                    'geom_st_box2d':
-                        'BOX(704071.1685604602 259725.79746988925,'
-                        '704071.1685604602 259725.79746988925)',
-                    'label': 'Test 1',
-                    'lat': 47.48006057739258,
-                    'layer': 'ch.bfs.gebaeude_wohnungs_register',
-                    'lon': 8.819401741027832,
-                    'origin': 'feature',
-                    'agnostic': 1,
                 }
-            },],
-            'total': 1,
-            'total_found': 1,
-            'time': 0.003,
-            'words': []
+            }],
         }]
 
         mock.return_value = mock_results
@@ -309,7 +184,7 @@ class TestFeatureSearchExactMatchBoost(BaseSearchTest):
                 'search_server',
                 topic='ech',
                 type='featuresearch',
-                searchText='abc123',
+                searchText='ABC123',
                 features='ch.bfs.gebaeude_wohnungs_register'
             ),
             headers=self.origin_headers["allowed"]
