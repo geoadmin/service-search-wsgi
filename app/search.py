@@ -2,6 +2,7 @@ import logging
 import re
 
 import pyproj.exceptions
+from opentelemetry import trace
 from shapely.geometry import Point
 from shapely.geometry import box
 from shapely.geometry import mapping
@@ -147,19 +148,25 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         if self.bbox is not None and self.typeInfo not in ('layers', 'featuresearch'):
             self._get_quad_index()
         if self.typeInfo == 'layers':
-            # search all layers
-            self.searchText = format_search_text(self.request.args.get('searchText'))
-            self._layer_search()
+            with trace.get_tracer(__name__).start_as_current_span("Search._layer_search"):
+                # search all layers
+                self.searchText = format_search_text(self.request.args.get('searchText'))
+                self._layer_search()
+
         elif self.typeInfo == 'featuresearch':
-            # search all features using searchText
-            self.searchText = format_search_text(self.request.args.get('searchText'))
-            self._feature_search()
+            with trace.get_tracer(__name__).start_as_current_span("Search._feature_search"):
+                # search all features using searchText
+                self.searchText = format_search_text(self.request.args.get('searchText'))
+                self._feature_search()
         elif self.typeInfo in ('locations'):
-            self.searchText = format_locations_search_text(self.request.args.get('searchText', ''))
-            # swiss search
-            self._swiss_search()
-            # translate some gazetteer categories from swissnames3
-            # tagged with <i>...</i> in the label attribute of the response
+            with trace.get_tracer(__name__).start_as_current_span("Search._swiss_search"):
+                self.searchText = format_locations_search_text(
+                    self.request.args.get('searchText', '')
+                )
+                # swiss search
+                self._swiss_search()
+                # translate some gazetteer categories from swissnames3
+                # tagged with <i>...</i> in the label attribute of the response
         return self.results
 
     def _fuzzy_search(self, searchTextFinal):
@@ -728,6 +735,40 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                 result['attrs'].pop('layerBodId', None)
             result['attrs'].pop('feature_id', None)
             result['attrs']['label'] = self._translate_label(result['attrs']['label'])
+
+            # Add related links for address results (including metaphone)
+            # Only add the links section if both new attributes exist
+            # TODO: PB-2168 once the featureid in mf-chsdi of  # pylint: disable=fixme
+            # ch.swisstopo.amtliches-gebaeudeadressverzeichnis has been switched
+            # back to egaid, we can do the same here in the links section
+            if origin in ('address', 'address_metaphone'):
+                egaid = result['attrs'].get('egaid')
+                egid_edid = result['attrs'].get('egid_edid')
+                if egaid and egid_edid:
+                    result['attrs']['links'] = [
+                        {
+                            'rel': 'related',
+                            'title': 'ch.swisstopo.amtliches-gebaeudeadressverzeichnis',
+                            'href': (
+                                f"/rest/services/ech/MapServer/"
+                                f"ch.swisstopo.amtliches-gebaeudeadressverzeichnis/"
+                                f"{egid_edid}"
+                            )
+                        },
+                        {
+                            'rel': 'related',
+                            'title': 'ch.bfs.gebaeude_wohnungs_register',
+                            'href': (
+                                f"/rest/services/ech/MapServer/"
+                                f"ch.bfs.gebaeude_wohnungs_register/{egid_edid}"
+                            )
+                        }
+                    ]
+
+            # Remove egaid and egid_edid attributes from the response
+            result['attrs'].pop('egaid', None)
+            result['attrs'].pop('egid_edid', None)
+
             if (
                 origin == 'address' and nb_address < self.LOCATION_LIMIT and (
                     not self.bbox or
