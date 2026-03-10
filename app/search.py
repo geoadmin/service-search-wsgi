@@ -738,9 +738,6 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
 
             # Add related links for address results (including metaphone)
             # Only add the links section if both new attributes exist
-            # TODO: PB-2168 once the featureid in mf-chsdi of  # pylint: disable=fixme
-            # ch.swisstopo.amtliches-gebaeudeadressverzeichnis has been switched
-            # back to egaid, we can do the same here in the links section
             if origin in ('address', 'address_metaphone'):
                 egaid = result['attrs'].get('egaid')
                 egid_edid = result['attrs'].get('egid_edid')
@@ -752,7 +749,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
                             'href': (
                                 f"/rest/services/ech/MapServer/"
                                 f"ch.swisstopo.amtliches-gebaeudeadressverzeichnis/"
-                                f"{egid_edid}"
+                                f"{egaid}"
                             )
                         },
                         {

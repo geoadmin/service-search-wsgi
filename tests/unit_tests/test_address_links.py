@@ -74,7 +74,7 @@ class TestAddressLinksComprehensive(unittest.TestCase):
         hrefs = {link['href'] for link in result['links']}
         self.assertIn(
             '/rest/services/ech/MapServer/'
-            'ch.swisstopo.amtliches-gebaeudeadressverzeichnis/EGID_EDID_001',
+            'ch.swisstopo.amtliches-gebaeudeadressverzeichnis/EGAID_001',
             hrefs,
         )
         self.assertIn(
