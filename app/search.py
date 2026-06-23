@@ -40,6 +40,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
     LOCATION_LIMIT = 50
     LAYER_LIMIT = 30
     FEATURE_LIMIT = 20
+    FEATURE_SEARCH_LIMIT = 100  # Fetch more results to find exact matches
     DEFAULT_SRID = 21781
     BBOX_SEARCH_LIMIT = 150
 
@@ -388,10 +389,13 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         if self.featureIndexes is None:
             logger.error("No layername is given. Needed is bounding box and layer name")
             raise BadRequest('Bad request: no layername given')
+        # User-facing limit for final response
         featureLimit = (
             self.limit if self.limit and self.limit <= self.FEATURE_LIMIT else self.FEATURE_LIMIT
         )
-        self.sphinx.SetLimits(0, featureLimit)
+        # Fetch more results from Sphinx to increase pool for exact match detection
+        sphinxFetchLimit = self.FEATURE_SEARCH_LIMIT
+        self.sphinx.SetLimits(0, sphinxFetchLimit)
         self.sphinx.SetRankingMode(sphinxapi.SPH_RANK_WORDCOUNT)
         if self.bbox and self.sortbbox:
             coords = self._get_geoanchor_from_bbox()
@@ -417,7 +421,7 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
             self.sphinx.ResetFilters()
 
         if results:
-            self._parse_feature_results(results)
+            self._parse_feature_results(results, featureLimit)
         else:
             error = "Failed to run sphinx queries"
             if self.sphinx.GetLastError():
@@ -784,42 +788,92 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         if len(self.results['results']) > 0:
             self.results['results'] = self.results['results'][:limit]
 
-    def _parse_feature_results(self, results):
+    def _apply_exact_match_boost(self, match):
+        """Apply weight boost to exact matches in the detail field."""
+        if self.searchText:
+            detail = match['attrs'].get('detail', '').lower()
+            search_text_joined = ' '.join(self.searchText).lower()
+
+            # Check if detail contains exact phrase match as a word boundary
+            # (at start, end, or surrounded by spaces)
+            exact_phrase_match = (
+                detail == search_text_joined or detail.startswith(f"{search_text_joined} ") or
+                detail.endswith(f" {search_text_joined}") or f" {search_text_joined} " in detail
+            )
+
+            if exact_phrase_match:
+                # Boost weight significantly for exact phrase matches
+                match['weight'] += 10000
+            else:
+                # Check if all search words appear in order (but not necessarily consecutive)
+                # This handles cases like "bahnhofstrasse 2 langenthal" matching
+                # "bahnhofstrasse 2 4900 langenthal langenthal _be_..."
+                detail_words = detail.split()
+                search_words = [w.lower() for w in self.searchText]
+
+                if len(search_words) > 1 and self._all_words_in_order(detail_words, search_words):
+                    # Smaller boost for matches with all words in order but not consecutive
+                    match['weight'] += 5000
+
+    @staticmethod
+    def _all_words_in_order(detail_words, search_words):
+        """Check if all search words appear in detail_words in the same order."""
+        search_idx = 0
+        for detail_word in detail_words:
+            if search_idx < len(search_words) and detail_word == search_words[search_idx]:
+                search_idx += 1
+                if search_idx == len(search_words):
+                    return True
+        return False
+
+    @staticmethod
+    def _cleanup_match_attributes(match):
+        """Clean up match attributes for backward compatibility."""
+        # Backward compatible
+        if 'feature_id' in match['attrs']:
+            match['attrs']['featureId'] = match['attrs']['feature_id']
+        # lang and agnostic in combination with searchLang
+        if 'lang' in match['attrs']:
+            del match['attrs']['lang']
+        if 'agnostic' in match['attrs']:
+            del match['attrs']['agnostic']
+
+    def _sort_and_trim_results(self, featureLimit):
+        """Sort results by weight and trim to requested limit."""
+        if not self.results['results']:
+            return
+
+        if self.bbox and self.sortbbox:
+            # Sort by weight DESC, then geodist ASC (matching Sphinx sort order)
+            self.results['results'].sort(
+                key=lambda x: (-x['weight'], x['attrs'].get('@geodist', float('inf')))
+            )
+        else:
+            # Sort by weight DESC only
+            self.results['results'].sort(key=lambda x: -x['weight'])
+
+        # Trim results to requested limit after sorting
+        if len(self.results['results']) > featureLimit:
+            self.results['results'] = self.results['results'][:featureLimit]
+
+    def _parse_feature_results(self, results, featureLimit):
         for _, result in self._yield_results(results):
             if 'error' in result:
                 if result['error'] != '':
                     raise NotFound(result['error'])
             if result is not None and 'matches' in result:
                 for match in self._yield_matches(result['matches']):
-                    # Backward compatible
-                    if 'feature_id' in match['attrs']:
-                        match['attrs']['featureId'] = match['attrs']['feature_id']
-                    # lang and agnostic in combination with searchLang
-                    if 'lang' in match['attrs']:
-                        del match['attrs']['lang']
-                    if 'agnostic' in match['attrs']:
-                        del match['attrs']['agnostic']
-
-                    # Boost exact matches in detail field
-                    # Similar to swiss search exact match boosting
-                    if self.searchText:
-                        detail = match['attrs'].get('detail', '').lower()
-                        search_text_joined = ' '.join(self.searchText).lower()
-                        # Check if detail contains exact match as a word boundary
-                        # (at start, end, or surrounded by spaces)
-                        if (
-                            detail == search_text_joined or
-                            detail.startswith(f"{search_text_joined} ") or
-                            detail.endswith(f" {search_text_joined}") or
-                            f" {search_text_joined} " in detail
-                        ):
-                            # Boost weight significantly for exact word matches
-                            match['weight'] += 10000
+                    self._cleanup_match_attributes(match)
+                    self._apply_exact_match_boost(match)
 
                     if not self.bbox or self._bbox_intersection(
                         self.bbox, match['attrs']['geom_st_box2d']
                     ):
                         self.results['results'].append(match)
+
+        # Re-sort results after applying exact match weight boost
+        # This ensures exact matches appear at the top despite Sphinx's pre-sorting
+        self._sort_and_trim_results(featureLimit)
 
     @staticmethod
     def _yield_results(results):
