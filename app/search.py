@@ -793,14 +793,38 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         if self.searchText:
             detail = match['attrs'].get('detail', '').lower()
             search_text_joined = ' '.join(self.searchText).lower()
-            # Check if detail contains exact match as a word boundary
+
+            # Check if detail contains exact phrase match as a word boundary
             # (at start, end, or surrounded by spaces)
-            if (
+            exact_phrase_match = (
                 detail == search_text_joined or detail.startswith(f"{search_text_joined} ") or
                 detail.endswith(f" {search_text_joined}") or f" {search_text_joined} " in detail
-            ):
-                # Boost weight significantly for exact word matches
+            )
+
+            if exact_phrase_match:
+                # Boost weight significantly for exact phrase matches
                 match['weight'] += 10000
+            else:
+                # Check if all search words appear in order (but not necessarily consecutive)
+                # This handles cases like "bahnhofstrasse 2 langenthal" matching
+                # "bahnhofstrasse 2 4900 langenthal langenthal _be_..."
+                detail_words = detail.split()
+                search_words = [w.lower() for w in self.searchText]
+
+                if len(search_words) > 1 and self._all_words_in_order(detail_words, search_words):
+                    # Smaller boost for matches with all words in order but not consecutive
+                    match['weight'] += 5000
+
+    @staticmethod
+    def _all_words_in_order(detail_words, search_words):
+        """Check if all search words appear in detail_words in the same order."""
+        search_idx = 0
+        for detail_word in detail_words:
+            if search_idx < len(search_words) and detail_word == search_words[search_idx]:
+                search_idx += 1
+                if search_idx == len(search_words):
+                    return True
+        return False
 
     @staticmethod
     def _cleanup_match_attributes(match):

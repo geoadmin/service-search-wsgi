@@ -176,3 +176,82 @@ class TestFeatureSearchExactMatchBoost(BaseSearchTest):
         self.assertEqual(
             results[0]['weight'], 12500, "Case-insensitive exact match should be boosted"
         )
+
+    def test_multiword_with_intervening_words(self, mock):
+        """Test that multi-word searches boost results even with intervening words."""
+        mock_results = [{
+            'matches': [
+                # Result with all search words in order but with intervening words
+                # Search: "bahnhofstrasse 2 langenthal"
+                # Detail has "bahnhofstrasse 2 4900 langenthal langenthal..."
+                {
+                    'id': 1,
+                    'weight': 2500,
+                    'attrs': {
+                        'detail':
+                            'bahnhofstrasse 2 4900 langenthal langenthal _be_ 1259385 100721941',
+                        'feature_id': 'test_1',
+                    }
+                },
+                # Result with only partial match
+                {
+                    'id': 2,
+                    'weight': 2600,
+                    'attrs': {
+                        'detail': 'bahnhofstrasse 5 langenthal',
+                        'feature_id': 'test_2',
+                    }
+                },
+                # Result with exact consecutive match
+                {
+                    'id': 3,
+                    'weight': 2400,
+                    'attrs': {
+                        'detail': 'bahnhofstrasse 2 langenthal _be_',
+                        'feature_id': 'test_3',
+                    }
+                },
+            ],
+        }]
+
+        mock.return_value = mock_results
+
+        # Search with multi-word query
+        response = self.app.get(
+            url_for(
+                'search_server',
+                topic='ech',
+                type='featuresearch',
+                searchText='Bahnhofstrasse 2 Langenthal',
+                features='ch.bfs.gebaeude_wohnungs_register'
+            ),
+            headers=self.origin_headers["allowed"]
+        )
+
+        self.assertEqual(response.status_code, 200)
+        results = response.json['results']
+
+        # Results should be reordered:
+        # 1. Exact consecutive match (test_3): 2400 + 10000 = 12400
+        # 2. All words in order but non-consecutive (test_1): 2500 + 5000 = 7500
+        # 3. Partial match (test_2): 2600 (no boost)
+
+        self.assertEqual(len(results), 3, "Should have all three results")
+
+        # Verify the exact consecutive match is first
+        self.assertEqual(results[0]['attrs']['feature_id'], 'test_3')
+        self.assertEqual(
+            results[0]['weight'], 12400, "Exact consecutive match should get +10000 boost"
+        )
+
+        # Verify the result with all words in order is second
+        self.assertEqual(results[1]['attrs']['feature_id'], 'test_1')
+        self.assertEqual(
+            results[1]['weight'],
+            7500,
+            "All words in order (non-consecutive) should get +5000 boost"
+        )
+
+        # Verify the partial match is third
+        self.assertEqual(results[2]['attrs']['feature_id'], 'test_2')
+        self.assertEqual(results[2]['weight'], 2600, "Partial match should not be boosted")
