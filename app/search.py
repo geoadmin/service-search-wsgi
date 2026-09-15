@@ -203,20 +203,35 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
 
         limit = self.limit if self.limit and \
             self.limit <= self.LOCATION_LIMIT else self.LOCATION_LIMIT
+        # Number of candidates fetched from Sphinx; can be larger than the returned `limit`
+        fetch_limit = limit
         # Define ranking mode
-        if self.bbox is not None and self.sortbbox:
+        if self.bbox is not None:
+            # A bbox restricts results spatially. The Morton quadindex added to the query is
+            # coarse: a bbox straddling the quad-space center collapses to the top-level tile
+            # covering ~a quarter of the country, so the precise restriction is done afterwards
+            # in _parse_location_results via _bbox_intersection. As that precise filter runs
+            # after Sphinx has already truncated to `fetch_limit`, we fetch the spatially nearest
+            # candidates (geoanchor + @geodist); otherwise a pure similarity sort fills the whole
+            # window with out-of-bbox rows and everything gets filtered out (sortbbox=false).
             coords = self._get_geoanchor_from_bbox()
             self.sphinx.SetGeoAnchor('lat', 'lon', coords[1], coords[0])  # pylint: disable=unsubscriptable-object
             self.sphinx.SetSortMode(sphinxapi.SPH_SORT_EXTENDED, '@geodist ASC')
-            limit = self.limit if self.limit and \
+            fetch_limit = self.limit if self.limit and \
                 self.limit <= self.BBOX_SEARCH_LIMIT else self.BBOX_SEARCH_LIMIT
+            if self.sortbbox:
+                # distance search returns the whole fetched window (unchanged behavior)
+                limit = fetch_limit
+            else:
+                # sortbbox=false: order by similarity and keep the LOCATION_LIMIT response cap
+                self.sphinx.SetRankingMode(sphinxapi.SPH_RANK_WORDCOUNT)
             logger.debug("SetGeoAnchor lat = %s, lon = %s", coords[1], coords[0])  # pylint: disable=unsubscriptable-object
         else:
             self.sphinx.SetRankingMode(sphinxapi.SPH_RANK_WORDCOUNT)
             self.sphinx.SetSortMode(sphinxapi.SPH_SORT_EXTENDED, 'rank ASC, @weight DESC, num ASC')
             logger.debug("SetRankingMode to wordcount")
 
-        self.sphinx.SetLimits(0, limit)
+        self.sphinx.SetLimits(0, fetch_limit)
 
         # Filter by origins if needed
         if self.origins is None:
@@ -304,7 +319,19 @@ class Search(SearchValidation):  # pylint: disable=too-many-instance-attributes
         else:
             results = []
         if results is not None and len(results) != 0:
-            self._parse_location_results(results, limit)
+            self._parse_location_results(results, fetch_limit)
+            if self.bbox is not None and not self.sortbbox:
+                # Candidates were fetched ordered by distance so the bbox filter keeps in-bbox
+                # rows; present them in the documented order (ascending rank, then weight, then
+                # street number) as when no bbox is given.
+                self.results['results'].sort(
+                    key=lambda x: (x['attrs']['rank'], -x['weight'], x['attrs'].get('num', 0))
+                )
+                # @geodist is only an internal sort helper here; not exposed when sortbbox=false
+                for result in self.results['results']:
+                    result['attrs'].pop('@geodist', None)
+                # keep the same response cap as a location search without a bbox
+                self.results['results'] = self.results['results'][:limit]
 
     def _layer_search(self):
         logger.debug("Search layer; searchText=%s", self.searchText)
